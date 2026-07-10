@@ -1,0 +1,51 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id "org.springframework.boot" version "${spring_boot_version}"
+    id "io.spring.dependency-management"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    api "vg.unique-id:unique-id-api:${vg_unique_id_version}"
+
+    implementation "vg.unique-id:unique-id-jpa-lib:${vg_unique_id_version}"
+    implementation "vg.identity:identity-api:${vg_identity_version}"
+
+    implementation "org.springframework.boot:spring-boot-starter"
+    implementation "org.springframework.boot:spring-boot-starter-json"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+    implementation "org.springframework.security:spring-security-core"
+    implementation "org.springframework.security:spring-security-config"
+
+    implementation "org.liquibase:liquibase-core"
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+    compileOnly "org.mapstruct:mapstruct"
+    annotationProcessor "org.mapstruct:mapstruct-processor"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "org.springframework.boot:spring-boot-starter-liquibase"
+    testImplementation "org.assertj:assertj-core"
+
+    testImplementation "vg.lib:test:${vg_lib_version}"
+
+    testRuntimeOnly "vg.unique-id:unique-id-logic:${vg_unique_id_version}"
+
+    // MySQL
+    testImplementation "org.springframework.boot:spring-boot-starter-jdbc"
+    testRuntimeOnly "com.mysql:mysql-connector-j"
+
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+}

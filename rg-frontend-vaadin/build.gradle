@@ -1,0 +1,34 @@
+plugins {
+	id "com.vaadin" version "${vaadin_version}"
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "com.vaadin:vaadin-bom:${vaadin_version}"
+	}
+}
+
+dependencies {
+	implementation project(":rg-logic")
+
+	implementation "com.vaadin:vaadin-spring-boot-starter"
+	implementation "com.vaadin:vaadin-dev-server"
+	implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+	implementation "org.springframework.boot:spring-boot-starter-json"
+	implementation "org.springframework.boot:spring-boot-starter-security"
+//	implementation "vg.unique-id:unique-id-jpa-lib:${unique_id_version}"
+
+	runtimeOnly "com.h2database:h2"
+	runtimeOnly "vg.unique-id:unique-id-logic:${vg_unique_id_version}"
+	implementation "vg.identity:identity-rest-client:${vg_identity_version}"
+//	runtimeOnly "vg.unique-id:unique-id-rest-client:${unique_id_version}"
+//	runtimeOnly "com.mysql:mysql-connector-j"
+
+	compileOnly "org.projectlombok:lombok"
+	annotationProcessor "org.projectlombok:lombok"
+	testImplementation "org.springframework.boot:spring-boot-starter-test"
+}
+
+tasks.named("test") {
+	useJUnitPlatform()
+}

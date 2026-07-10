@@ -1,3 +1,16 @@
 /.idea/
 /.gradle/
-*/build/
+*/build/**
+/build/
+/node_modules/
+/rg-frontend-vaadin/frontend/
+/rg-frontend-vaadin/node_modules/
+/rg-frontend-vaadin/src/main/frontend/generated/
+/src/main/frontend/generated/
+**/target/**
+/.agents/
+
+# Developer-local Spring configuration may contain credentials.
+**/application-local.properties
+**/application-local.yml
+**/application-local.yaml

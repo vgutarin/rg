@@ -14,10 +14,12 @@ allprojects {
         sourceCompatibility = '21'
     }
 
-    group = 'vg.template'
+    group = 'vg.rg'
 }
 
 subprojects {
+
+    version = project_version
 
     apply plugin: "java"
     apply plugin: "jacoco"
@@ -26,8 +28,6 @@ subprojects {
 
     dependencyManagement {
         dependencies {
-            dependency "org.projectlombok:lombok:${lombok_version}"
-
             dependency "org.mapstruct:mapstruct:${mapstruct_version}"
             dependency "org.mapstruct:mapstruct-processor:${mapstruct_version}"
         }
