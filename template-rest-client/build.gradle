@@ -1,0 +1,29 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id "org.springframework.boot" version "${spring_boot_version}"
+    id "io.spring.dependency-management"
+}
+
+version = "0.0.1-SNAPSHOT"
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    implementation "org.springframework:spring-web"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+
+    api "vg.template:template-api:0.0.1-SNAPSHOT"
+    implementation "vg.lib:rest-client:0.0.1-SNAPSHOT"
+
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+}

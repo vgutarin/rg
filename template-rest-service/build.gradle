@@ -1,0 +1,45 @@
+plugins {
+    id "maven-publish"
+    id "org.springframework.boot" version "${spring_boot_version}"
+    id "io.spring.dependency-management"
+}
+
+version = "0.0.1-SNAPSHOT"
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+dependencies {
+
+    implementation project(":template-api")
+    implementation project(":template-logic")
+
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+
+    runtimeOnly "com.h2database:h2"
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+    compileOnly "org.mapstruct:mapstruct"
+    annotationProcessor "org.mapstruct:mapstruct-processor"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "org.assertj:assertj-core"
+
+    testImplementation "vg.lib:test:0.0.1-SNAPSHOT"
+    testImplementation "vg.template:template-rest-client:0.0.1-SNAPSHOT"
+
+    testRuntimeOnly "com.h2database:h2"
+    testRuntimeOnly "vg.unique-id:unique-id-logic:0.0.1-SNAPSHOT"
+
+}
+
+tasks.named("test") {
+    useJUnitPlatform()
+}

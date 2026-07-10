@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "${spring_boot_version}"
+    id 'io.spring.dependency-management' version "${spring_dependency_management_version}"
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    java {
+        sourceCompatibility = '21'
+    }
+
+    group = 'vg.template'
+}
+
+subprojects {
+
+    apply plugin: "java"
+    apply plugin: "jacoco"
+    apply plugin: "org.springframework.boot"
+    apply plugin: "io.spring.dependency-management"
+
+    dependencyManagement {
+        dependencies {
+            dependency "org.projectlombok:lombok:${lombok_version}"
+
+            dependency "org.mapstruct:mapstruct:${mapstruct_version}"
+            dependency "org.mapstruct:mapstruct-processor:${mapstruct_version}"
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events "PASSED", "SKIPPED", "FAILED", "STANDARD_OUT", "STANDARD_ERROR"
+        }
+    }
+
+}

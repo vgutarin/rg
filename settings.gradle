@@ -1,0 +1,6 @@
+rootProject.name = 'java-service-template'
+include 'template-api'
+include 'template-logic'
+include 'template-rest-service'
+include 'template-rest-client'
+include 'template-integration-tests'
