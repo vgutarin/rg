@@ -1,12 +1,16 @@
 package vg.rg.security.model;
 
+import lombok.Builder;
+import vg.unique.id.model.UniqueId;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+@Builder
 public record AuthenticatedUserPrincipal(
-        String sub,
+        UniqueId userUniqueId,
         String name,
         Set<String> permissions,
         boolean consentGiven,
@@ -15,9 +19,6 @@ public record AuthenticatedUserPrincipal(
     @Serial private static final long serialVersionUID = 1L;
 
     public AuthenticatedUserPrincipal {
-        if (sub != null) {
-            ContractValidation.bounded(sub, "sub", 1, 128);
-        }
         if (name != null) {
             ContractValidation.bounded(name, "name", 1, 256);
         }

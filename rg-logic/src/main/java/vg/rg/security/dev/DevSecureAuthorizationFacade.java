@@ -11,6 +11,7 @@ import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 import vg.rg.security.model.TelegramInitDataRequest;
+import vg.unique.id.model.UniqueId;
 
 import java.time.Clock;
 
@@ -49,7 +50,7 @@ public class DevSecureAuthorizationFacade implements SecureAuthorizationFacade {
         }
         var telegramUserId = verification.telegramUserId().getAsLong();
         return AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                Long.toString(telegramUserId),
+                new UniqueId(telegramUserId),
                 null,
                 Permissions.ALL,
                 true,

@@ -13,9 +13,27 @@ class PermissionsTest {
     @Test
     void all_declaredPermissions_exposesStableCatalog() {
         assertThat(Permissions.ALL).containsExactly(
-                Permissions.Home.VIEW,
                 Permissions.Reports.VIEW,
-                Permissions.Request.SUBMIT);
+                Permissions.Request.SUBMIT,
+                Permissions.Location.VIEW,
+                Permissions.Location.ADD,
+                Permissions.Location.EDIT,
+                Permissions.Location.DELETE);
+    }
+
+    @Test
+    void all_locationPermissions_areRecognizedAndWellFormed() {
+        var locationPermissions = List.of(
+                Permissions.Location.VIEW,
+                Permissions.Location.ADD,
+                Permissions.Location.EDIT,
+                Permissions.Location.DELETE);
+
+        assertThat(locationPermissions).allSatisfy(permission -> {
+            assertThat(Permissions.hasValidFormat(permission)).isTrue();
+            assertThat(Permissions.isRecognized(permission)).isTrue();
+            assertThat(Permissions.ALL).contains(permission);
+        });
     }
 
     @Test
@@ -57,8 +75,10 @@ class PermissionsTest {
 
     @Test
     void recognized_mixedPermissionSet_returnsRecognizedValuesInCatalogOrder() {
-        assertThat(Permissions.recognized(Set.of(
-                "unknown:view", Permissions.Request.SUBMIT, Permissions.Home.VIEW)))
-                .containsExactly(Permissions.Home.VIEW, Permissions.Request.SUBMIT);
+        assertThat(
+                Permissions.recognized(
+                        Set.of("unknown:view", Permissions.Request.SUBMIT)
+                )
+        ).containsExactly(Permissions.Request.SUBMIT);
     }
 }

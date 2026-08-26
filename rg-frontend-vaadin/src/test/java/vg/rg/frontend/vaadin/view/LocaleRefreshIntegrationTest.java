@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 
@@ -95,8 +96,8 @@ class LocaleRefreshIntegrationTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User",
-                Set.of(Permissions.Home.VIEW, Permissions.Reports.VIEW), true,
+                new UniqueId(1234L), "Test User",
+                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));

@@ -7,6 +7,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 
@@ -32,8 +33,8 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User",
-                Set.of(Permissions.Home.VIEW, Permissions.Request.SUBMIT), true,
+                new UniqueId(1234L), "Test User",
+                Set.of(Permissions.Request.SUBMIT), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
@@ -48,15 +49,15 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User",
-                Set.of(Permissions.Home.VIEW, Permissions.Request.SUBMIT), true,
+                new UniqueId(1234L), "Test User",
+                Set.of(Permissions.Location.VIEW, Permissions.Request.SUBMIT), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
 
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Home.VIEW, Permissions.Request.SUBMIT);
+                Permissions.Location.VIEW, Permissions.Request.SUBMIT);
     }
 
     @Test
@@ -65,13 +66,13 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User", Set.of(Permissions.Home.VIEW), true,
+                new UniqueId(1234L), "Test User", Set.of(Permissions.Location.VIEW), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
 
-        assertThat(view.getElement().getText()).doesNotContain(principal.sub());
+        assertThat(view.getElement().getText()).doesNotContain(principal.userUniqueId().toString());
     }
 
     @Test
@@ -158,7 +159,7 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1234L), "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
@@ -167,31 +168,48 @@ class MainViewTest {
     }
 
     @Test
-    void constructor_authenticatedPrincipalWithoutPermissions_displaysLogoutAction() {
+    void constructor_telegramFlow_hidesLogoutAction() {
         when(localization.getProvidedLocales()).thenReturn(List.of(LocalizationService.DEFAULT_LOCALE, Locale.ENGLISH));
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1234L), "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
 
-        assertThat(view.sessionActionText()).isEqualTo("action.logout");
+        // Telegram Mini App sessions have no local login to return to, so the logout action is hidden.
+        assertThat(view.sessionActionVisible()).isFalse();
     }
 
     @Test
-    void constructor_nullSubject_suppressesAllNavigationAndEffectivePermissions() {
+    void constructor_unauthenticated_keepsLoginActionVisible() {
+        when(localization.getProvidedLocales()).thenReturn(List.of(LocalizationService.DEFAULT_LOCALE, Locale.ENGLISH));
+        when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
+        when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
+
+        var view = new MainView(localization, authenticationContext);
+
+        // Hiding is scoped to the Telegram flow; an unauthenticated visitor still sees the login action.
+        assertThat(view.sessionActionVisible()).isTrue();
+        assertThat(view.sessionActionText()).isEqualTo("Login");
+    }
+
+    @Test
+    void constructor_nullSubject_keepsOnlyHomeNavigationAndSuppressesEffectivePermissions() {
         configureLocalization();
         var principal = new AuthenticatedUserPrincipal(
-                null, "Sensitive Name", Set.of(Permissions.Home.VIEW, Permissions.Reports.VIEW),
+                null, "Sensitive Name", Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW),
                 false, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
 
-        assertThat(view.navigationLabels()).isEmpty();
+        // Home navigation is always present; a null subject exposes no effective permissions and no
+        // permission-gated navigation beyond Home.
+        assertThat(view.navigationLabels()).containsExactly("nav.home");
         assertThat(view.visiblePermissions()).isEmpty();
         assertThat(view.getElement().getText()).doesNotContain("Sensitive Name");
     }
@@ -207,8 +225,8 @@ class MainViewTest {
             default -> invocation.getArgument(0);
         });
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", null,
-                Set.of(Permissions.Home.VIEW, Permissions.Reports.VIEW, "unknown:view"),
+                new UniqueId(1234L), null,
+                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW, "unknown:view"),
                 true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
@@ -217,7 +235,7 @@ class MainViewTest {
 
         assertThat(view.navigationLabels()).containsExactly("Головна", "Звіти");
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Home.VIEW, Permissions.Reports.VIEW);
+                Permissions.Request.SUBMIT, Permissions.Reports.VIEW);
     }
 
     private void configureLocalization() {

@@ -67,7 +67,7 @@ class FrontendSecurityArchitectureTest {
                 .filter(line -> line.matches(".*(bot-token|api-key)=.*"))
                 .toList();
 
-        assertThat(activeCredentialLines).hasSize(1)
+        assertThat(activeCredentialLines).hasSize(2)
                 .allSatisfy(line -> assertThat(line).contains("${").endsWith(":}"));
     }
 

@@ -18,6 +18,7 @@ import vg.rg.frontend.vaadin.view.LandingView;
 import vg.rg.frontend.vaadin.view.NoAccessView;
 import vg.rg.security.AuthorizationApplicationService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.AuthorizationOutcome;
 
@@ -46,7 +47,7 @@ class SecureEntryIntegrationTest {
 
     @Test
     void secureEntry_establishedPrincipal_reachesPermittedContent() {
-        var principal = principal("subject-1234", "Session Name", Set.of("home:view"));
+        var principal = principal(new UniqueId(1234L), "Session Name", Set.of("location:view"));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
         var view = view();
@@ -57,14 +58,14 @@ class SecureEntryIntegrationTest {
 
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                     .extracting(Object::toString)
-                    .containsExactly("home:view");
+                    .containsExactly("location:view");
             verify(ui).navigate(LandingView.class);
         }
     }
 
     @Test
     void secureEntry_nullSubject_reachesNoAccessWithoutRenderingIdentity() {
-        var principal = principal(null, "Sensitive Session Name", Set.of("home:view"));
+        var principal = principal(null, "Sensitive Session Name", Set.of("location:view"));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
         var view = view();
@@ -75,7 +76,7 @@ class SecureEntryIntegrationTest {
 
             assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isSameAs(principal);
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities()).isEmpty();
-            assertThat(renderedText(view)).doesNotContain("Sensitive Session Name", "home:view", "auth_date");
+            assertThat(renderedText(view)).doesNotContain("Sensitive Session Name", "location:view", "auth_date");
             verify(ui).navigate(NoAccessView.class);
             verify(ui, never()).navigate(LandingView.class);
         }
@@ -113,9 +114,9 @@ class SecureEntryIntegrationTest {
         }
     }
 
-    private AuthenticatedUserPrincipal principal(String subject, String name, Set<String> permissions) {
+    private AuthenticatedUserPrincipal principal(UniqueId userUniqueId, String name, Set<String> permissions) {
         return new AuthenticatedUserPrincipal(
-                subject, name, permissions, false, AuthenticationFlow.TELEGRAM);
+                userUniqueId, name, permissions, false, AuthenticationFlow.TELEGRAM);
     }
 
     private String renderedText(Component component) {

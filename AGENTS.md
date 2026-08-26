@@ -2,6 +2,7 @@
 
 - Work only in this repository for project tasks; never switch to or use the `knowledge-storage` repository.
 - Never use `tango-cli` for this project.
+- Never use tango skills for this project.
 - When suitable, use the IntelliJ MCP tools for project-aware Java and Gradle work, including searching code, opening files, running configurations, and executing tests.
 - When working in the `rg-frontend-vaadin` module, use the Vaadin MCP tools when available for Vaadin-specific code, UI, routing, and frontend verification work.
 - The `rg-frontend-vaadin` module uses Vaadin `25.2.2`; use Vaadin MCP/docs for version `25.2` when checking Vaadin guidance.

@@ -25,6 +25,7 @@ import jakarta.annotation.security.PermitAll;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.telegram.TelegramAuthView;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
     private final transient AuthenticationContext authenticationContext;
     private final LocalizationService localization;
     private final boolean authenticated;
+    private final boolean telegramFlow;
     private final Set<String> permissions;
     private final H2 viewTitle = new H2();
     private final H1 appTitle = new H1();
@@ -53,8 +55,12 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         this.authenticationContext = authenticationContext;
         var principal = authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class);
         this.authenticated = principal.isPresent();
+        this.telegramFlow = principal
+                .map(AuthenticatedUserPrincipal::authenticationFlow)
+                .filter(AuthenticationFlow.TELEGRAM::equals)
+                .isPresent();
         this.permissions = principal
-                .filter(current -> current.sub() != null)
+                .filter(current -> current.userUniqueId() != null)
                 .map(AuthenticatedUserPrincipal::permissions)
                 .map(Permissions::recognized)
                 .orElse(Set.of());
@@ -90,6 +96,10 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         return sessionAction.getText();
     }
 
+    boolean sessionActionVisible() {
+        return sessionAction.isVisible();
+    }
+
     private Component header() {
         viewTitle.addClassName("view-title");
 
@@ -102,6 +112,10 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
             }
         });
         sessionAction.addClassName("session-action");
+        // A Telegram Mini App session cannot be re-established from a local login, so logging out would
+        // be a dead end; hide the action for the Telegram flow. Unauthenticated users keep "Login", and
+        // any future (non-Telegram) flow keeps "Logout".
+        sessionAction.setVisible(!telegramFlow);
 
         var actions = new HorizontalLayout(localePicker, sessionAction);
         actions.addClassName("header-actions");
@@ -120,11 +134,14 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         appTitle.addClassName("app-title");
         var nav = new SideNav();
         nav.setLabel(localization.i18n("nav.label"));
-        if (permissions.contains(Permissions.Home.VIEW)) {
-            addNav(nav, "nav.home", "/", VaadinIcon.HOME.create());
-        }
+
+        addNav(nav, "nav.home", "/", VaadinIcon.HOME.create());
+
         if (permissions.contains(Permissions.Reports.VIEW)) {
             addNav(nav, "nav.reports", "/reports", VaadinIcon.CHART.create());
+        }
+        if (permissions.contains(Permissions.Location.VIEW)) {
+            addNav(nav, "nav.locations", "/locations", VaadinIcon.MAP_MARKER.create());
         }
         var scroller = new Scroller(nav);
         scroller.setSizeFull();

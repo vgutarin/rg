@@ -14,3 +14,14 @@
 **/application-local.properties
 **/application-local.yml
 **/application-local.yaml
+
+# Generated and workstation-local files.
+.DS_Store
+Thumbs.db
+.vscode/
+*.class
+*.log
+.env
+.env.local
+.env.*.local
+/local-db/

@@ -57,14 +57,14 @@ public class IdentitySecureAuthorizationFacade implements SecureAuthorizationFac
                 return AuthorizationOutcome.incompatible();
             }
             var permissions = validatedPermissions.orElseThrow();
-            if (principal.sub() == null
+            if (principal.userUniqueId() == null
                     && permissions != null
                     && !permissions.isEmpty()) {
                 permissions = Collections.emptySet();
                 log.warn("Identity authorization returned permissions without a subject; permissions ignored");
             }
             return AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                    principal.sub(),
+                    principal.userUniqueId(),
                     principal.name(),
                     permissions,
                     principal.consentGiven(),

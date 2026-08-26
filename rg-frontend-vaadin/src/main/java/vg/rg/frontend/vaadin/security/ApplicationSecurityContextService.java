@@ -27,7 +27,7 @@ public class ApplicationSecurityContextService {
     public void authenticate(AuthenticatedUserPrincipal principal) {
         try {
             Objects.requireNonNull(principal);
-            var authorities = principal.sub() == null
+            var authorities = principal.userUniqueId() == null
                     ? List.<SimpleGrantedAuthority>of()
                     : Permissions.recognized(principal.permissions()).stream()
                             .map(SimpleGrantedAuthority::new)

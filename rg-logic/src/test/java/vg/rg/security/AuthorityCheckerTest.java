@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
+import vg.unique.id.model.UniqueId;
 
 import java.util.List;
 import java.util.Set;
@@ -24,35 +25,47 @@ class AuthorityCheckerTest {
 
     @Test
     void hasAuthority_grantedPermission_returnsTrue() {
-        authenticate(Set.of(Permissions.Home.VIEW, Permissions.Request.SUBMIT));
+        authenticate(Set.of(Permissions.Location.VIEW, Permissions.Request.SUBMIT));
 
-        assertThat(checker.hasAuthority(Permissions.Home.VIEW)).isTrue();
+        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isTrue();
     }
 
     @Test
     void hasAuthority_missingPermission_returnsFalse() {
-        authenticate(Set.of(Permissions.Home.VIEW));
+        authenticate(Set.of(Permissions.Location.VIEW));
 
         assertThat(checker.hasAuthority(Permissions.Reports.VIEW)).isFalse();
     }
 
     @Test
     void hasAuthority_unknownPermission_returnsFalse() {
-        authenticate(Set.of(Permissions.Home.VIEW));
+        authenticate(Set.of(Permissions.Location.VIEW));
 
         assertThat(checker.hasAuthority("unknown:view")).isFalse();
     }
 
     @Test
-    void currentSubject_authenticatedPrincipal_returnsPrincipalSubject() {
-        authenticate(Set.of(Permissions.Home.VIEW));
+    void currentUserUniqueId_authenticatedPrincipal_returnsPrincipalUserUniqueId() {
+        authenticate(Set.of(Permissions.Location.VIEW));
 
-        assertThat(checker.currentSubject()).contains("subject-1234");
+        assertThat(checker.currentUserUniqueId()).contains(new UniqueId(1234L));
+    }
+
+    @Test
+    void currentAuthenticationFlow_authenticatedPrincipal_returnsFlow() {
+        authenticate(Set.of(Permissions.Location.VIEW));
+
+        assertThat(checker.currentAuthenticationFlow()).contains(AuthenticationFlow.TELEGRAM);
+    }
+
+    @Test
+    void currentAuthenticationFlow_missingAuthentication_isEmpty() {
+        assertThat(checker.currentAuthenticationFlow()).isEmpty();
     }
 
     @Test
     void hasAuthority_missingAuthentication_returnsFalse() {
-        assertThat(checker.hasAuthority(Permissions.Home.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
     }
 
     @Test
@@ -61,37 +74,37 @@ class AuthorityCheckerTest {
 
         assertThat(Permissions.ALL).allSatisfy(permission ->
                 assertThat(checker.hasAuthority(permission)).isFalse());
-        assertThat(checker.currentSubject()).isEmpty();
+        assertThat(checker.currentUserUniqueId()).isEmpty();
     }
 
     @Test
     void hasAuthority_falseConsentWithSubject_retainsPermission() {
-        authenticate("opaque-subject", false, Set.of(Permissions.Home.VIEW));
+        authenticate(new UniqueId(777L), false, Set.of(Permissions.Location.VIEW));
 
-        assertThat(checker.hasAuthority(Permissions.Home.VIEW)).isTrue();
-        assertThat(checker.currentSubject()).contains("opaque-subject");
+        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isTrue();
+        assertThat(checker.currentUserUniqueId()).contains(new UniqueId(777L));
     }
 
     @Test
     void hasAuthority_wrongPrincipalTypeOrUnauthenticatedToken_returnsFalse() {
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated("malformed", null, List.of()));
-        assertThat(checker.hasAuthority(Permissions.Home.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
 
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", null, Set.of(Permissions.Home.VIEW), true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1234L), null, Set.of(Permissions.Location.VIEW), true, AuthenticationFlow.TELEGRAM);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.unauthenticated(principal, null));
-        assertThat(checker.hasAuthority(Permissions.Home.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
     }
 
     private void authenticate(Set<String> permissions) {
-        authenticate("subject-1234", true, permissions);
+        authenticate(new UniqueId(1234L), true, permissions);
     }
 
-    private void authenticate(String subject, boolean consent, Set<String> permissions) {
+    private void authenticate(UniqueId userUniqueId, boolean consent, Set<String> permissions) {
         var principal = new AuthenticatedUserPrincipal(
-                subject, "Test User", permissions, consent, AuthenticationFlow.TELEGRAM);
+                userUniqueId, "Test User", permissions, consent, AuthenticationFlow.TELEGRAM);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
     }

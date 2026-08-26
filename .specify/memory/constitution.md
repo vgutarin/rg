@@ -1,28 +1,25 @@
 <!--
 Sync Impact Report
-- Version change: 2.0.0 -> 3.0.0
-- Modified principles:
-  - II. Secure-Service Trust Boundaries
-  - IV. Resilient Middleware Boundaries
+- Version change: 3.0.0 -> 3.1.0
+- Modified principles: none
+- Added sections:
+  - Specification Artifacts and Organization
 - Modified sections:
-  - Architecture and Data Constraints
-  - Development Workflow and Mandatory Test Coverage
-- Added sections: none
+  - Development Workflow and Mandatory Test Coverage (added a mandatory final actualization phase
+    that keeps the current specification set in sync with each implemented change)
 - Removed sections: none
-- Amendment rationale: distinguish unsolicited inbound data, which requires an explicit hard bound,
-  from intentionally requested external data, which requires controlled retrieval and resource use
-  but not a universal hard response-size limit. Keep performance acceptance focused on
-  application-owned work and finite external-service timeouts rather than third-party latency SLOs.
-- Compatibility impact: specifications no longer need fixed total-size limits for requested external
-  responses when pagination, cursors, streaming, batching, projection, cancellation, or equivalent
-  controls provide bounded resource use. End-to-end percentile or absolute latency criteria are not
-  required for flows whose duration depends on an external service outside project control.
-- Migration needs: review active specifications and tests that mandate pre-parse hard limits for
-  requested responses or user-latency targets spanning external calls; retain strict bounds for
-  unsolicited input and finite connection/request/read timeouts for external calls.
+- Amendment rationale: establish a single, discoverable home and naming/ordering convention for
+  active specifications, allow features and domains to live in dedicated cross-referencing files,
+  and require every task plan to conclude by actualizing the current specification set so that
+  `specs/current/` always reflects implemented behavior.
+- Compatibility impact: additive. Existing specifications SHOULD be relocated into `specs/current/`
+  and split by feature or domain as they are next revised; task plans MUST henceforth end with an
+  actualization phase.
+- Migration needs: move active specifications into `specs/current/`, use self-explaining file names
+  (optionally adding an explicit ordering prefix only if a genuine ordering need arises), and add the
+  final actualization phase to any in-flight `tasks.md`.
 - Approval: approved by a project maintainer on 2026-08-26.
-- Follow-up TODOs: review active feature artifacts for requirements superseded by this amendment;
-  credential remediation remains a release-blocking implementation task.
+- Follow-up TODOs: none.
 -->
 # RG Telegram Bot Constitution
 
@@ -161,6 +158,24 @@ behavior reusable, independently testable, and free of presentation concerns.
 - Simplicity is mandatory: new persistence, asynchronous infrastructure, or abstraction layers
   require a demonstrated user or reliability need and a documented tradeoff.
 
+## Specification Artifacts and Organization
+
+Active specifications MUST live under the `specs/current/` directory, which is the single
+authoritative home for the project's current-state specification set. Content that is superseded
+MUST be updated or removed rather than left stale; `specs/current/` MUST describe intended behavior
+as it currently stands.
+
+Specifications MUST be decomposed into focused Markdown files. Each feature MAY be captured in its
+own Markdown file, and each logical area (domain) MUST be represented as a separate Markdown file so
+that ownership and scope stay clear. Files MUST use self-explaining names that identify the feature
+or domain they describe.
+
+Specification files MAY reference one another through relative Markdown links to connect related
+material instead of duplicating it. A defined inter-file order is not required, and specifications
+SHOULD NOT assume one unless a real need exists. If such a need does arise, the order SHOULD be made
+explicit rather than implied; a zero-padded numeric filename prefix (for example, `0001-...`,
+`0002-...`) is one suggested way to express it, and any other clear, explicit scheme is acceptable.
+
 ## Development Workflow and Mandatory Test Coverage
 
 Every change MUST state its user outcome, affected trust boundaries, and testable acceptance
@@ -184,6 +199,12 @@ Deployments MUST support health checks, actionable non-personal telemetry, rollb
 verification proportional to risk. Unresolved violations MUST block release unless Governance
 grants a documented, time-bounded exception with an owner and remediation date.
 
+Every task plan (`tasks.md`) MUST end with a final actualization phase whose purpose is to update
+the current specification set in `specs/current/` so that it reflects the change just implemented. A
+change is not complete until its corresponding specifications have been actualized: affected feature
+and domain files MUST be revised, cross-references and ordering prefixes kept consistent, and any
+superseded content removed. Reviews MUST confirm that this actualization was performed.
+
 ## Governance
 
 This constitution is the highest authority for project engineering decisions. Specifications,
@@ -199,4 +220,4 @@ Impact Report. Compliance MUST be reviewed during feature planning and pull-requ
 must be audited before each production release. Exceptions MUST be explicit, risk-assessed,
 approved by a maintainer, assigned to an owner, and expire on a recorded date.
 
-**Version**: 3.0.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-26
+**Version**: 3.1.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-26

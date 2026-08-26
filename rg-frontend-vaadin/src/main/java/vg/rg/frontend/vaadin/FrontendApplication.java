@@ -12,7 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @StyleSheet(Aura.STYLESHEET)
 @StyleSheet("styles.css")
 @ColorScheme(ColorScheme.Value.LIGHT_DARK)
-@SpringBootApplication(scanBasePackages = {"vg.rg"})
+@SpringBootApplication(scanBasePackages = {"vg.rg", "vg.unique.id"})
 //@EnableJpaAuditing
 public class FrontendApplication implements AppShellConfigurator {
 

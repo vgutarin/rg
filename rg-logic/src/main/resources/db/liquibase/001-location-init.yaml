@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-location-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_location
+                  name: unique_id
+                  type: BIGINT
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: latitude
+                  type: DECIMAL(9, 6)
+              - column:
+                  name: longitude
+                  type: DECIMAL(9, 6)
+              - column:
+                  name: name
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(2048)
+              - column:
+                  name: google_place_id
+                  type: VARCHAR(512)
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+            tableName: rg_location
+        - createIndex:
+            indexName: ix_rg_location_latitude
+            tableName: rg_location
+            columns:
+              - column:
+                  name: latitude
+        - createIndex:
+            indexName: ix_rg_location_name
+            tableName: rg_location
+            columns:
+              - column:
+                  name: name

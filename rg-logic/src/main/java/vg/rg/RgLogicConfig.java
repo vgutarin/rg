@@ -9,10 +9,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import java.time.Clock;
 
 @Configuration
-@EnableJpaAuditing
+@EnableJpaAuditing(auditorAwareRef = "currentUserAuditorAware")
 @EnableJpaRepositories
 @EntityScan
-public class TemplateLogicConfig {
+public class RgLogicConfig {
 
     @Bean
     public Clock clock() {

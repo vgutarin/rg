@@ -11,6 +11,7 @@ import jakarta.annotation.security.RolesAllowed;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 import vg.rg.service.ProtectedActionService;
@@ -42,24 +43,29 @@ class PermissionAwareViewsTest {
     }
 
     @Test
-    void requiredPermission_landingView_returnsHomeViewPermission() {
-        var landing = new LandingView(
-                localization, authorityChecker, authenticationContext, protectedActionService);
-
-        assertThat(landing.requiredPermission()).isEqualTo(Permissions.Home.VIEW);
-    }
-
-    @Test
-    void beforeEnter_missingHomePermission_reroutesToAccessDenied() {
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(false);
+    void beforeEnter_missingPrincipal_reroutesToAccessDenied() {
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.VIEW))));
+                .thenReturn(Optional.empty());
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
         landing.beforeEnter(event);
 
         verify(event).rerouteTo(AccessDeniedErrorView.class);
+    }
+
+    @Test
+    void beforeEnter_presentPrincipal_rendersHome() {
+        when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW))));
+        var landing = new LandingView(
+                localization, authorityChecker, authenticationContext, protectedActionService);
+
+        landing.beforeEnter(event);
+
+        assertThat(descendants(landing)).anyMatch(com.vaadin.flow.component.html.H1.class::isInstance);
+        verify(event, never()).rerouteTo(AccessDeniedErrorView.class);
     }
 
     @Test
@@ -82,49 +88,45 @@ class PermissionAwareViewsTest {
     }
 
     @Test
-    void localeChange_revokedHomePermission_removesProtectedContent() {
+    void localeChange_presentPrincipal_reRendersContent() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(true, false);
-        when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Home.VIEW))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
-        landing.beforeEnter(event);
 
         landing.localeChange(null);
 
-        var descendants = landing.getChildren().flatMap(component -> component.getChildren()).toList();
-        assertThat(descendants)
-                .noneMatch(com.vaadin.flow.component.html.H1.class::isInstance);
+        assertThat(descendants(landing)).anyMatch(com.vaadin.flow.component.html.H1.class::isInstance);
     }
 
     @Test
-    void beforeEnter_nullSubjectWithPermissions_reroutesToNoAccess() {
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(false);
+    void beforeEnter_nullSubjectPrincipal_rendersHomeWithoutReroute() {
+        when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(null, Set.of(Permissions.Home.VIEW))));
+                .thenReturn(Optional.of(principal(null, Set.of())));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
         landing.beforeEnter(event);
 
-        verify(event).rerouteTo(NoAccessView.class);
+        assertThat(descendants(landing)).anyMatch(com.vaadin.flow.component.html.H1.class::isInstance);
+        verify(event, never()).rerouteTo(AccessDeniedErrorView.class);
+        verify(event, never()).rerouteTo(NoAccessView.class);
     }
 
     @Test
     void beforeEnter_recognizedAndUnknownPermissions_rendersOnlyRecognizedCapabilities() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(true);
         when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Home.VIEW, "unknown:view"))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW, "unknown:view"))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
         landing.beforeEnter(event);
 
-        verify(localization).i18n("permission." + Permissions.Home.VIEW);
+        verify(localization).i18n("permission." + Permissions.Location.VIEW);
         verify(localization, never()).i18n("permission.unknown:view");
     }
 
@@ -139,31 +141,13 @@ class PermissionAwareViewsTest {
         assertThat(descendants(reports)).anyMatch(com.vaadin.flow.component.html.H1.class::isInstance);
     }
 
-    @Test
-    void beforeEnter_replacedSessionWithoutHomePermission_removesStaleContentAndDenies() {
-        when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(true, false);
-        when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(false);
-        when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Home.VIEW))))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.VIEW))));
-        var landing = new LandingView(
-                localization, authorityChecker, authenticationContext, protectedActionService);
-        landing.beforeEnter(event);
-
-        landing.beforeEnter(event);
-
-        verify(event).rerouteTo(AccessDeniedErrorView.class);
-        assertThat(descendants(landing)).noneMatch(com.vaadin.flow.component.html.H1.class::isInstance);
-    }
-
     private AuthenticatedUserPrincipal principal(Set<String> permissions) {
-        return principal("subject-1234", permissions);
+        return principal(new UniqueId(1234L), permissions);
     }
 
-    private AuthenticatedUserPrincipal principal(String subject, Set<String> permissions) {
+    private AuthenticatedUserPrincipal principal(UniqueId userUniqueId, Set<String> permissions) {
         return new AuthenticatedUserPrincipal(
-                subject, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
+                userUniqueId, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
     }
 
     private java.util.List<com.vaadin.flow.component.Component> descendants(

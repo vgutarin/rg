@@ -6,6 +6,7 @@ import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 import vg.rg.security.support.SecureAuthorizationFixtures;
+import vg.unique.id.model.UniqueId;
 
 import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +22,7 @@ class DevSecureAuthorizationFacadeTest {
 
         assertThat(outcome.status()).isEqualTo(AuthorizationOutcome.Status.AUTHORIZED);
         assertThat(outcome.principal()).hasValueSatisfying(principal -> {
-            assertThat(principal.sub()).isEqualTo("42");
+            assertThat(principal.userUniqueId()).isEqualTo(new UniqueId(42L));
             assertThat(principal.name()).isNull();
             assertThat(principal.permissions()).containsExactlyInAnyOrderElementsOf(Permissions.ALL);
             assertThat(principal.consentGiven()).isTrue();
@@ -62,7 +63,7 @@ class DevSecureAuthorizationFacadeTest {
                 SecureAuthorizationFixtures.signedInitData(84, SecureAuthorizationFixtures.NOW)));
 
         assertThat(outcome.principal()).hasValueSatisfying(principal -> {
-            assertThat(principal.sub()).isEqualTo("84");
+            assertThat(principal.userUniqueId()).isEqualTo(new UniqueId(84L));
             assertThat(principal.name()).isNull();
         });
     }

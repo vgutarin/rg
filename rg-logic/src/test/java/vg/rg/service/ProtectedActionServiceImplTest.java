@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.security.AuthorityChecker;
+import vg.unique.id.model.UniqueId;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -27,10 +28,10 @@ class ProtectedActionServiceImplTest {
 
     @Test
     void submit_repeatedIdempotencyKey_returnsPriorResultWithoutDuplicateEffect() {
-        when(authorityChecker.currentSubject()).thenReturn(Optional.of("subject-1234"));
+        when(authorityChecker.currentUserUniqueId()).thenReturn(Optional.of(new UniqueId(1234L)));
         var effects = new AtomicInteger();
         var service = new ProtectedActionServiceImpl(
-                authorityChecker, (operationId, subject) -> effects.incrementAndGet());
+                authorityChecker, (operationId, userUniqueId) -> effects.incrementAndGet());
         var key = UUID.randomUUID();
 
         var first = service.submit(key);
@@ -43,10 +44,10 @@ class ProtectedActionServiceImplTest {
 
     @Test
     void submit_sameIdempotencyKeyFromDifferentSubject_returnsDenied() {
-        when(authorityChecker.currentSubject())
-                .thenReturn(Optional.of("subject-1234"))
-                .thenReturn(Optional.of("subject-5678"));
-        var service = new ProtectedActionServiceImpl(authorityChecker, (operationId, subject) -> { });
+        when(authorityChecker.currentUserUniqueId())
+                .thenReturn(Optional.of(new UniqueId(1234L)))
+                .thenReturn(Optional.of(new UniqueId(5678L)));
+        var service = new ProtectedActionServiceImpl(authorityChecker, (operationId, userUniqueId) -> { });
         var key = UUID.randomUUID();
         assertThat(service.submit(key).state()).isEqualTo(ProtectedActionService.State.COMPLETED);
         assertThat(service.submit(key).state()).isEqualTo(ProtectedActionService.State.DENIED);
@@ -54,13 +55,13 @@ class ProtectedActionServiceImplTest {
 
     @Test
     void submit_missingSubject_returnsStableDenialWithoutCreatingOwnershipOrEffect() {
-        when(authorityChecker.currentSubject())
+        when(authorityChecker.currentUserUniqueId())
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.empty())
-                .thenReturn(Optional.of("subject-1234"));
+                .thenReturn(Optional.of(new UniqueId(1234L)));
         var effects = new AtomicInteger();
         var service = new ProtectedActionServiceImpl(
-                authorityChecker, (operationId, subject) -> effects.incrementAndGet());
+                authorityChecker, (operationId, userUniqueId) -> effects.incrementAndGet());
         var key = UUID.randomUUID();
 
         var first = service.submit(key);
