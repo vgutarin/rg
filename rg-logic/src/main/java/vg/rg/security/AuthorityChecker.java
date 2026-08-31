@@ -3,7 +3,9 @@ package vg.rg.security;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
+import vg.unique.id.model.UniqueId;
 
 import java.util.Optional;
 
@@ -15,17 +17,22 @@ public final class AuthorityChecker {
             return false;
         }
         return currentPrincipal()
-                .map(principal -> principal.sub() != null
+                .map(principal -> principal.userUniqueId() != null
                         && principal.permissions().contains(permission))
                 .orElse(false);
     }
 
-    public Optional<String> currentSubject() {
+    public Optional<UniqueId> currentUserUniqueId() {
         return currentPrincipal()
-                .map(AuthenticatedUserPrincipal::sub);
+                .map(AuthenticatedUserPrincipal::userUniqueId);
     }
 
-    private Optional<AuthenticatedUserPrincipal> currentPrincipal() {
+    public Optional<AuthenticationFlow> currentAuthenticationFlow() {
+        return currentPrincipal()
+                .map(AuthenticatedUserPrincipal::authenticationFlow);
+    }
+
+    public Optional<AuthenticatedUserPrincipal> currentPrincipal() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal)) {

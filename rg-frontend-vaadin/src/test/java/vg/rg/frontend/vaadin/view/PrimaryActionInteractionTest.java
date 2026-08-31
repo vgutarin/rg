@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 import vg.rg.service.ProtectedActionService;
@@ -38,12 +39,11 @@ class PrimaryActionInteractionTest {
     @Test
     void permittedPrimaryAction_isLabeledFocusableAndStartsWithinOneActivationUsingOneKey() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Home.VIEW)).thenReturn(true);
         when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(true);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(new AuthenticatedUserPrincipal(
-                        "subject-1234", null,
-                        Set.of(Permissions.Home.VIEW, Permissions.Request.SUBMIT),
+                        new UniqueId(1234L), null,
+                        Set.of(Permissions.Location.VIEW, Permissions.Request.SUBMIT),
                         true, AuthenticationFlow.TELEGRAM)));
         when(protectedActionService.submit(org.mockito.ArgumentMatchers.any(UUID.class)))
                 .thenAnswer(invocation -> {

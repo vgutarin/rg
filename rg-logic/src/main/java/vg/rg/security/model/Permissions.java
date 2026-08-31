@@ -12,12 +12,6 @@ public final class Permissions {
     private static final Pattern FORMAT =
             Pattern.compile("^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$");
 
-    public static final class Home {
-        public static final String VIEW = "home:view";
-
-        private Home() { }
-    }
-
     public static final class Reports {
         public static final String VIEW = "reports:view";
 
@@ -30,10 +24,22 @@ public final class Permissions {
         private Request() { }
     }
 
+    public static final class Location {
+        public static final String VIEW = "location:view";
+        public static final String ADD = "location:add";
+        public static final String EDIT = "location:edit";
+        public static final String DELETE = "location:delete";
+
+        private Location() { }
+    }
+
     public static final Set<String> ALL = validateAndFreeze(List.of(
-            Home.VIEW,
             Reports.VIEW,
-            Request.SUBMIT));
+            Request.SUBMIT,
+            Location.VIEW,
+            Location.ADD,
+            Location.EDIT,
+            Location.DELETE));
 
     public static boolean isRecognized(String permission) {
         return permission != null && ALL.contains(permission);

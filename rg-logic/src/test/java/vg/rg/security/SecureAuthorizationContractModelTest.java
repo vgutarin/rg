@@ -6,6 +6,7 @@ import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.Permissions;
 import vg.rg.security.model.TelegramInitDataRequest;
+import vg.unique.id.model.UniqueId;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -24,7 +25,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void serialization_validAuthenticatedPrincipal_restoresEquivalentPrincipal() throws Exception {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", "Test User", Set.of(Permissions.Home.VIEW), true,
+                new UniqueId(1L),"Test User", Set.of(Permissions.Location.VIEW), true,
                 AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
@@ -42,7 +43,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void serialization_provisionalPrincipal_preservesNullSubjectAndFalseConsent() throws Exception {
         var principal = new AuthenticatedUserPrincipal(
-                null, null, Set.of(Permissions.Home.VIEW), false,
+                null, null, Set.of(Permissions.Location.VIEW), false,
                 AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
@@ -55,7 +56,7 @@ class SecureAuthorizationContractModelTest {
         }
 
         assertThat(restored).isEqualTo(principal);
-        assertThat(restored.sub()).isNull();
+        assertThat(restored.userUniqueId()).isNull();
         assertThat(restored.consentGiven()).isFalse();
     }
 
@@ -88,11 +89,11 @@ class SecureAuthorizationContractModelTest {
     @Test
     void constructor_unknownPermission_preservesPermission() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", "Test User", Set.of("home:view", "unknown:view"), true,
+                new UniqueId(1L),"Test User", Set.of("location:view", "unknown:view"), true,
                 AuthenticationFlow.TELEGRAM);
 
         assertThat(principal.permissions()).containsExactlyInAnyOrder(
-                Permissions.Home.VIEW, "unknown:view");
+                Permissions.Location.VIEW, "unknown:view");
     }
 
     @Test
@@ -100,20 +101,13 @@ class SecureAuthorizationContractModelTest {
         var principal = new AuthenticatedUserPrincipal(
                 null, "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
 
-        assertThat(principal.sub()).isNull();
-    }
-
-    @Test
-    void constructor_emptyNonNullSubject_throwsIllegalArgumentException() {
-        assertThatThrownBy(() -> new AuthenticatedUserPrincipal(
-                "", "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(principal.userUniqueId()).isNull();
     }
 
     @Test
     void constructor_consentNotGiven_preservesFalseConsent() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", "Test User", Set.of(), false, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1L),"Test User", Set.of(), false, AuthenticationFlow.TELEGRAM);
 
         assertThat(principal.consentGiven()).isFalse();
     }
@@ -121,7 +115,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void constructor_malformedPermission_throwsIllegalArgumentException() {
         assertThatThrownBy(() -> new AuthenticatedUserPrincipal(
-                "subject-1", "Test User", Set.of("malformed"), true,
+                new UniqueId(1L),"Test User", Set.of("malformed"), true,
                 AuthenticationFlow.TELEGRAM))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -133,7 +127,7 @@ class SecureAuthorizationContractModelTest {
                 .collect(Collectors.toSet());
 
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", null, permissions, true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1L),null, permissions, true, AuthenticationFlow.TELEGRAM);
 
         assertThat(principal.permissions()).hasSize(1025).containsAll(permissions);
     }
@@ -143,7 +137,7 @@ class SecureAuthorizationContractModelTest {
         var permission = "r".repeat(129) + ":view";
 
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", null, Set.of(permission), true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1L),null, Set.of(permission), true, AuthenticationFlow.TELEGRAM);
 
         assertThat(principal.permissions()).containsExactly(permission);
     }
@@ -151,7 +145,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void constructor_permissionsAreImmutable() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", null, Set.of(Permissions.Home.VIEW), true,
+                new UniqueId(1L),null, Set.of(Permissions.Location.VIEW), true,
                 AuthenticationFlow.TELEGRAM);
 
         assertThatThrownBy(() -> principal.permissions().add(Permissions.Reports.VIEW))
@@ -169,7 +163,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void authorized_validPrincipal_containsPrincipal() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1", "Test User", Set.of("home:view"), true,
+                new UniqueId(1L),"Test User", Set.of("location:view"), true,
                 AuthenticationFlow.TELEGRAM);
 
         assertThat(AuthorizationOutcome.authorized(principal).principal()).contains(principal);

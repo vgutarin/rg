@@ -68,7 +68,7 @@ public class ReportsView extends VerticalLayout implements BeforeEnterObserver, 
 
     private boolean hasNoEffectivePermissions() {
         return authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)
-                .filter(principal -> principal.sub() == null
+                .filter(principal -> principal.userUniqueId() == null
                         || Permissions.recognized(principal.permissions()).isEmpty())
                 .isPresent();
     }

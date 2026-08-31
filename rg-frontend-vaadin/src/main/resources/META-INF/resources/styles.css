@@ -1,1 +1,434 @@
-@import "secure-telegram-aura.css";
+html {
+  color-scheme: light dark;
+  --aura-accent-color-dark: #38bdf8;
+  --aura-accent-color-light: #0084d1;
+  --aura-app-layout-inset: 0px;
+  --aura-background-color-dark: #171717;
+  --aura-background-color-light: #f5f5f5;
+  --aura-base-font-size: 15;
+  --aura-base-radius: 4;
+  --aura-base-size: 20;
+  --aura-contrast-level: 2;
+  --aura-surface-level: -0.5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  max-width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 3px solid var(--aura-accent-color);
+  outline-offset: 2px;
+}
+
+/* Vaadin input fields render their own focus ring, so the global outline above would draw a second
+   accent rectangle around a focused field (e.g. in the edit dialog). Suppress it on native controls. */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+vaadin-button,
+vaadin-drawer-toggle,
+vaadin-select {
+  min-height: 44px;
+}
+
+vaadin-side-nav-item:not([current]) > vaadin-icon {
+  color: var(--aura-accent-text-color);
+}
+
+vaadin-side-nav-item[current]::part(content) {
+  --vaadin-side-nav-item-background: var(--vaadin-background-container);
+  --vaadin-side-nav-item-border-color: transparent;
+}
+
+vaadin-side-nav::part(label) {
+  color: var(--vaadin-text-color-secondary);
+  font-size: var(--aura-font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+:is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button):not([theme~="primary"], [theme~="tertiary"]) {
+  --aura-accent-color-dark: var(--aura-neutral);
+  --aura-accent-color-light: var(--aura-neutral);
+  --vaadin-button-background: var(--vaadin-background-container);
+  --vaadin-button-border-color: transparent;
+  --vaadin-button-shadow: none;
+}
+
+.secure-shell::part(navbar),
+.secure-shell::part(drawer) {
+  --aura-surface-level: 1;
+  background: var(--aura-surface-color-solid);
+}
+
+.main-header {
+  display: grid;
+  gap: var(--vaadin-gap-s);
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 64px;
+  padding: var(--vaadin-padding-s);
+  width: 100%;
+}
+
+.view-title {
+  align-self: center;
+  font-size: var(--aura-font-size-l);
+  line-height: var(--aura-line-height-l);
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.header-actions {
+  display: grid;
+  gap: var(--vaadin-gap-s);
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+}
+
+.locale-picker {
+  min-width: 0;
+  width: 100%;
+}
+
+.session-action {
+  align-self: end;
+  white-space: normal;
+}
+
+.drawer-content {
+  min-width: 0;
+  padding: var(--vaadin-padding-m);
+}
+
+.app-title {
+  color: var(--aura-accent-text-color);
+  font-size: var(--aura-font-size-xl);
+  line-height: var(--aura-line-height-xl);
+  margin: 0 0 var(--vaadin-gap-l);
+  overflow-wrap: anywhere;
+}
+
+.secure-view {
+  align-items: stretch;
+  margin-inline: auto;
+  max-width: 72rem;
+  min-width: 0;
+  padding: var(--vaadin-padding-m);
+  width: 100%;
+}
+
+.content-grid {
+  display: grid;
+  gap: var(--vaadin-gap-m);
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+}
+
+.semantic-card {
+  --aura-surface-level: 4;
+  background: var(--aura-surface-color-solid);
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-l);
+  box-shadow: var(--aura-shadow-s);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: clamp(var(--vaadin-padding-m), 5vw, var(--vaadin-padding-xl));
+}
+
+.semantic-card h1,
+.semantic-card h2 {
+  margin-block: 0 var(--vaadin-gap-s);
+}
+
+/* Full-width list container so its rows span the whole width even inside a non-stretching layout. */
+.location-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Each list entry: a clickable header row plus a collapsible detail panel. Zebra striping and the
+   separator live on the entry so alternating shades and the divider survive the header/panel split. */
+.location-item {
+  border-block-end: 1px solid var(--vaadin-border-color-secondary);
+}
+
+.location-item:nth-of-type(odd) {
+  background: var(--vaadin-background-container);
+}
+
+.location-item:nth-of-type(even) {
+  background: var(--vaadin-background-color);
+}
+
+/* Header row: name (+ meta) on the left, disclosure chevron on the right. */
+.location-row {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  transition: background-color 0.15s ease;
+}
+
+.location-row:hover,
+.location-row:focus-visible {
+  background: var(--aura-accent-surface);
+}
+
+.location-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.location-row__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.location-row__meta {
+  color: var(--vaadin-text-color-secondary);
+  font-size: 0.85em;
+}
+
+.location-row__icon {
+  color: var(--aura-accent-color);
+  flex: none;
+  height: 20px;
+  margin-inline-start: auto;
+  transition: transform 0.2s ease;
+  width: 20px;
+}
+
+/* Chevron rotates from pointing right to pointing down when the entry is expanded. */
+.location-item--open .location-row__icon {
+  transform: rotate(90deg);
+}
+
+/* Collapsible detail panel: a plain show/hide toggle. (The grid 0fr/1fr height-animation trick is not
+   honored by several in-app webviews — notably Telegram's — which leaves every panel expanded, so we
+   collapse with display instead.) */
+.location-row__panel {
+  display: none;
+}
+
+.location-item--open .location-row__panel {
+  display: block;
+}
+
+.location-row__panel-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-m);
+  padding: 0.25rem 0.9rem 0.9rem;
+}
+
+/* Edit / delete sit side by side, each taking half the width. */
+.location-row__actions {
+  display: flex;
+  gap: var(--vaadin-gap-s);
+}
+
+.location-row__actions > vaadin-button {
+  flex: 1;
+}
+
+/* Inline add-form actions: stacked full-width on mobile, side-by-side on wider screens. */
+.location-form__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  width: 100%;
+}
+
+@media (min-width: 30rem) {
+  .location-form__actions {
+    flex-direction: row;
+  }
+
+  .location-form__actions > vaadin-button {
+    flex: 1;
+  }
+}
+
+
+/* Location detail (inline panel): icon-led info rows and a prominent, full-width maps action. */
+.location-detail__description {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.location-detail__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+}
+
+/* First line: icon + label together; second line: the value beneath, aligned past the icon. */
+.location-detail__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.location-detail__heading {
+  align-items: center;
+  display: flex;
+  gap: var(--vaadin-gap-s);
+}
+
+.location-detail__icon {
+  color: var(--aura-accent-color);
+  flex: none;
+  height: 20px;
+  width: 20px;
+}
+
+.location-detail__label {
+  color: var(--vaadin-text-color-secondary);
+  font-size: 0.8em;
+}
+
+.location-detail__value {
+  overflow-wrap: anywhere;
+  padding-inline-start: calc(20px + var(--vaadin-gap-s));
+}
+
+.location-detail__value--mono {
+  font-family: monospace;
+}
+
+.location-detail__maps {
+  width: 100%;
+}
+
+.hero-card {
+  background: var(--aura-accent-surface);
+}
+
+.access-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+}
+
+.access-card > p {
+  margin-block: 0;
+}
+
+.primary-action {
+  margin-top: var(--vaadin-gap-m);
+  min-height: 44px;
+  width: 100%;
+}
+
+.telegram-auth-view {
+  min-height: 100%;
+  padding: var(--vaadin-padding-m);
+  text-align: center;
+}
+
+.authorization-status {
+  display: block;
+  margin-inline: auto;
+  max-width: 34rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.authorization-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  text-align: center;
+  transition: box-shadow 160ms ease;
+}
+
+.authorization-status-mark {
+  align-self: center;
+  color: var(--aura-accent-text-color);
+  --vaadin-icon-size: calc(var(--aura-line-height-xl) * 1.5);
+  --vaadin-icon-visual-size: calc(var(--aura-line-height-xl) * 1.25);
+}
+
+.authorization-status-heading,
+.authorization-status-description {
+  margin-block: 0;
+  overflow-wrap: anywhere;
+}
+
+.authorization-status-heading:focus-visible {
+  border-radius: var(--vaadin-radius-s);
+}
+
+.authorization-status-progress,
+.authorization-status-action {
+  margin-top: var(--vaadin-gap-m);
+  max-width: 100%;
+  width: 100%;
+}
+
+.authorization-status-action {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (min-width: 48rem) {
+  .main-header {
+    align-items: center;
+    display: flex;
+    gap: var(--vaadin-gap-m);
+    padding-inline: var(--vaadin-padding-m);
+  }
+
+  .header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .locale-picker {
+    width: 11rem;
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.65fr);
+  }
+
+  .primary-action {
+    align-self: flex-start;
+    width: auto;
+  }
+
+  .authorization-status-action {
+    align-self: center;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authorization-status-card {
+    transition: none;
+  }
+}

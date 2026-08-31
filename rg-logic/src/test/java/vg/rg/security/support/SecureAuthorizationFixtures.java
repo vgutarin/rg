@@ -3,6 +3,7 @@ package vg.rg.security.support;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.TelegramInitDataRequest;
+import vg.unique.id.model.UniqueId;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -37,7 +38,7 @@ public final class SecureAuthorizationFixtures {
 
     public static AuthenticatedUserPrincipal establishedPrincipal(Set<String> permissions) {
         return new AuthenticatedUserPrincipal(
-                "subject-1",
+                new UniqueId(1L),
                 "Test User",
                 permissions,
                 true,

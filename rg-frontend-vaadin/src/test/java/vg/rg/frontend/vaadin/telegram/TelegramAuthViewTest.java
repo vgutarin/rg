@@ -16,6 +16,7 @@ import vg.rg.frontend.vaadin.view.LandingView;
 import vg.rg.frontend.vaadin.view.NoAccessView;
 import vg.rg.security.AuthorizationApplicationService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.AuthenticationFlow;
 
@@ -97,7 +98,7 @@ class TelegramAuthViewTest {
     @Test
     void authenticate_authorizedOutcome_installsPrincipal() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User", Set.of("home:view"), true,
+                new UniqueId(1234L), "Test User", Set.of("location:view"), true,
                 AuthenticationFlow.TELEGRAM);
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var view = view();
@@ -120,7 +121,7 @@ class TelegramAuthViewTest {
 
     @Test
     void authenticate_establishedPrincipal_navigatesToLanding() {
-        var principal = principal("subject-1234");
+        var principal = principal(new UniqueId(1234L));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
         var view = view();
@@ -192,9 +193,9 @@ class TelegramAuthViewTest {
         assertThat(renderedText(view)).doesNotContain("auth_date", "hash=x");
     }
 
-    private AuthenticatedUserPrincipal principal(String subject) {
+    private AuthenticatedUserPrincipal principal(UniqueId userUniqueId) {
         return new AuthenticatedUserPrincipal(
-                subject, "Test User", Set.of("home:view"), true, AuthenticationFlow.TELEGRAM);
+                userUniqueId, "Test User", Set.of("location:view"), true, AuthenticationFlow.TELEGRAM);
     }
 
     private String renderedText(Component component) {

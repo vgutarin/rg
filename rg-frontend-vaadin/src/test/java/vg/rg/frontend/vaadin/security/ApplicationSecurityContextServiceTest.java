@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 
@@ -49,36 +50,36 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_validPrincipal_installsAuthenticatedPrincipal() {
-        var principal = principal(Set.of("home:view"));
+        var principal = principal(Set.of("location:view"));
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication.getPrincipal()).isSameAs(principal);
-        assertThat(principal.sub()).isEqualTo("subject-1234");
+        assertThat(principal.userUniqueId()).isEqualTo(new UniqueId(1234L));
     }
 
     @Test
     void authenticate_validPrincipal_preservesIdentityFields() {
-        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("home:view")));
+        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("location:view")));
 
         var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        assertThat(principal).extracting("sub", "name", "consentGiven", "authenticationFlow")
-                .containsExactly("subject-1234", "Test User", true, AuthenticationFlow.TELEGRAM);
+        assertThat(principal).extracting("userUniqueId", "name", "consentGiven", "authenticationFlow")
+                .containsExactly(new UniqueId(1234L), "Test User", true, AuthenticationFlow.TELEGRAM);
     }
 
     @Test
     void authenticate_unknownAuthority_installsOnlyRecognizedAuthority() {
         new ApplicationSecurityContextService(events).authenticate(
-                principal(Set.of("home:view", "unknown:view")));
+                principal(Set.of("location:view", "unknown:view")));
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(authentication.getAuthorities()).extracting(Object::toString).containsExactly("home:view");
+        assertThat(authentication.getAuthorities()).extracting(Object::toString).containsExactly("location:view");
     }
 
     @Test
     void authenticate_validPrincipal_publishesAuthenticationSuccess() {
-        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("home:view")));
+        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("location:view")));
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         var captor = ArgumentCaptor.forClass(Authentication.class);
@@ -110,7 +111,7 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_principal_serializationPreservesEveryIdentityField() throws Exception {
         var original = new AuthenticatedUserPrincipal(
-                null, "Session Name", Set.of("home:view"), false, AuthenticationFlow.TELEGRAM);
+                null, "Session Name", Set.of("location:view"), false, AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
             output.writeObject(original);
@@ -127,7 +128,7 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_nullSubject_installsPrincipalWithZeroAuthorities() {
         var principal = new AuthenticatedUserPrincipal(
-                null, "Session Name", Set.of("home:view"), false, AuthenticationFlow.TELEGRAM);
+                null, "Session Name", Set.of("location:view"), false, AuthenticationFlow.TELEGRAM);
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
@@ -139,14 +140,14 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_falseConsentWithSubject_retainsRecognizedAuthorities() {
         var principal = new AuthenticatedUserPrincipal(
-                "subject-1234", "Session Name", Set.of("home:view", "unknown:view"), false,
+                new UniqueId(1234L), "Session Name", Set.of("location:view", "unknown:view"), false,
                 AuthenticationFlow.TELEGRAM);
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                 .extracting(Object::toString)
-                .containsExactly("home:view");
+                .containsExactly("location:view");
     }
 
     @Test
@@ -162,7 +163,7 @@ class ApplicationSecurityContextServiceTest {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
 
             assertThatThrownBy(() -> new ApplicationSecurityContextService(events)
-                    .authenticate(principal(Set.of("home:view"))))
+                    .authenticate(principal(Set.of("location:view"))))
                     .isInstanceOf(IllegalStateException.class);
 
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
@@ -174,7 +175,7 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void clear_removesThreadAndSessionIdentity() {
         SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal(Set.of("home:view")), null, Set.of()));
+                UsernamePasswordAuthenticationToken.authenticated(principal(Set.of("location:view")), null, Set.of()));
         when(vaadinSession.getSession()).thenReturn(wrappedSession);
         try (var currentSession = mockStatic(VaadinSession.class)) {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
@@ -189,7 +190,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_successfulReplacement_keepsOldPermissionsUntilNewContextIsPersisted() {
-        var oldPrincipal = principal(Set.of(Permissions.Home.VIEW));
+        var oldPrincipal = principal(Set.of(Permissions.Location.VIEW));
         var oldAuthentication = UsernamePasswordAuthenticationToken.authenticated(
                 oldPrincipal, null, Set.of());
         SecurityContextHolder.getContext().setAuthentication(oldAuthentication);
@@ -217,7 +218,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void persistedAuthentication_reloadAndLocaleIndependentStateRetainsSamePrincipal() {
-        var principal = principal(Set.of(Permissions.Home.VIEW));
+        var principal = principal(Set.of(Permissions.Location.VIEW));
         when(vaadinSession.getSession()).thenReturn(wrappedSession);
         var persisted = ArgumentCaptor.forClass(SecurityContext.class);
         try (var currentSession = mockStatic(VaadinSession.class)) {
@@ -233,12 +234,12 @@ class ApplicationSecurityContextServiceTest {
                     .isSameAs(principal);
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                     .extracting(Object::toString)
-                    .containsExactly(Permissions.Home.VIEW);
+                    .containsExactly(Permissions.Location.VIEW);
         }
     }
 
     private AuthenticatedUserPrincipal principal(Set<String> permissions) {
         return new AuthenticatedUserPrincipal(
-                "subject-1234", "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1234L), "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
     }
 }

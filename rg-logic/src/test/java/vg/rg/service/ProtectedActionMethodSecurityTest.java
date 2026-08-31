@@ -13,6 +13,7 @@ import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
+import vg.unique.id.model.UniqueId;
 
 import java.util.List;
 import java.util.Set;
@@ -44,7 +45,7 @@ class ProtectedActionMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(ProtectedActionService.class);
 
-            authenticate(Set.of(Permissions.Home.VIEW));
+            authenticate(Set.of(Permissions.Location.VIEW));
             assertThatThrownBy(() -> service.submit(UUID.randomUUID()))
                     .isInstanceOf(AccessDeniedException.class);
         }
@@ -78,12 +79,12 @@ class ProtectedActionMethodSecurityTest {
     }
 
     private void authenticate(Set<String> permissions) {
-        authenticate("subject-1234", permissions);
+        authenticate(new UniqueId(1234L), permissions);
     }
 
-    private void authenticate(String subject, Set<String> permissions) {
+    private void authenticate(UniqueId userUniqueId, Set<String> permissions) {
         var principal = new AuthenticatedUserPrincipal(
-                subject, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
+                userUniqueId, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
     }
@@ -106,7 +107,7 @@ class ProtectedActionMethodSecurityTest {
         ProtectedActionService protectedActionService(
                 AuthorityChecker authorityChecker, AtomicInteger effectCount) {
             return new ProtectedActionServiceImpl(
-                    authorityChecker, (operationId, subject) -> effectCount.incrementAndGet());
+                    authorityChecker, (operationId, userUniqueId) -> effectCount.incrementAndGet());
         }
     }
 }

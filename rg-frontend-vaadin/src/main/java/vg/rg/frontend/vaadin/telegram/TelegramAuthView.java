@@ -23,11 +23,13 @@ import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.TelegramInitDataRequest;
 
 
-@JavaScript("https://telegram.org/js/telegram-web-app.js?63")
+@JavaScript(TelegramAuthView.TELEGRAM_JS)
 @PageTitle("page.login.title")
 @Route("login")
 @AnonymousAllowed
 public class TelegramAuthView extends VerticalLayout implements LocaleChangeObserver {
+
+    public static final String TELEGRAM_JS = "https://telegram.org/js/telegram-web-app.js?63";
 
     private final AuthorizationApplicationService authorizationService;
     private final ApplicationSecurityContextService securityContextService;
@@ -84,7 +86,7 @@ public class TelegramAuthView extends VerticalLayout implements LocaleChangeObse
         if (outcome.status() == AuthorizationOutcome.Status.AUTHORIZED) {
             var principal = outcome.principal().orElseThrow();
             securityContextService.authenticate(principal);
-            navigateAuthorized(principal.sub() == null);
+            navigateAuthorized(principal.userUniqueId() == null);
         } else if (outcome.status() == AuthorizationOutcome.Status.UNAVAILABLE) {
             securityContextService.clear();
             show(AuthorizationUiState.TEMPORARILY_UNAVAILABLE);

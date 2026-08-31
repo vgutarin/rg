@@ -5,6 +5,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.Permissions;
+import vg.unique.id.model.UniqueId;
 
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
@@ -15,16 +16,16 @@ public class ProtectedActionServiceImpl implements ProtectedActionService {
 
     @FunctionalInterface
     public interface ProtectedEffect {
-        void execute(UUID operationId, String subject);
+        void execute(UUID operationId, UniqueId userUniqueId);
     }
 
     private static final class Entry {
-        private final String subject;
+        private final UniqueId userUniqueId;
         private final UUID operationId = UUID.randomUUID();
         private Result result;
 
-        private Entry(String subject) {
-            this.subject = subject;
+        private Entry(UniqueId userUniqueId) {
+            this.userUniqueId = userUniqueId;
         }
     }
 
@@ -50,20 +51,20 @@ public class ProtectedActionServiceImpl implements ProtectedActionService {
         if (idempotencyKey == null) {
             throw new IllegalArgumentException("Idempotency key is required");
         }
-        var subject = authorityChecker.currentSubject();
-        if (subject.isEmpty()) {
+        var userUniqueId = authorityChecker.currentUserUniqueId();
+        if (userUniqueId.isEmpty()) {
             return deniedWithoutState(idempotencyKey);
         }
         var entry = operations.computeIfAbsent(
-                idempotencyKey, ignored -> new Entry(subject.orElseThrow()));
+                idempotencyKey, ignored -> new Entry(userUniqueId.orElseThrow()));
         synchronized (entry) {
-            if (!entry.subject.equals(subject.orElseThrow())) {
+            if (!entry.userUniqueId.equals(userUniqueId.orElseThrow())) {
                 return result(entry, idempotencyKey, State.DENIED, "request.denied");
             }
             if (entry.result != null) {
                 return entry.result;
             }
-            effect.execute(entry.operationId, entry.subject);
+            effect.execute(entry.operationId, entry.userUniqueId);
             entry.result = result(entry, idempotencyKey, State.COMPLETED, "request.submitted");
             return entry.result;
         }

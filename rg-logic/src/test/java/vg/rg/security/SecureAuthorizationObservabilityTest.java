@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.mock.env.MockEnvironment;
 import vg.identity.model.IdentityApplicationUserPrincipal;
 import vg.identity.service.IdentityApplicationApi;
+import vg.unique.id.model.UniqueId;
 import vg.rg.security.identity.IdentityAuthorizationLimitsProperties;
 import vg.rg.security.identity.IdentityAuthorizationResponseValidator;
 import vg.rg.security.identity.IdentitySecureAuthorizationFacade;
@@ -57,18 +58,18 @@ class SecureAuthorizationObservabilityTest {
     @Test
     void redeem_allOperationalOutcomesAndExplicitRetry_logOnlyRequestIdsAndCodes() {
         var sensitivePayload = "synthetic-sensitive-telegram-payload";
-        var sensitiveSubject = "synthetic-sensitive-subject";
+        var sensitiveSubjectId = new UniqueId(918273645L);
         var sensitiveName = "Synthetic Sensitive Name";
         var sensitivePermission = "synthetic:permission";
         var outcomes = new java.util.ArrayDeque<>(List.of(
                 AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                        sensitiveSubject, sensitiveName, Set.of(sensitivePermission), true,
+                        sensitiveSubjectId, sensitiveName, Set.of(sensitivePermission), true,
                         AuthenticationFlow.TELEGRAM)),
                 AuthorizationOutcome.denied(),
                 AuthorizationOutcome.unavailable(Duration.ofSeconds(1)),
                 AuthorizationOutcome.incompatible(),
                 AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                        sensitiveSubject, sensitiveName, Set.of(Permissions.Home.VIEW), true,
+                        sensitiveSubjectId, sensitiveName, Set.of(Permissions.Location.VIEW), true,
                         AuthenticationFlow.TELEGRAM))));
         SecureAuthorizationFacade facade = request -> outcomes.removeFirst();
         var service = new AuthorizationApplicationService(
@@ -89,7 +90,7 @@ class SecureAuthorizationObservabilityTest {
                 .anyMatch(message -> message.endsWith("outcome UNAVAILABLE"))
                 .anyMatch(message -> message.endsWith("outcome INCOMPATIBLE"));
         assertThat(messages).allSatisfy(message -> assertThat(message).doesNotContain(
-                sensitivePayload, sensitiveSubject, sensitiveName, sensitivePermission));
+                sensitivePayload, sensitiveSubjectId.toString(), sensitiveName, sensitivePermission));
     }
 
     @Test

@@ -51,8 +51,8 @@ public class LandingView extends VerticalLayout implements BeforeEnterObserver, 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         protectedContent.removeAll();
-        if (!authorityChecker.hasAuthority(Permissions.Home.VIEW)) {
-            event.rerouteTo(hasNoEffectivePermissions() ? NoAccessView.class : AccessDeniedErrorView.class);
+        if (!hasPrincipal()) {
+            event.rerouteTo(AccessDeniedErrorView.class);
             return;
         }
         render();
@@ -60,14 +60,8 @@ public class LandingView extends VerticalLayout implements BeforeEnterObserver, 
 
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        if (authorityChecker.hasAuthority(Permissions.Home.VIEW)) {
-            render();
-        } else {
-            protectedContent.removeAll();
-        }
+        render();
     }
-
-    String requiredPermission() { return Permissions.Home.VIEW; }
 
     private void render() {
         protectedContent.removeAll();
@@ -78,7 +72,7 @@ public class LandingView extends VerticalLayout implements BeforeEnterObserver, 
         access.add(new H2(localization.i18n("home.access.title")));
         var principal = authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)
                 .orElseThrow(() -> new IllegalStateException("No authenticated opaque principal"));
-        var effectivePermissions = principal.sub() == null
+        var effectivePermissions = principal.userUniqueId() == null
                 ? java.util.Set.<String>of()
                 : Permissions.recognized(principal.permissions());
         effectivePermissions.forEach(permission ->
@@ -101,10 +95,8 @@ public class LandingView extends VerticalLayout implements BeforeEnterObserver, 
         protectedContent.add(hero, access);
     }
 
-    private boolean hasNoEffectivePermissions() {
+    private boolean hasPrincipal() {
         return authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)
-                .filter(principal -> principal.sub() == null
-                        || Permissions.recognized(principal.permissions()).isEmpty())//TODO VG consider to do not recognize every time. Do it one time on principal creation
                 .isPresent();
     }
 
