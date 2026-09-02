@@ -68,7 +68,7 @@ radius ordered by ascending `distanceMeters` (FR-003).
 
 ## Permissions (`rg-logic`, `vg.rg.security.model.Permissions`)
 
-New nested class `Location`: `VIEW="location:view"`, `ADD="location:add"`, `EDIT="location:edit"`,
+New nested class `Location`: `READ="location:read"`, `CREATE="location:create"`, `UPDATE="location:update"`,
 `DELETE="location:delete"`; added to `Permissions.ALL`. See [contracts/permissions.md](contracts/permissions.md).
 
 ## Configuration (`rg-logic`)

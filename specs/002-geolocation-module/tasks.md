@@ -37,9 +37,9 @@ Multi-module Gradle web app: `rg-logic/` (domain) and `rg-frontend-vaadin/` (Vaa
 
 **Purpose**: Permissions, configuration, and localization scaffolding used by all stories
 
-- [X] T001 [P] Add `Location` permissions (`location:view`, `location:add`, `location:edit`, `location:delete`) as a nested class in `rg-logic/src/main/java/vg/rg/security/model/Permissions.java` and include them in `Permissions.ALL` (colon format, per contracts/permissions.md)
+- [X] T001 [P] Add `Location` permissions (`location:read`, `location:create`, `location:update`, `location:delete`) as a nested class in `rg-logic/src/main/java/vg/rg/security/model/Permissions.java` and include them in `Permissions.ALL` (colon format, per contracts/permissions.md)
 - [X] T002 [P] Create `GeoProperties` (`@ConfigurationProperties("rg.geo")`, `matchRadiusMeters` default 500, `maxNameSearchResults`) in `rg-logic/src/main/java/vg/rg/config/GeoProperties.java`
-- [X] T003 [P] Add i18n keys for locations and permissions (`location.*`, `permission.location\:view|add|edit|delete`, validation/empty/no-results/conflict messages) to `rg-frontend-vaadin/src/main/resources/messages.properties` and `rg-frontend-vaadin/src/main/resources/messages_en.properties`
+- [X] T003 [P] Add i18n keys for locations and permissions (`location.*`, `permission.location\:read|create|update|delete`, validation/empty/no-results/conflict messages) to `rg-frontend-vaadin/src/main/resources/messages.properties` and `rg-frontend-vaadin/src/main/resources/messages_en.properties`
 - [X] T004 [P] Add config placeholders (`google.maps.browser-api-key=${GOOGLE_MAPS_BROWSER_API_KEY:}`, `rg.geo.match-radius-meters`) to `rg-frontend-vaadin/src/main/resources/application.properties` (value from env; never commit the key)
 
 ---
@@ -73,14 +73,14 @@ Multi-module Gradle web app: `rg-logic/` (domain) and `rg-frontend-vaadin/` (Vaa
 ### Tests for User Story 1
 
 - [X] T014 [P] [US1] Unit test `GeoDistance` (great-circle distance + bounding box) in `rg-logic/src/test/java/vg/rg/geo/GeoDistanceTest.java`
-- [X] T015 [P] [US1] Unit test `LocationServiceImpl.findNearby` (Mockito `MockitoExtension`): radius filter, nearest-first ordering, empty result, invalid-coordinate rejection, `location:view` denial — in `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
+- [X] T015 [P] [US1] Unit test `LocationServiceImpl.findNearby` (Mockito `MockitoExtension`): radius filter, nearest-first ordering, empty result, invalid-coordinate rejection, `location:read` denial — in `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
 - [X] T016 [US1] Func test (`BaseFuncTest`, MySQL) proximity boundaries: ~100 m matches, ~2 km excluded, ~510 m excluded — in `rg-logic/src/test/java/vg/rg/service/LocationServiceFuncTest.java`
 
 ### Implementation for User Story 1
 
 - [X] T017 [P] [US1] Create `GeoDistance` util (`metersBetween(...)`, `boundingBox(lat, lng, radiusMeters)`) in `rg-logic/src/main/java/vg/rg/geo/GeoDistance.java`
 - [X] T018 [US1] Implement `LocationServiceImpl.findNearby` (bounding-box repo query via T007 → great-circle distance refine to ≤ radius → sort nearest-first; radius from `GeoProperties`; advisory only, `create` never consults it) in `rg-logic/src/main/java/vg/rg/service/LocationServiceImpl.java`
-- [X] T019 [US1] Implement advisory suggestion UI in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationsView.java` — accept input coordinates, list nearby suggestions nearest-first, and always offer "add new anyway" (non-blocking, FR-003a); `@Route("locations", layout = MainView.class)`, `location:view` gating mirroring `ReportsView`
+- [X] T019 [US1] Implement advisory suggestion UI in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationsView.java` — accept input coordinates, list nearby suggestions nearest-first, and always offer "add new anyway" (non-blocking, FR-003a); `@Route("locations", layout = MainView.class)`, `location:read` gating mirroring `ReportsView`
 
 **Checkpoint**: Proximity suggestions work end-to-end against seeded data
 
@@ -120,13 +120,13 @@ Multi-module Gradle web app: `rg-logic/` (domain) and `rg-frontend-vaadin/` (Vaa
 
 ### Tests for User Story 3
 
-- [X] T024 [P] [US3] Unit test `LocationServiceImpl.create` (name required, coordinate ranges, optional Place ID, `location:add` denial) — extend `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
+- [X] T024 [P] [US3] Unit test `LocationServiceImpl.create` (name required, coordinate ranges, optional Place ID, `location:create` denial) — extend `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
 - [X] T025 [P] [US3] Func test create persists via `saveWithNewUniqueId` and populates `author`/`createdAt`/`version` — in `rg-logic/src/test/java/vg/rg/service/LocationServiceFuncTest.java`
 
 ### Implementation for User Story 3
 
 - [X] T026 [US3] Implement `LocationServiceImpl.create` (validate → `repository.saveWithNewUniqueId(entity, uniqueIdService)` → map back) in `rg-logic/src/main/java/vg/rg/service/LocationServiceImpl.java`
-- [X] T027 [US3] Create `LocationFormDialog` (add mode) in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationFormDialog.java` — pre-filled with the acquired coordinates (Place ID optional), name/description fields, localized validation feedback, anti-PII guidance on free-text (FR-018), `location:add` gating
+- [X] T027 [US3] Create `LocationFormDialog` (add mode) in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationFormDialog.java` — pre-filled with the acquired coordinates (Place ID optional), name/description fields, localized validation feedback, anti-PII guidance on free-text (FR-018), `location:create` gating
 - [X] T028 [US3] Implement the "Add location" entry + decision step in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationsView.java` — trigger acquire→suggest, then let the user pick a suggested existing location (no create) or choose "add new anyway" to open the form (adding within radius allowed, FR-004b/FR-003a)
 
 **Checkpoint**: Full add flow works end-to-end; MVP (US1+US2+US3) demoable
@@ -166,7 +166,7 @@ Multi-module Gradle web app: `rg-logic/` (domain) and `rg-frontend-vaadin/` (Vaa
 
 - [X] T033 [US5] Implement `LocationServiceImpl.browse(Pageable)` (paged listing) in `rg-logic/src/main/java/vg/rg/service/LocationServiceImpl.java`
 - [X] T034 [US5] Implement list + detail in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationsView.java` — mobile-first cards, detail with "open in Google Maps" link derived from Place ID + coordinates (no stored URL), unresolved-Place-ID graceful state
-- [X] T035 [US5] Add a `Locations` navigation entry gated on `location:view` in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/MainView.java` (mirror the existing `Reports` nav gating)
+- [X] T035 [US5] Add a `Locations` navigation entry gated on `location:read` in `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/MainView.java` (mirror the existing `Reports` nav gating)
 
 **Checkpoint**: Collection is browsable and viewable on narrow screens
 
@@ -180,13 +180,13 @@ Multi-module Gradle web app: `rg-logic/` (domain) and `rg-frontend-vaadin/` (Vaa
 
 ### Tests for User Story 6
 
-- [X] T036 [P] [US6] Unit test `update` (stale `version` → `ObjectOptimisticLockingFailureException`; validation; `location:edit`) and `delete` (`location:delete`) — extend `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
+- [X] T036 [P] [US6] Unit test `update` (stale `version` → `ObjectOptimisticLockingFailureException`; validation; `location:update`) and `delete` (`location:delete`) — extend `rg-logic/src/test/java/vg/rg/service/LocationServiceImplTest.java`
 - [X] T037 [US6] Func test concurrency: two updates from the same loaded `version` → second fails with optimistic lock — in `rg-logic/src/test/java/vg/rg/service/LocationServiceFuncTest.java`
 
 ### Implementation for User Story 6
 
 - [X] T038 [US6] Implement `LocationServiceImpl.update` (version-checked save, sets `lastEditor`) and `delete` in `rg-logic/src/main/java/vg/rg/service/LocationServiceImpl.java`
-- [X] T039 [US6] Add edit + delete (with confirmation) to `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationFormDialog.java` / `LocationsView.java`, surfacing the localized `exception.ObjectOptimisticLockingFailureException` reload/retry message and `location:edit`/`location:delete` gating
+- [X] T039 [US6] Add edit + delete (with confirmation) to `rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/LocationFormDialog.java` / `LocationsView.java`, surfacing the localized `exception.ObjectOptimisticLockingFailureException` reload/retry message and `location:update`/`location:delete` gating
 
 **Checkpoint**: Full CRUD with safe concurrency and permissions
 

@@ -23,12 +23,11 @@ is permitted.
 
 ## Permission mapping
 
-| Permission | Visible UI | Direct access behavior |
-|------------|------------|------------------------|
-| `home:view` | Home item and landing content | Require non-null `sub` and the current session permission through `AuthorityChecker`; deny/reroute on failure |
-| `reports:view` | Reports item | Require non-null `sub` and the current session permission through `AuthorityChecker`; deny/reroute on failure |
+| Permission       | Visible UI | Direct access behavior |
+|------------------|------------|------------------------|
+| `reports:read`   | Reports item | Require non-null `sub` and the current session permission through `AuthorityChecker`; deny/reroute on failure |
 | `request:submit` | Primary protected action | Check current permission, require non-null `sub`, and require an idempotency key |
-| Missing/unknown | No item/action | Grants nothing |
+| Missing/unknown  | No item/action | Grants nothing |
 
 Navigation filtering is never accepted as authorization evidence.
 

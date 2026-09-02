@@ -137,10 +137,10 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
         addNav(nav, "nav.home", "/", VaadinIcon.HOME.create());
 
-        if (permissions.contains(Permissions.Reports.VIEW)) {
+        if (permissions.contains(Permissions.Reports.READ)) {
             addNav(nav, "nav.reports", "/reports", VaadinIcon.CHART.create());
         }
-        if (permissions.contains(Permissions.Location.VIEW)) {
+        if (permissions.contains(Permissions.Location.READ)) {
             addNav(nav, "nav.locations", "/locations", VaadinIcon.MAP_MARKER.create());
         }
         var scroller = new Scroller(nav);

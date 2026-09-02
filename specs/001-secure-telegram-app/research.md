@@ -64,7 +64,7 @@ unvalidated permission strings (rejected: unknown values are too easy to grant a
 validated, deduplicated permission set in the authenticated app principal, together with the RG-owned
 `authenticationFlow`.
 The external contract uses case-sensitive lowercase
-`resource:action` identifiers (`home:view`, `reports:view`, `request:submit`). An immutable,
+`resource:action` identifiers (`reports:read`, `request:submit`). An immutable,
 resource-grouped `Permissions` registry is the application allowlist; it validates declaration
 syntax and uniqueness at startup. Map only recognized values to Spring authorities, filter
 navigation for usability, and use a session-aware `AuthorityChecker` for direct route entry and

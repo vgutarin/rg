@@ -6,16 +6,16 @@ All Technical Context unknowns are resolved below. Decisions favor the existing 
 ## R1. Permission naming and authorization mechanism
 
 **Decision**: Add four permissions to `vg.rg.security.model.Permissions` as a nested
-`Location` class: `location:view`, `location:add`, `location:edit`, `location:delete`. Authorize each
+`Location` class: `location:read`, `location:create`, `location:update`, `location:delete`. Authorize each
 service method with `@PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.X + "')")`,
 exactly as `ProtectedActionServiceImpl` does for `request:submit`.
 
 **Rationale**: The `Permissions.FORMAT` regex is `^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$` — a **colon**
-separator, not a dot. The clarification used `location.add` informally; the enforced convention is
-`location:add`. `Permissions.ALL` must include the new values (validated/frozen at class load).
-Message keys follow the escaped form already used: `permission.location\:view`, etc.
+separator, not a dot. The clarification used `location.create` informally; the enforced convention is
+`location:create`. `Permissions.ALL` must include the new values (validated/frozen at class load).
+Message keys follow the escaped form already used: `permission.location\:read`, etc.
 
-**Alternatives considered**: Dotted names (`location.add`) — rejected: fail `hasValidFormat`. A single
+**Alternatives considered**: Dotted names (`location.create`) — rejected: fail `hasValidFormat`. A single
 coarse `location:manage` — rejected: spec needs distinct view/add/edit/delete gating (FR-010, edge case).
 
 ## R2. Entity, IDs, auditing, and optimistic concurrency
@@ -183,14 +183,14 @@ coordinate — dropped: coordinates are optional, so no second acquisition sourc
 
 ## Resolved unknowns summary
 
-| Unknown | Resolution |
-|---------|-----------|
-| Permission names/format | `location:view/add/edit/delete` (colon), in `Permissions.Location` |
-| Concurrency mechanism | JPA `@Version` + existing localized optimistic-lock message |
-| Author/editor source | `AuditorAware<UniqueId>` → abstract `userUniqueId` (audit only; `UniqueId`↔BIGINT `@Convert`) |
-| Proximity over MySQL+H2 | Bounding-box `@Query` + Java great-circle distance, radius configurable (500 m default) |
-| Coordinate acquisition (add flow) | Maps picker only (search / POI tap → `{placeId,lat,lng}`; map point → `{lat,lng}`). Coordinates are **optional**: if Maps is unavailable, the add form opens with none |
-| Maps APIs / key handling | Maps JavaScript API + Places API (New) (modern `PlaceAutocompleteElement`/`Place`); referrer-restricted browser key + optional Vector `google.maps.map-id`, via runtime config, never stored/logged |
-| Preview/open link | Derived from Place ID + coordinates (only when present); not persisted; opened via `Telegram.WebApp.openLink` (fallback `window.open`) |
+| Unknown | Resolution                                                                                                                                                                                                                                    |
+|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Permission names/format | `location:read/create/update/delete` (colon), in `Permissions.Location`                                                                                                                                                                       |
+| Concurrency mechanism | JPA `@Version` + existing localized optimistic-lock message                                                                                                                                                                                   |
+| Author/editor source | `AuditorAware<UniqueId>` → abstract `userUniqueId` (audit only; `UniqueId`↔BIGINT `@Convert`)                                                                                                                                                 |
+| Proximity over MySQL+H2 | Bounding-box `@Query` + Java great-circle distance, radius configurable (500 m default)                                                                                                                                                       |
+| Coordinate acquisition (add flow) | Maps picker only (search / POI tap → `{placeId,lat,lng}`; map point → `{lat,lng}`). Coordinates are **optional**: if Maps is unavailable, the add form opens with none                                                                        |
+| Maps APIs / key handling | Maps JavaScript API + Places API (New) (modern `PlaceAutocompleteElement`/`Place`); referrer-restricted browser key + optional Vector `google.maps.map-id`, via runtime config, never stored/logged                                           |
+| Preview/open link | Derived from Place ID + coordinates (only when present); not persisted; opened via `Telegram.WebApp.openLink` (fallback `window.open`)                                                                                                        |
 | Telegram location | **Map centering only** (never the saved coordinate), as a fallback after browser geolocation: `ready`→`init`/`locationManagerUpdated`→`getLocation`→`openSettings` (non-blocking); requires https; failure → browser fix or Kyiv default (R8) |
-| Secure origin | https required; `server.forward-headers-strategy=framework` so `X-Forwarded-Proto` is honoured behind the TLS-terminating proxy |
+| Secure origin | https required; `server.forward-headers-strategy=framework` so `X-Forwarded-Proto` is honoured behind the TLS-terminating proxy                                                                                                               |

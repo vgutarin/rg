@@ -58,7 +58,7 @@ class PermissionAwareViewsTest {
     void beforeEnter_presentPrincipal_rendersHome() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
@@ -72,12 +72,12 @@ class PermissionAwareViewsTest {
     void requiredPermission_reportsView_returnsReportsViewPermission() {
         var reports = new ReportsView(localization, authorityChecker, authenticationContext);
 
-        assertThat(reports.requiredPermission()).isEqualTo(Permissions.Reports.VIEW);
+        assertThat(reports.requiredPermission()).isEqualTo(Permissions.Reports.READ);
     }
 
     @Test
     void beforeEnter_emptyPermissionSet_reroutesToNoAccess() {
-        when(authorityChecker.hasAuthority(Permissions.Reports.VIEW)).thenReturn(false);
+        when(authorityChecker.hasAuthority(Permissions.Reports.READ)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal(Set.of())));
         var reports = new ReportsView(localization, authorityChecker, authenticationContext);
@@ -91,7 +91,7 @@ class PermissionAwareViewsTest {
     void localeChange_presentPrincipal_reRendersContent() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
@@ -120,20 +120,20 @@ class PermissionAwareViewsTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.VIEW, "unknown:view"))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ, "unknown:view"))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
         landing.beforeEnter(event);
 
-        verify(localization).i18n("permission." + Permissions.Location.VIEW);
+        verify(localization).i18n("permission." + Permissions.Location.READ);
         verify(localization, never()).i18n("permission.unknown:view");
     }
 
     @Test
     void beforeEnter_reportsPermission_rendersReportsWhileDirectMissingPermissionDenies() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Reports.VIEW)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Reports.READ)).thenReturn(true);
         var reports = new ReportsView(localization, authorityChecker, authenticationContext);
 
         reports.beforeEnter(event);

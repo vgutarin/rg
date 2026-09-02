@@ -13,20 +13,20 @@ class PermissionsTest {
     @Test
     void all_declaredPermissions_exposesStableCatalog() {
         assertThat(Permissions.ALL).containsExactly(
-                Permissions.Reports.VIEW,
+                Permissions.Reports.READ,
                 Permissions.Request.SUBMIT,
-                Permissions.Location.VIEW,
-                Permissions.Location.ADD,
-                Permissions.Location.EDIT,
+                Permissions.Location.READ,
+                Permissions.Location.CREATE,
+                Permissions.Location.UPDATE,
                 Permissions.Location.DELETE);
     }
 
     @Test
     void all_locationPermissions_areRecognizedAndWellFormed() {
         var locationPermissions = List.of(
-                Permissions.Location.VIEW,
-                Permissions.Location.ADD,
-                Permissions.Location.EDIT,
+                Permissions.Location.READ,
+                Permissions.Location.CREATE,
+                Permissions.Location.UPDATE,
                 Permissions.Location.DELETE);
 
         assertThat(locationPermissions).allSatisfy(permission -> {
@@ -44,7 +44,7 @@ class PermissionsTest {
 
     @Test
     void hasValidFormat_validPermission_returnsTrue() {
-        assertThat(Permissions.hasValidFormat("home:view")).isTrue();
+        assertThat(Permissions.hasValidFormat("home:read")).isTrue();
     }
 
     @Test
@@ -54,9 +54,9 @@ class PermissionsTest {
 
     @Test
     void validateAndFreeze_duplicatePermission_throwsIllegalStateException() {
-        assertThatThrownBy(() -> Permissions.validateAndFreeze(List.of("home:view", "home:view")))
+        assertThatThrownBy(() -> Permissions.validateAndFreeze(List.of("home:read", "home:read")))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Duplicate permission declaration: home:view");
+                .hasMessage("Duplicate permission declaration: home:read");
     }
 
     @Test

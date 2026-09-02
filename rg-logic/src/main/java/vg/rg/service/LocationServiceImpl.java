@@ -43,7 +43,7 @@ class LocationServiceImpl implements LocationService {
     private final AuthorityChecker authorityChecker;
 
     @Override
-    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.ADD + "')")
+    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.CREATE + "')")
     public LocationModel create(LocationModel model) {
         Objects.requireNonNull(model, "model");
         validateWritable(model);
@@ -52,7 +52,7 @@ class LocationServiceImpl implements LocationService {
     }
 
     @Override
-    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.EDIT + "')")
+    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.UPDATE + "')")
     public LocationModel update(LocationModel model) {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(model.getUniqueId(), "uniqueId");
@@ -83,7 +83,7 @@ class LocationServiceImpl implements LocationService {
     }
 
     @Override
-    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.VIEW + "')")
+    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.READ + "')")
     public List<ProximityMatch> findNearby(ProximityQuery query) {
         Objects.requireNonNull(query, "query");
         var latitude = requireCoordinate(query.latitude(), "latitude", 90d);
@@ -132,7 +132,7 @@ class LocationServiceImpl implements LocationService {
     }
 
     @Override
-    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.VIEW + "')")
+    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.READ + "')")
     public List<LocationModel> searchByName(String query, int limit) {
         var normalized = query == null ? "" : query.trim();
         var cap = geoProperties.maxNameSearchResults();
@@ -145,7 +145,7 @@ class LocationServiceImpl implements LocationService {
     }
 
     @Override
-    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.VIEW + "')")
+    @PreAuthorize("@authorityChecker.hasAuthority('" + Permissions.Location.READ + "')")
     public Page<LocationModel> browse(Pageable pageable) {
         return repository.findAll(pageable).map(mapper::toModel);
     }

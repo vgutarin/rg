@@ -69,7 +69,7 @@ class SecureAuthorizationObservabilityTest {
                 AuthorizationOutcome.unavailable(Duration.ofSeconds(1)),
                 AuthorizationOutcome.incompatible(),
                 AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                        sensitiveSubjectId, sensitiveName, Set.of(Permissions.Location.VIEW), true,
+                        sensitiveSubjectId, sensitiveName, Set.of(Permissions.Location.READ), true,
                         AuthenticationFlow.TELEGRAM))));
         SecureAuthorizationFacade facade = request -> outcomes.removeFirst();
         var service = new AuthorizationApplicationService(

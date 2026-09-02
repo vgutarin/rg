@@ -13,7 +13,7 @@ public final class Permissions {
             Pattern.compile("^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$");
 
     public static final class Reports {
-        public static final String VIEW = "reports:view";
+        public static final String READ = "reports:read";
 
         private Reports() { }
     }
@@ -25,20 +25,20 @@ public final class Permissions {
     }
 
     public static final class Location {
-        public static final String VIEW = "location:view";
-        public static final String ADD = "location:add";
-        public static final String EDIT = "location:edit";
+        public static final String READ = "location:read";
+        public static final String CREATE = "location:create";
+        public static final String UPDATE = "location:update";
         public static final String DELETE = "location:delete";
 
         private Location() { }
     }
 
     public static final Set<String> ALL = validateAndFreeze(List.of(
-            Reports.VIEW,
+            Reports.READ,
             Request.SUBMIT,
-            Location.VIEW,
-            Location.ADD,
-            Location.EDIT,
+            Location.READ,
+            Location.CREATE,
+            Location.UPDATE,
             Location.DELETE));
 
     public static boolean isRecognized(String permission) {

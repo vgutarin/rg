@@ -119,7 +119,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         content.removeAll();
-        if (!authorityChecker.hasAuthority(Permissions.Location.VIEW)) {
+        if (!authorityChecker.hasAuthority(Permissions.Location.READ)) {
             event.rerouteTo(hasNoEffectivePermissions() ? NoAccessView.class : AccessDeniedErrorView.class);
             return;
         }
@@ -128,7 +128,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
 
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        if (authorityChecker.hasAuthority(Permissions.Location.VIEW)) {
+        if (authorityChecker.hasAuthority(Permissions.Location.READ)) {
             render();
         } else {
             content.removeAll();
@@ -192,7 +192,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        if (authorityChecker.hasAuthority(Permissions.Location.ADD)) {
+        if (authorityChecker.hasAuthority(Permissions.Location.CREATE)) {
             var addLocation = new Button(localization.i18n("locations.add"),
                     event -> startCoordinateAcquisition());
             addLocation.setWidthFull();
@@ -237,7 +237,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
      */
     @ClientCallable
     public void onMapsUnavailable() {
-        if (!authorityChecker.hasAuthority(Permissions.Location.ADD)) {
+        if (!authorityChecker.hasAuthority(Permissions.Location.CREATE)) {
             Notification.show(localization.i18n("location.maps.unavailable"));
             return;
         }
@@ -463,7 +463,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         // delete is confirmed first. The row hides itself when the user has neither permission.
         var actions = new Div();
         actions.addClassName("location-row__actions");
-        if (authorityChecker.hasAuthority(Permissions.Location.EDIT)) {
+        if (authorityChecker.hasAuthority(Permissions.Location.UPDATE)) {
             var edit = new Button(localization.i18n("location.form.edit.title"), VaadinIcon.EDIT.create(),
                     event -> LocationFormDialog.forEdit(localization, locationService, model,
                             this::afterChange).open());

@@ -46,7 +46,7 @@ public class MapsResolutionBridge {
 
     /**
      * Validates the payload and returns the advisory proximity suggestion for the acquired coordinates.
-     * Authorized against {@code location:view} inside {@link LocationService#findNearby}.
+     * Authorized against {@code location:read} inside {@link LocationService#findNearby}.
      */
     public List<ProximityMatch> resolveAndSuggest(Double latitude, Double longitude, String placeId) {
         var coordinates = validate(latitude, longitude, placeId);

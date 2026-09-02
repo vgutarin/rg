@@ -50,7 +50,7 @@ class LocationServiceFuncTest extends BaseFuncTest {
     void authenticate() {
         var principal = new AuthenticatedUserPrincipal(
                 AUTHOR, "Test User",
-                Set.of(Permissions.Location.VIEW, Permissions.Location.ADD),
+                Set.of(Permissions.Location.READ, Permissions.Location.CREATE),
                 true, AuthenticationFlow.TELEGRAM);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));

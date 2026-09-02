@@ -62,9 +62,9 @@ class LocationsViewTest {
 
     @Test
     void beforeEnter_missingViewPermission_withOtherPermissions_reroutesToAccessDenied() {
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(false);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.VIEW))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ))));
 
         view().beforeEnter(event);
 
@@ -73,7 +73,7 @@ class LocationsViewTest {
 
     @Test
     void beforeEnter_missingViewPermission_noEffectivePermissions_reroutesToNoAccess() {
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(false);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal(Set.of())));
 
@@ -85,7 +85,7 @@ class LocationsViewTest {
     @Test
     void beforeEnter_viewPermission_rendersLocationsFromBrowse() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(true);
         when(locationService.browse(any())).thenReturn(new PageImpl<>(List.of(
                 LocationModel.builder().name("Central Cafe")
                         .latitude(BigDecimal.valueOf(50.0)).longitude(BigDecimal.valueOf(30.0)).build())));
@@ -102,7 +102,7 @@ class LocationsViewTest {
     @Test
     void beforeEnter_viewPermission_emptyCollection_showsEmptyState() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(true);
         when(locationService.browse(any())).thenReturn(new PageImpl<>(List.of()));
 
         var view = view();
@@ -116,7 +116,7 @@ class LocationsViewTest {
     @Test
     void beforeEnter_rendersTwoTabs() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(true);
         when(locationService.browse(any())).thenReturn(new PageImpl<>(List.of()));
 
         var view = view();
@@ -131,8 +131,8 @@ class LocationsViewTest {
     @Test
     void beforeEnter_addPermission_addTabShowsAddButton_viewTabShowsSearch() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(true);
-        when(authorityChecker.hasAuthority(Permissions.Location.ADD)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.CREATE)).thenReturn(true);
         when(locationService.browse(any())).thenReturn(new PageImpl<>(List.of()));
 
         var view = view();
@@ -183,9 +183,9 @@ class LocationsViewTest {
 
     @Test
     void detailPanel_withManagementPermissions_showsDetailsMapsAndActions() {
-        // Lenient: addTab() also probes hasAuthority(ADD); these edit/delete stubs must not make that
+        // Lenient: addTab() also probes hasAuthority(CREATE); these update/delete stubs must not make that
         // unmatched call trip strict-stubbing.
-        lenient().when(authorityChecker.hasAuthority(Permissions.Location.EDIT)).thenReturn(true);
+        lenient().when(authorityChecker.hasAuthority(Permissions.Location.UPDATE)).thenReturn(true);
         lenient().when(authorityChecker.hasAuthority(Permissions.Location.DELETE)).thenReturn(true);
         var view = renderList(LocationModel.builder()
                 .name("Central Cafe").description("Quiet corner")
@@ -222,7 +222,7 @@ class LocationsViewTest {
 
     private LocationsView renderList(LocationModel... models) {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authorityChecker.hasAuthority(Permissions.Location.VIEW)).thenReturn(true);
+        when(authorityChecker.hasAuthority(Permissions.Location.READ)).thenReturn(true);
         when(locationService.browse(any())).thenReturn(new PageImpl<>(List.of(models)));
         var view = view();
         view.beforeEnter(event);

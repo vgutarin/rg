@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 /**
  * Edit form for an existing location: carries the location's id, version, and coordinates, and updates
  * name/description. (Adding is handled inline in {@link LocationsView}, not via this dialog.) Free-text
- * fields show localized anti-personal-data guidance (FR-018). Gated by {@code location:edit} at the
+ * fields show localized anti-personal-data guidance (FR-018). Gated by {@code location:update} at the
  * service boundary; a stale edit surfaces the localized optimistic-lock "reload and retry" message
  * (FR-019).
  */

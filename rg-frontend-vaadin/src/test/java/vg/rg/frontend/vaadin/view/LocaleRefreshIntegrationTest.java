@@ -97,7 +97,7 @@ class LocaleRefreshIntegrationTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), "Test User",
-                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW), true,
+                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.READ), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));

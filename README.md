@@ -20,15 +20,3 @@
 - The adapter sends no personal-data consent because the current RG request has no explicit user
   consent signal. Existing identity users can authenticate; a provisional principal without `sub`
   is denied until a consent flow is implemented.
-
-## TODO
-
-- remove "logout" button for telegram mini app
-- consider to recover integration-tests? or configure func tests to use mysql
-- Clean up "\* Template \*"
-- add and use bom project with
-  - versions of apis/implementations
-  - test util version
-- add ACL
-- add Audit
-- add common errors (like, "Version conflict", "Access denied", "Validation error" etc)

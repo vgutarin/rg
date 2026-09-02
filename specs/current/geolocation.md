@@ -52,8 +52,8 @@ discouraging others' personal data but are stored as-is (the user's own content)
 
 ## Access control
 
-Governed by the application's existing permissions model via `location:view`, `location:add`,
-`location:edit`, `location:delete` (colon syntax, in `Permissions.Location`). Ownership is never used
+Governed by the application's existing permissions model via `location:read`, `location:create`,
+`location:update`, `location:delete` (colon syntax, in `Permissions.Location`). Ownership is never used
 for access; author/last-editor are audit-only. Concurrent edits use optimistic concurrency (JPA
 `@Version`); a stale save is rejected with the localized "reload and retry" message.
 
@@ -65,7 +65,7 @@ for access; author/last-editor are audit-only. Concurrent edits use optimistic c
   (`rg.geo.match-radius-meters`, default 500), `CurrentUserAuditorAware`, and the `location:*`
   permissions. Schema: `rg-logic/src/main/resources/db/liquibase/001-location-init.yaml`.
 - **`rg-frontend-vaadin`** (UI, mobile-first, i18n): `LocationsView` (`/locations`, gated on
-  `location:view`, in the nav), `LocationFormDialog` (add/edit), `MapsResolutionBridge` (validates
+  `location:read`, in the nav), `LocationFormDialog` (add/edit), `MapsResolutionBridge` (validates
   browser-acquired coordinates and runs the proximity suggestion), `MapsClientProperties` (browser
   config), and the browser connector `../../rg-frontend-vaadin/src/main/frontend/google-maps-connector.ts`. The connector loads
   the Google Maps JS API on demand and exposes `rgInitGoogleMapsConnector` (the map picker, including

@@ -50,14 +50,14 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), "Test User",
-                Set.of(Permissions.Location.VIEW, Permissions.Request.SUBMIT), true,
+                Set.of(Permissions.Location.READ, Permissions.Request.SUBMIT), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext);
 
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Location.VIEW, Permissions.Request.SUBMIT);
+                Permissions.Location.READ, Permissions.Request.SUBMIT);
     }
 
     @Test
@@ -66,7 +66,7 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Test User", Set.of(Permissions.Location.VIEW), true,
+                new UniqueId(1234L), "Test User", Set.of(Permissions.Location.READ), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
@@ -200,7 +200,7 @@ class MainViewTest {
     void constructor_nullSubject_keepsOnlyHomeNavigationAndSuppressesEffectivePermissions() {
         configureLocalization();
         var principal = new AuthenticatedUserPrincipal(
-                null, "Sensitive Name", Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW),
+                null, "Sensitive Name", Set.of(Permissions.Request.SUBMIT, Permissions.Reports.READ),
                 false, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
@@ -226,7 +226,7 @@ class MainViewTest {
         });
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), null,
-                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.VIEW, "unknown:view"),
+                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.READ, "unknown:view"),
                 true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
@@ -235,7 +235,7 @@ class MainViewTest {
 
         assertThat(view.navigationLabels()).containsExactly("Головна", "Звіти");
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Request.SUBMIT, Permissions.Reports.VIEW);
+                Permissions.Request.SUBMIT, Permissions.Reports.READ);
     }
 
     private void configureLocalization() {

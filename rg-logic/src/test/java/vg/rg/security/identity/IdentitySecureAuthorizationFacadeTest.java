@@ -35,7 +35,7 @@ class IdentitySecureAuthorizationFacadeTest {
         var userUniqueId = new UniqueId(42L);
         var principal = new IdentityApplicationUserPrincipal(
                 userUniqueId, "Test User",
-                Set.of(Permissions.Location.VIEW, "unknown:view"), true);
+                Set.of(Permissions.Location.READ, "unknown:view"), true);
         when(identityApplicationApi.authenticateTelegram(argThat(request ->
                 REQUEST.initData().equals(request.telegramInitData())
                         && !request.consentToKeepPersonalData())))
@@ -48,7 +48,7 @@ class IdentitySecureAuthorizationFacadeTest {
         assertThat(authenticatedPrincipal.userUniqueId()).isEqualTo(userUniqueId);
         assertThat(authenticatedPrincipal.name()).isEqualTo("Test User");
         assertThat(authenticatedPrincipal.permissions()).containsExactlyInAnyOrder(
-                Permissions.Location.VIEW, "unknown:view");
+                Permissions.Location.READ, "unknown:view");
         assertThat(authenticatedPrincipal.consentGiven()).isTrue();
         assertThat(authenticatedPrincipal.authenticationFlow()).isEqualTo(AuthenticationFlow.TELEGRAM);
     }
@@ -81,7 +81,7 @@ class IdentitySecureAuthorizationFacadeTest {
             CapturedOutput output) {
         when(identityApplicationApi.authenticateTelegram(any()))
                 .thenReturn(Optional.of(new IdentityApplicationUserPrincipal(
-                        null, "Sensitive Name", Set.of("location:view", "reports:view"), false)));
+                        null, "Sensitive Name", Set.of("location:read", "reports:read"), false)));
 
         var outcome = facade().redeemAuthorizationGrant(REQUEST);
 
@@ -93,7 +93,7 @@ class IdentitySecureAuthorizationFacadeTest {
         });
         assertThat(output.getAll())
                 .containsOnlyOnce("Identity authorization returned permissions without a subject")
-                .doesNotContain("Sensitive Name", "location:view", "reports:view");
+                .doesNotContain("Sensitive Name", "location:read", "reports:read");
     }
 
     @Test
@@ -118,7 +118,7 @@ class IdentitySecureAuthorizationFacadeTest {
     void redeemAuthorizationGrant_permissionCountOverConfiguredLimit_returnsIncompatible() {
         when(identityApplicationApi.authenticateTelegram(any()))
                 .thenReturn(Optional.of(new IdentityApplicationUserPrincipal(
-                        new UniqueId(42L), null, Set.of("location:view", "reports:view"), true)));
+                        new UniqueId(42L), null, Set.of("location:read", "reports:read"), true)));
 
         assertThat(facade(1, 128).redeemAuthorizationGrant(REQUEST).status())
                 .isEqualTo(AuthorizationOutcome.Status.INCOMPATIBLE);
@@ -128,11 +128,11 @@ class IdentitySecureAuthorizationFacadeTest {
     void redeemAuthorizationGrant_permissionAtConfiguredBound_preservesPermission() {
         when(identityApplicationApi.authenticateTelegram(any()))
                 .thenReturn(Optional.of(new IdentityApplicationUserPrincipal(
-                        new UniqueId(42L), null, Set.of("alpha:view"), true)));
+                        new UniqueId(42L), null, Set.of("alpha:read"), true)));
 
         assertThat(facade(1, 10).redeemAuthorizationGrant(REQUEST).principal())
                 .hasValueSatisfying(principal -> assertThat(principal.permissions())
-                        .containsExactly("alpha:view"));
+                        .containsExactly("alpha:read"));
     }
 
     @Test

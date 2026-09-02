@@ -45,7 +45,7 @@ class ProtectedActionMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(ProtectedActionService.class);
 
-            authenticate(Set.of(Permissions.Location.VIEW));
+            authenticate(Set.of(Permissions.Location.READ));
             assertThatThrownBy(() -> service.submit(UUID.randomUUID()))
                     .isInstanceOf(AccessDeniedException.class);
         }

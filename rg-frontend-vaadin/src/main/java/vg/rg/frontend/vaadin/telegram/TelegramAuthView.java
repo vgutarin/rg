@@ -10,6 +10,7 @@ import com.vaadin.flow.i18n.LocaleChangeObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.frontend.vaadin.security.ApplicationSecurityContextService;
@@ -19,10 +20,16 @@ import vg.rg.frontend.vaadin.view.NoAccessView;
 import vg.rg.frontend.vaadin.view.AuthorizationStatusComponent;
 import vg.rg.frontend.vaadin.view.AuthorizationUiState;
 import vg.rg.security.AuthorizationApplicationService;
+import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.AuthorizationOutcome;
+import vg.rg.security.model.Permissions;
 import vg.rg.security.model.TelegramInitDataRequest;
+import vg.unique.id.model.UniqueId;
 
+import java.util.Set;
 
+@Slf4j
 @JavaScript(TelegramAuthView.TELEGRAM_JS)
 @PageTitle("page.login.title")
 @Route("login")

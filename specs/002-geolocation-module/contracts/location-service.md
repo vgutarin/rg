@@ -7,7 +7,7 @@ internals. Author/last-editor audit fields are set by JPA auditing, not by calle
 ## Methods
 
 ### `LocationModel create(LocationModel model)`
-- **Permission**: `location:add` (`@PreAuthorize`).
+- **Permission**: `location:create` (`@PreAuthorize`).
 - **Preconditions**: `name` non-blank; `latitude`/`longitude` in valid ranges; optional `description`,
   `googlePlaceId` within length bounds. `uniqueId`/`version`/audit fields ignored on input.
 - **Behavior**: assigns a new `uniqueId`, persists, sets author=lastEditor=current `userUniqueId`, `version=0`.
@@ -16,7 +16,7 @@ internals. Author/last-editor audit fields are set by JPA auditing, not by calle
   `AccessDeniedException`.
 
 ### `LocationModel update(LocationModel model)`
-- **Permission**: `location:edit`.
+- **Permission**: `location:update`.
 - **Preconditions**: existing `uniqueId`; `version` **must** equal the persisted version (optimistic
   concurrency); same field validation as create.
 - **Behavior**: applies changes, bumps `version`, sets lastEditor=current `userUniqueId`.
@@ -31,7 +31,7 @@ internals. Author/last-editor audit fields are set by JPA auditing, not by calle
 - **Errors**: not found → `EntityNotFoundException`; missing permission → `AccessDeniedException`.
 
 ### `List<ProximityMatch> findNearby(ProximityQuery query)`
-- **Permission**: `location:view`.
+- **Permission**: `location:read`.
 - **Behavior**: bounding-box prefilter by `query` coordinates and radius (default from `GeoProperties`,
   500 m), then great-circle distance refine to `distanceMeters ≤ radius`, ordered nearest-first (FR-003). Result is
   **advisory suggestions only** — it does not block creation and `create` never consults it (FR-003a).
@@ -39,13 +39,13 @@ internals. Author/last-editor audit fields are set by JPA auditing, not by calle
 - **Errors**: invalid coordinates → `ValidationException`; missing permission → `AccessDeniedException`.
 
 ### `List<LocationModel> searchByName(String query, int limit)`
-- **Permission**: `location:view`.
+- **Permission**: `location:read`.
 - **Behavior**: case-insensitive name contains-match, bounded by `limit` (FR-005). Blank query → full
   collection (paged by caller).
 - **Returns**: matching locations (possibly empty).
 
 ### `Page<LocationModel> browse(Pageable pageable)`
-- **Permission**: `location:view`.
+- **Permission**: `location:read`.
 - **Behavior**: paged listing of the shared collection for display (FR-006), scalable to ≥10k rows.
 
 ## Cross-cutting guarantees

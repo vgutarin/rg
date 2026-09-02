@@ -25,7 +25,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void serialization_validAuthenticatedPrincipal_restoresEquivalentPrincipal() throws Exception {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1L),"Test User", Set.of(Permissions.Location.VIEW), true,
+                new UniqueId(1L),"Test User", Set.of(Permissions.Location.READ), true,
                 AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
@@ -43,7 +43,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void serialization_provisionalPrincipal_preservesNullSubjectAndFalseConsent() throws Exception {
         var principal = new AuthenticatedUserPrincipal(
-                null, null, Set.of(Permissions.Location.VIEW), false,
+                null, null, Set.of(Permissions.Location.READ), false,
                 AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
@@ -89,11 +89,11 @@ class SecureAuthorizationContractModelTest {
     @Test
     void constructor_unknownPermission_preservesPermission() {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1L),"Test User", Set.of("location:view", "unknown:view"), true,
+                new UniqueId(1L),"Test User", Set.of("location:read", "unknown:view"), true,
                 AuthenticationFlow.TELEGRAM);
 
         assertThat(principal.permissions()).containsExactlyInAnyOrder(
-                Permissions.Location.VIEW, "unknown:view");
+                Permissions.Location.READ, "unknown:view");
     }
 
     @Test
@@ -145,10 +145,10 @@ class SecureAuthorizationContractModelTest {
     @Test
     void constructor_permissionsAreImmutable() {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1L),null, Set.of(Permissions.Location.VIEW), true,
+                new UniqueId(1L),null, Set.of(Permissions.Location.READ), true,
                 AuthenticationFlow.TELEGRAM);
 
-        assertThatThrownBy(() -> principal.permissions().add(Permissions.Reports.VIEW))
+        assertThatThrownBy(() -> principal.permissions().add(Permissions.Reports.READ))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -163,7 +163,7 @@ class SecureAuthorizationContractModelTest {
     @Test
     void authorized_validPrincipal_containsPrincipal() {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1L),"Test User", Set.of("location:view"), true,
+                new UniqueId(1L),"Test User", Set.of("location:read"), true,
                 AuthenticationFlow.TELEGRAM);
 
         assertThat(AuthorizationOutcome.authorized(principal).principal()).contains(principal);

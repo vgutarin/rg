@@ -41,7 +41,7 @@ public class ReportsView extends VerticalLayout implements BeforeEnterObserver, 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         protectedContent.removeAll();
-        if (!authorityChecker.hasAuthority(Permissions.Reports.VIEW)) {
+        if (!authorityChecker.hasAuthority(Permissions.Reports.READ)) {
             event.rerouteTo(hasNoEffectivePermissions() ? NoAccessView.class : AccessDeniedErrorView.class);
             return;
         }
@@ -50,14 +50,14 @@ public class ReportsView extends VerticalLayout implements BeforeEnterObserver, 
 
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        if (authorityChecker.hasAuthority(Permissions.Reports.VIEW)) {
+        if (authorityChecker.hasAuthority(Permissions.Reports.READ)) {
             render();
         } else {
             protectedContent.removeAll();
         }
     }
 
-    String requiredPermission() { return Permissions.Reports.VIEW; }
+    String requiredPermission() { return Permissions.Reports.READ; }
 
     private void render() {
         protectedContent.removeAll();

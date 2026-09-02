@@ -8,8 +8,8 @@ A run/validation guide proving the feature works end-to-end. Implementation deta
   skill if Docker is not configured on macOS.
 - For UI + Google Maps: a referrer-restricted Google Maps JavaScript API key exported as
   `GOOGLE_MAPS_BROWSER_API_KEY` (the app reads `google.maps.browser-api-key`).
-- A test user whose secure-service permissions include `location:view`, `location:add`,
-  `location:edit`, `location:delete`.
+- A test user whose secure-service permissions include `location:read`, `location:create`,
+  `location:update`, `location:delete`.
 
 ## Build & test (server-side logic)
 
@@ -64,7 +64,7 @@ Open `http://localhost:9000` in a narrow (mobile) viewport, authenticate via the
 | Name search (P2) | Type part of a name | List filters to matches; clearing restores full list; "no results" state works (US4) |
 | Display (P2) | Open a location with a Place ID | Detail shows map preview / "open in Google Maps" link derived from Place ID + coordinates (US5) |
 | Edit conflict (P3) | Edit the same location from two sessions; save both | Second save rejected with localized "reload and retry"; no silent loss (FR-019) |
-| Permission denied | Sign in as a user lacking `location:edit` | Edit action denied safely; routed per `ReportsView` pattern (FR-010) |
+| Permission denied | Sign in as a user lacking `location:update` | Edit action denied safely; routed per `ReportsView` pattern (FR-010) |
 | Privacy notice | Focus name/description field | Localized guidance discouraging others' personal data is shown; text stored as-is (FR-018) |
 
 ## Definition of done (validation gates)

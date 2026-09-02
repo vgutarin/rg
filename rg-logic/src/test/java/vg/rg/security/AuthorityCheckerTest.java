@@ -25,35 +25,35 @@ class AuthorityCheckerTest {
 
     @Test
     void hasAuthority_grantedPermission_returnsTrue() {
-        authenticate(Set.of(Permissions.Location.VIEW, Permissions.Request.SUBMIT));
+        authenticate(Set.of(Permissions.Location.READ, Permissions.Request.SUBMIT));
 
-        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isTrue();
+        assertThat(checker.hasAuthority(Permissions.Location.READ)).isTrue();
     }
 
     @Test
     void hasAuthority_missingPermission_returnsFalse() {
-        authenticate(Set.of(Permissions.Location.VIEW));
+        authenticate(Set.of(Permissions.Location.READ));
 
-        assertThat(checker.hasAuthority(Permissions.Reports.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Reports.READ)).isFalse();
     }
 
     @Test
     void hasAuthority_unknownPermission_returnsFalse() {
-        authenticate(Set.of(Permissions.Location.VIEW));
+        authenticate(Set.of(Permissions.Location.READ));
 
         assertThat(checker.hasAuthority("unknown:view")).isFalse();
     }
 
     @Test
     void currentUserUniqueId_authenticatedPrincipal_returnsPrincipalUserUniqueId() {
-        authenticate(Set.of(Permissions.Location.VIEW));
+        authenticate(Set.of(Permissions.Location.READ));
 
         assertThat(checker.currentUserUniqueId()).contains(new UniqueId(1234L));
     }
 
     @Test
     void currentAuthenticationFlow_authenticatedPrincipal_returnsFlow() {
-        authenticate(Set.of(Permissions.Location.VIEW));
+        authenticate(Set.of(Permissions.Location.READ));
 
         assertThat(checker.currentAuthenticationFlow()).contains(AuthenticationFlow.TELEGRAM);
     }
@@ -65,7 +65,7 @@ class AuthorityCheckerTest {
 
     @Test
     void hasAuthority_missingAuthentication_returnsFalse() {
-        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.READ)).isFalse();
     }
 
     @Test
@@ -79,9 +79,9 @@ class AuthorityCheckerTest {
 
     @Test
     void hasAuthority_falseConsentWithSubject_retainsPermission() {
-        authenticate(new UniqueId(777L), false, Set.of(Permissions.Location.VIEW));
+        authenticate(new UniqueId(777L), false, Set.of(Permissions.Location.READ));
 
-        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isTrue();
+        assertThat(checker.hasAuthority(Permissions.Location.READ)).isTrue();
         assertThat(checker.currentUserUniqueId()).contains(new UniqueId(777L));
     }
 
@@ -89,13 +89,13 @@ class AuthorityCheckerTest {
     void hasAuthority_wrongPrincipalTypeOrUnauthenticatedToken_returnsFalse() {
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated("malformed", null, List.of()));
-        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.READ)).isFalse();
 
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), null, Set.of(Permissions.Location.VIEW), true, AuthenticationFlow.TELEGRAM);
+                new UniqueId(1234L), null, Set.of(Permissions.Location.READ), true, AuthenticationFlow.TELEGRAM);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.unauthenticated(principal, null));
-        assertThat(checker.hasAuthority(Permissions.Location.VIEW)).isFalse();
+        assertThat(checker.hasAuthority(Permissions.Location.READ)).isFalse();
     }
 
     private void authenticate(Set<String> permissions) {

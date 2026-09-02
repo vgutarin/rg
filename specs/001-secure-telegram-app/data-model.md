@@ -87,10 +87,9 @@ when such a result contained non-empty permissions. Consent collection is outsid
 
 Initial recognized catalog:
 
-| Permission | Capability |
-|------------|------------|
-| `home:view` | Enter the permitted landing view |
-| `reports:view` | See the representative reports destination |
+| Permission       | Capability |
+|------------------|------------|
+| `reports:read`   | See the representative reports destination |
 | `request:submit` | Execute the representative protected request action |
 
 Contract identifiers are case-sensitive lowercase `resource:action` strings. Each segment starts

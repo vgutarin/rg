@@ -114,7 +114,7 @@ rg-logic/src/main/java/vg/rg/
 │   ├── LocationService.java                # interface (contract)
 │   └── LocationServiceImpl.java            # @PreAuthorize per action, proximity + great-circle distance refine
 ├── security/
-│   ├── model/Permissions.java              # add Location.{VIEW,ADD,EDIT,DELETE}
+│   ├── model/Permissions.java              # add Location.{READ,CREATE,UPDATE,DELETE}
 │   └── CurrentUserAuditorAware.java        # AuditorAware<UniqueId> → current userUniqueId (author/editor)
 ├── config/GeoProperties.java               # default match radius (configurable)
 └── resources/db/liquibase/002-location-init.yaml

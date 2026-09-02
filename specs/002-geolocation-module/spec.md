@@ -26,7 +26,7 @@ also find locations by name, view them, and edit or remove existing ones. Locati
 application as a shared collection with no per-user cap; each record keeps the acting user's abstract
 identity as author and last editor for auditing only, and this identity is never used to restrict who
 can see or change a location. Access is instead governed by the application's existing permissions
-model through new location-scoped permissions (e.g., `location:view`, `location:add`, `location:edit`,
+model through new location-scoped permissions (e.g., `location:read`, `location:create`, `location:update`,
 `location:delete`). The Google Place ID is optional enrichment, and the module stays usable for
 viewing/adding/editing saved locations even when Google Maps is unavailable.
 
@@ -41,8 +41,8 @@ viewing/adding/editing saved locations even when Google Maps is unavailable.
   per-user cap; locations form a shared collection. The acting user's abstract identity is recorded as
   author (creator) and last editor for auditing only, never to restrict access.
 - Q: In the shared collection, who may edit or delete a location? → A: Authorization uses the
-  application's existing permissions model with new location-scoped permissions (e.g., `location:view`,
-  `location:add`, `location:edit`, `location:delete`); ownership is not used for access control.
+  application's existing permissions model with new location-scoped permissions (e.g., `location:read`,
+  `location:create`, `location:update`, `location:delete`); ownership is not used for access control.
 - Q: How are concurrent edits to the same location resolved? → A: Optimistic concurrency — detect the
   conflict via a version/last-updated check and reject the stale save with a clear "reload and retry"
   message; never silently discard an update.
@@ -261,7 +261,7 @@ location and confirm it disappears from the collection.
   fallback query). An unresolvable Place ID MUST be handled gracefully per FR-013.
 - **FR-010**: Locations MUST form a shared collection with no per-user cap and MUST NOT be restricted by
   per-record ownership. Access MUST be governed by the application's existing permissions model via new
-  location-scoped permissions — at minimum `location:view`, `location:add`, `location:edit`, and
+  location-scoped permissions — at minimum `location:read`, `location:create`, `location:update`, and
   `location:delete` — and the system MUST authorize each action against the acting user's granted
   permissions, denying disallowed actions safely without exposing internal details. Each location MUST
   record the abstract user identities of its author (creator) and last editor for auditing only; these
@@ -335,7 +335,7 @@ location and confirm it disappears from the collection.
 - Locations form a single shared collection with no per-user cap; the acting user's abstract identity is
   recorded as author/last editor for auditing only and never restricts who can view or change a location.
 - Access relies on the application's existing permissions model; this feature adds new location-scoped
-  permissions (`location:view`, `location:add`, `location:edit`, `location:delete`). Their exact names
+  permissions (`location:read`, `location:create`, `location:update`, `location:delete`). Their exact names
   and granularity are finalized during planning.
 - In the "Add location" flow the coordinate source is the Google Maps picker (Place ID + coordinates, or
   coordinates alone). Coordinates are **optional**: when Maps is unavailable the location is added without

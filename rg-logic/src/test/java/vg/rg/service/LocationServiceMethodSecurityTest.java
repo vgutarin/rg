@@ -56,7 +56,7 @@ class LocationServiceMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(LocationService.class);
 
-            authenticate(Set.of(Permissions.Location.ADD));
+            authenticate(Set.of(Permissions.Location.CREATE));
             assertThatThrownBy(() -> service.findNearby(QUERY))
                     .isInstanceOf(AccessDeniedException.class);
         }
@@ -67,7 +67,7 @@ class LocationServiceMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(LocationService.class);
 
-            authenticate(Set.of(Permissions.Location.VIEW));
+            authenticate(Set.of(Permissions.Location.READ));
             assertThat(service.findNearby(QUERY)).isEmpty();
         }
     }
@@ -87,7 +87,7 @@ class LocationServiceMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(LocationService.class);
 
-            authenticate(Set.of(Permissions.Location.VIEW));
+            authenticate(Set.of(Permissions.Location.READ));
             assertThatThrownBy(() -> service.create(LocationModel.builder().build()))
                     .isInstanceOf(AccessDeniedException.class);
         }
