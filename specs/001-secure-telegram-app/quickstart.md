@@ -11,12 +11,12 @@ automated evidence; never copy real values into commands, reports, screenshots, 
    [the UI contract](contracts/permission-aware-ui.md).
 3. Use exact dependency versions. Snapshot `rg-logic` or identity artifacts are acceptable only for
    development; release compatibility evidence requires published non-snapshot versions.
-4. For development-facade testing, set `rg.secure-service.enabled=true` and provide the bot token
+4. For development-facade testing, set `rg.dev-secure-service.enabled=true` and provide the bot token
    through an ignored `application-local.properties`, `.yml`, or `.yaml` file under an explicitly
    activated local profile. If identity-rest-client auto-configuration requires an API key, supply a
    clearly fake, non-secret local value and a loopback/non-production base URL; the development facade
    does not call that client.
-5. For identity-facade testing, leave `rg.secure-service.enabled` absent or set it to false and supply
+5. For identity-facade testing, leave `rg.dev-secure-service.enabled` absent or set it to false and supply
    identity base URL, API key, and finite timeout values through approved runtime secret/configuration
    sources. Use an identity client that supports explicit finite transport timeouts, a configurable
    pre-parse response limit, and duplicate-permission visibility.
@@ -98,8 +98,8 @@ Run real Spring application-context tests for each configuration:
 
 | Configuration | Expected result |
 |---|---|
-| `rg.secure-service.enabled=true` | Exactly one development facade; an unused identity client may initialize with a fake non-secret local API key |
-| `rg.secure-service.enabled=false` | Exactly one identity facade and configured identity client |
+| `rg.dev-secure-service.enabled=true` | Exactly one development facade; an unused identity client may initialize with a fake non-secret local API key |
+| `rg.dev-secure-service.enabled=false` | Exactly one identity facade and configured identity client |
 | Property missing | Exactly one identity facade and configured identity client |
 | Missing or conflicting resulting beans | Startup fails |
 

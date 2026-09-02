@@ -10,23 +10,28 @@ import com.vaadin.flow.component.textfield.TextField;
 import lombok.extern.slf4j.Slf4j;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.model.LocationModel;
-import vg.rg.service.LocationService;
+import vg.rg.service.WorkspaceLocationService;
 
 import java.math.BigDecimal;
+import java.util.function.Consumer;
 
 /**
  * Edit form for an existing location: carries the location's id, version, and coordinates, and updates
- * name/description. (Adding is handled inline in {@link LocationsView}, not via this dialog.) Free-text
+ * name/description. (Adding is handled inline in the locations views, not via this dialog.) Free-text
  * fields show localized anti-personal-data guidance (FR-018). Gated by {@code location:update} at the
  * service boundary; a stale edit surfaces the localized optimistic-lock "reload and retry" message
  * (FR-019).
+ *
+ * <p>The dialog holds the update operation rather than the service, so the form never learns which
+ * workspace it is editing in — the location's own identifier resolves to that at the authority
+ * boundary, and the scope is not editable content.
  */
 @Slf4j
 public class LocationFormDialog extends Dialog {
 
 
     private final LocalizationService localization;
-    private final LocationService locationService;
+    private final Consumer<LocationModel> updater;
     private final Runnable onSaved;
 
     private final UniqueIdRef existing;
@@ -42,7 +47,7 @@ public class LocationFormDialog extends Dialog {
     }
 
     private LocationFormDialog(LocalizationService localization,
-                              LocationService locationService,
+                              Consumer<LocationModel> updater,
                               UniqueIdRef existing,
                               BigDecimal latitude,
                               BigDecimal longitude,
@@ -51,7 +56,7 @@ public class LocationFormDialog extends Dialog {
                               String initialDescription,
                               Runnable onSaved) {
         this.localization = localization;
-        this.locationService = locationService;
+        this.updater = updater;
         this.existing = existing;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -80,11 +85,15 @@ public class LocationFormDialog extends Dialog {
                 new Button(localization.i18n("location.save"), event -> save()));
     }
 
+    /**
+     * Edits a location inside a workspace. The workspace is not passed: the location's own identifier
+     * resolves to it at the authority boundary.
+     */
     public static LocationFormDialog forEdit(LocalizationService localization,
-                                             LocationService locationService,
+                                             WorkspaceLocationService locationService,
                                              LocationModel model,
                                              Runnable onSaved) {
-        return new LocationFormDialog(localization, locationService,
+        return new LocationFormDialog(localization, locationService::update,
                 new UniqueIdRef(model.getUniqueId(), model.getVersion()),
                 model.getLatitude(), model.getLongitude(), model.getGooglePlaceId(),
                 model.getName(), model.getDescription(), onSaved);
@@ -109,7 +118,7 @@ public class LocationFormDialog extends Dialog {
                 .build();
 
         try {
-            locationService.update(model);
+            updater.accept(model);
             close();
             Notification.show(localization.i18n("location.created"));
             onSaved.run();

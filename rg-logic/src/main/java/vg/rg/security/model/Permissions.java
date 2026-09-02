@@ -5,12 +5,21 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
+/**
+ * Application-wide permission declarations: capabilities that mean something without naming a resource.
+ *
+ * <p>Capabilities that only apply <em>inside</em> a workspace live in {@link LocalPermissions}. The two
+ * declarations share the syntax rule exposed by {@link #hasValidFormat(String)}, and the two authority
+ * checks accept different sets: the flat check takes app-wide permissions only, the resource-scoped check
+ * takes local permissions only.
+ *
+ * <p>This class deliberately knows nothing about the local declaration. Local permissions are never
+ * tested against what a principal <em>holds</em> — owning a workspace already grants complete authority
+ * over its contents — so they have no business in a sanitised permission set or in the granted authorities
+ * derived from one. Keeping them out also leaves exactly one meaning of "recognized" here.
+ */
 public final class Permissions {
-
-    private static final Pattern FORMAT =
-            Pattern.compile("^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$");
 
     public static final class Reports {
         public static final String READ = "reports:read";
@@ -24,27 +33,42 @@ public final class Permissions {
         private Request() { }
     }
 
-    public static final class Location {
-        public static final String READ = "location:read";
-        public static final String CREATE = "location:create";
-        public static final String UPDATE = "location:update";
-        public static final String DELETE = "location:delete";
+    /**
+     * The workspace layer's gate. Holding it means the user may own and use workspaces at all; it is
+     * distinct from {@link LocalPermissions.Workspace}, whose capabilities apply to a particular
+     * workspace. One permission covers the whole workspace lifecycle.
+     */
+    public static final class Workspace {
+        public static final String OWNER = "workspace:owner";
 
-        private Location() { }
+        private Workspace() { }
     }
 
-    public static final Set<String> ALL = validateAndFreeze(List.of(
+    /** Permissions the flat, resource-less authority check accepts. */
+    public static final Set<String> APP_WIDE = PermissionSyntax.validateAndFreeze(List.of(
             Reports.READ,
             Request.SUBMIT,
-            Location.READ,
-            Location.CREATE,
-            Location.UPDATE,
-            Location.DELETE));
+            Workspace.OWNER));
 
+    /**
+     * Every permission this class recognizes. Identical to {@link #APP_WIDE}; retained as the name the
+     * rest of the application reads.
+     */
+    public static final Set<String> ALL = APP_WIDE;
+
+    /**
+     * Whether the permission is one the flat, resource-less authority check may accept. A
+     * <em>local</em> permission returns false: it is meaningless without a resource to apply it to.
+     */
     public static boolean isRecognized(String permission) {
-        return permission != null && ALL.contains(permission);
+        return permission != null && APP_WIDE.contains(permission);
     }
 
+    /**
+     * Filters a principal's declared permissions down to the app-wide ones. Local permissions are dropped
+     * on purpose: nothing checks whether they are held, so surfacing them here — or in the Spring
+     * authorities derived from this set — would imply an enforcement that does not exist.
+     */
     public static Set<String> recognized(Collection<String> permissions) {
         if (permissions == null || permissions.isEmpty()) {
             return Set.of();
@@ -58,24 +82,9 @@ public final class Permissions {
         return Collections.unmodifiableSet(recognized);
     }
 
-    static Set<String> validateAndFreeze(Collection<String> permissions) {
-        if (permissions == null) {
-            throw new IllegalStateException("Permission declarations are required");
-        }
-        var validated = new LinkedHashSet<String>();
-        for (var permission : permissions) {
-            if (!hasValidFormat(permission)) {
-                throw new IllegalStateException("Invalid permission declaration: " + permission);
-            }
-            if (!validated.add(permission)) {
-                throw new IllegalStateException("Duplicate permission declaration: " + permission);
-            }
-        }
-        return Collections.unmodifiableSet(validated);
-    }
-
+    /** The shared syntax rule; see {@link PermissionSyntax} for why it lives in its own class. */
     public static boolean hasValidFormat(String permission) {
-        return permission != null && FORMAT.matcher(permission).matches();
+        return PermissionSyntax.hasValidFormat(permission);
     }
 
     private Permissions() { }

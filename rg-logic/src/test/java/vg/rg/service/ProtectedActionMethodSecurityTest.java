@@ -16,6 +16,7 @@ import vg.rg.security.model.Permissions;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,7 +46,7 @@ class ProtectedActionMethodSecurityTest {
         try (var context = new AnnotationConfigApplicationContext(TestConfiguration.class)) {
             var service = context.getBean(ProtectedActionService.class);
 
-            authenticate(Set.of(Permissions.Location.READ));
+            authenticate(Set.of(Permissions.Reports.READ));
             assertThatThrownBy(() -> service.submit(UUID.randomUUID()))
                     .isInstanceOf(AccessDeniedException.class);
         }
@@ -95,7 +96,9 @@ class ProtectedActionMethodSecurityTest {
 
         @Bean
         AuthorityChecker authorityChecker() {
-            return new AuthorityChecker();
+            // These tests exercise the flat, resource-less overload only, so a resolver that finds no
+            // workspace is sufficient -- and proves the flat path never consults it.
+            return new AuthorityChecker((resourceId, permission) -> Optional.empty());
         }
 
         @Bean

@@ -6,10 +6,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import vg.rg.entity.LocationEntity;
+import vg.rg.entity.WorkspaceLocationEntity;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.model.LocationModel;
-import vg.rg.service.LocationService;
+import vg.rg.service.WorkspaceLocationService;
 import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class LocationFormDialogTest {
 
     @Mock LocalizationService localization;
-    @Mock LocationService locationService;
+    @Mock WorkspaceLocationService locationService;
 
     @BeforeEach
     void echoLabels() {
@@ -67,7 +67,8 @@ class LocationFormDialogTest {
         var dialog = editDialog();
 
         var message = dialog.messageFor(
-                new ObjectOptimisticLockingFailureException(LocationEntity.class, new UniqueId(1L)));
+                new ObjectOptimisticLockingFailureException(
+                        WorkspaceLocationEntity.class, new UniqueId(1L)));
 
         assertThat(message).isEqualTo("reload-and-retry");
     }

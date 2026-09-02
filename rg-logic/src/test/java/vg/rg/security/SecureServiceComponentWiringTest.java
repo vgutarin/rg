@@ -18,6 +18,7 @@ import vg.rg.service.ProtectedActionService;
 import vg.rg.service.ProtectedActionServiceImpl;
 
 import java.time.Clock;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,11 +26,11 @@ class SecureServiceComponentWiringTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withUserConfiguration(SecureComponents.class, SupportConfiguration.class)
-            .withPropertyValues("rg.secure-service.bot-token=synthetic-token");
+            .withPropertyValues("rg.dev-secure-service.bot-token=synthetic-token");
 
     @Test
     void applicationContext_developmentFacadeEnabled_loadsOnlyDevelopmentFacade() {
-        runner.withPropertyValues("rg.secure-service.enabled=true")
+        runner.withPropertyValues("rg.dev-secure-service.enabled=true")
                 .run(SecureServiceComponentWiringTest::assertDevelopmentComponents);
     }
 
@@ -42,7 +43,7 @@ class SecureServiceComponentWiringTest {
     @Test
     void applicationContext_developmentFacadeDisabled_loadsIdentityFacade() {
         runner.withUserConfiguration(IdentityApiConfiguration.class)
-                .withPropertyValues("rg.secure-service.enabled=false")
+                .withPropertyValues("rg.dev-secure-service.enabled=false")
                 .run(SecureServiceComponentWiringTest::assertIdentityComponents);
     }
 
@@ -58,7 +59,7 @@ class SecureServiceComponentWiringTest {
     @Test
     void applicationContext_identityMode_loadsSharedAuthorizationServices() {
         runner.withUserConfiguration(IdentityApiConfiguration.class)
-                .withPropertyValues("rg.secure-service.enabled=false")
+                .withPropertyValues("rg.dev-secure-service.enabled=false")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertSharedComponents(context);
@@ -77,7 +78,7 @@ class SecureServiceComponentWiringTest {
 
     @Test
     void applicationContext_multipleFacades_failsStartup() {
-        runner.withPropertyValues("rg.secure-service.enabled=true")
+        runner.withPropertyValues("rg.dev-secure-service.enabled=true")
                 .withUserConfiguration(ExtraFacadeConfiguration.class)
                 .run(context -> {
                     assertThat(context).hasFailed();
@@ -121,6 +122,12 @@ class SecureServiceComponentWiringTest {
     static class SupportConfiguration {
         @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }
         @Bean Clock clock() { return Clock.systemUTC(); }
+
+        // AuthorityChecker collaborates with the workspace-scope resolver for its resource-scoped
+        // overload. This slice is about facade wiring, so a resolver that finds no workspace suffices.
+        @Bean WorkspaceScopeResolver workspaceScopeResolver() {
+            return (resourceId, permission) -> Optional.empty();
+        }
     }
 
     @Configuration(proxyBeanMethods = false)

@@ -1,0 +1,26 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 003-retire-migration-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      # The one-time GLOBAL_LOCATION_TO_WORKSPACE migration and its JPA mapping are gone from the
+      # codebase. The table stays, deliberately unmapped: its row is the durable record that the copy
+      # ran in this environment, and dropping rg_location is still an open decision gated on that.
+      #
+      # Restate that in the schema itself, because the code that used to explain the row no longer
+      # exists -- without this, a future reader finds an unmapped table holding one opaque name.
+      preConditions:
+        - onFail: MARK_RAN
+        - onFailMessage: rg_migration_marker is absent, so there is nothing to annotate.
+        - tableExists:
+            tableName: rg_migration_marker
+      changes:
+        - setTableRemarks:
+            tableName: rg_migration_marker
+            remarks: >-
+              Completed one-time data migrations, one row per migration name. Intentionally not mapped
+              by any entity: nothing reads it at runtime. A GLOBAL_LOCATION_TO_WORKSPACE row means the
+              former shared rg_location collection was copied into per-author workspaces in this
+              environment, which is the precondition for ever dropping rg_location. A future one-time
+              migration may write here again by re-adding its own mapping.

@@ -19,7 +19,6 @@ import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
-import org.springframework.data.domain.PageRequest;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -28,7 +27,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.PermitAll;
-import vg.rg.frontend.vaadin.MainView;
+import org.springframework.data.domain.PageRequest;
 import vg.rg.frontend.vaadin.config.MapsClientProperties;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.service.MapsResolutionBridge;
@@ -38,8 +37,11 @@ import vg.rg.model.ProximityMatch;
 import vg.rg.model.ProximityQuery;
 import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.security.model.LocalPermissions;
 import vg.rg.security.model.Permissions;
-import vg.rg.service.LocationService;
+import vg.rg.service.WorkspaceLocationService;
+import vg.rg.service.WorkspaceSelectionService;
+import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -47,27 +49,39 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Locations screen, split into two tabs (mobile-first):
+ * Locations inside the active workspace, split into two tabs (mobile-first):
  * <ul>
- *   <li><b>View</b> — name search over the shared collection; initial state lists the first
- *       {@value #VIEW_PAGE_SIZE} locations. Selecting an entry opens its detail (edit / delete).</li>
+ *   <li><b>View</b> — name search over the workspace's locations; initial state lists the first
+ *       {@value #VIEW_PAGE_SIZE}. Selecting an entry opens its detail (edit / delete).</li>
  *   <li><b>Add</b> — the "Add location" button (Google Maps picker). After coordinates are picked, an
  *       inline add form appears (name pre-filled from the picked place) with the list of already
  *       registered locations within the proximity radius (±500 m) below it. Saving hides the form and
  *       the new location appears on top of the nearby list; cancelling just hides the form.</li>
  * </ul>
+ *
+ * <p>Behaviourally identical to the global locations screen — same tabs, same cards, same inline
+ * accordion detail, same styles — with exactly one difference: <strong>every query is confined to the
+ * active workspace</strong>, including the proximity suggestion, which therefore never surfaces an
+ * identical copy living in another workspace.
+ *
+ * <p>The other consequence of that scope is where the guards point. Entry is gated on the app-wide
+ * workspace permission, and each action is authorized against the resource it acts on — the workspace for
+ * create and reads, the location's own identifier for edit and delete — so a workspace owner needs no
+ * separate location capability inside their own workspace.
  */
-@PageTitle("page.locations.title")
-@Route(value = "locations", layout = MainView.class)
+@PageTitle("page.workspace-locations.title")
+@Route(value = "workspaces/locations", layout = WorkspaceLayout.class)
 @JavaScript(TelegramAuthView.TELEGRAM_JS)
 @JsModule("./google-maps-connector.ts")
 @PermitAll
-public class LocationsView extends VerticalLayout implements BeforeEnterObserver, LocaleChangeObserver {
+public class WorkspaceLocationsView extends VerticalLayout
+        implements BeforeEnterObserver, LocaleChangeObserver {
 
     private final LocalizationService localization;
     private final AuthorityChecker authorityChecker;
     private final transient AuthenticationContext authenticationContext;
-    private final transient LocationService locationService;
+    private final transient WorkspaceLocationService locationService;
+    private final transient WorkspaceSelectionService selectionService;
     private final transient MapsResolutionBridge mapsResolutionBridge;
     private final transient MapsClientProperties mapsClientProperties;
 
@@ -86,20 +100,25 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
     /** The list entry whose inline detail panel is currently expanded (single-open), or {@code null}. */
     private Div expandedItem;
 
+    /** The workspace every query on this screen is scoped to, resolved once per navigation. */
+    private UniqueId workspaceId;
+
     private BigDecimal acquiredLatitude;
     private BigDecimal acquiredLongitude;
     private String acquiredPlaceId;
 
-    public LocationsView(LocalizationService localization,
-                         AuthorityChecker authorityChecker,
-                         AuthenticationContext authenticationContext,
-                         LocationService locationService,
-                         MapsResolutionBridge mapsResolutionBridge,
-                         MapsClientProperties mapsClientProperties) {
+    public WorkspaceLocationsView(LocalizationService localization,
+                                  AuthorityChecker authorityChecker,
+                                  AuthenticationContext authenticationContext,
+                                  WorkspaceLocationService locationService,
+                                  WorkspaceSelectionService selectionService,
+                                  MapsResolutionBridge mapsResolutionBridge,
+                                  MapsClientProperties mapsClientProperties) {
         this.localization = localization;
         this.authorityChecker = authorityChecker;
         this.authenticationContext = authenticationContext;
         this.locationService = locationService;
+        this.selectionService = selectionService;
         this.mapsResolutionBridge = mapsResolutionBridge;
         this.mapsClientProperties = mapsClientProperties;
 
@@ -119,16 +138,19 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         content.removeAll();
-        if (!authorityChecker.hasAuthority(Permissions.Location.READ)) {
+        if (!authorityChecker.hasAuthority(Permissions.Workspace.OWNER)) {
             event.rerouteTo(hasNoEffectivePermissions() ? NoAccessView.class : AccessDeniedErrorView.class);
             return;
         }
+        // Resolved here rather than read from the surrounding layout: the selection service repairs a
+        // stale pointer, so this screen cannot open against a workspace that no longer exists.
+        workspaceId = selectionService.activeWorkspace().getUniqueId();
         render();
     }
 
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        if (authorityChecker.hasAuthority(Permissions.Location.READ)) {
+        if (workspaceId != null && authorityChecker.hasAuthority(Permissions.Workspace.OWNER)) {
             render();
         } else {
             content.removeAll();
@@ -158,7 +180,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
 
     // --- View tab -----------------------------------------------------------------------------------
 
-    /** Name search over the shared collection; blank query lists the first {@link #VIEW_PAGE_SIZE}. */
+    /** Name search within the workspace; blank query lists the first {@link #VIEW_PAGE_SIZE}. */
     private Component viewTab() {
         viewSearch.setPlaceholder(localization.i18n("locations.search.placeholder"));
         var layout = new VerticalLayout(viewSearch, viewList);
@@ -173,8 +195,8 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         expandedItem = null;
         var trimmed = query == null ? "" : query.trim();
         List<LocationModel> results = trimmed.isBlank()
-                ? locationService.browse(PageRequest.of(0, VIEW_PAGE_SIZE)).getContent()
-                : locationService.searchByName(trimmed, 0);
+                ? locationService.browse(workspaceId, PageRequest.of(0, VIEW_PAGE_SIZE)).getContent()
+                : locationService.searchByName(workspaceId, trimmed, 0);
         if (results.isEmpty()) {
             viewList.add(new Paragraph(localization.i18n(
                     trimmed.isBlank() ? "locations.empty" : "locations.search.no-results")));
@@ -192,7 +214,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        if (authorityChecker.hasAuthority(Permissions.Location.CREATE)) {
+        if (canCreate()) {
             var addLocation = new Button(localization.i18n("locations.add"),
                     event -> startCoordinateAcquisition());
             addLocation.setWidthFull();
@@ -221,7 +243,10 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
     @ClientCallable
     public void onCoordinatesAcquired(Double latitude, Double longitude, String placeId, String name) {
         try {
-            var matches = mapsResolutionBridge.resolveAndSuggest(latitude, longitude, placeId);
+            // Scoped: the suggestion never looks outside the active workspace, so an identical copy in
+            // another workspace is invisible here.
+            var matches = mapsResolutionBridge.resolveAndSuggest(
+                    workspaceId, latitude, longitude, placeId);
             rememberCoordinates(BigDecimal.valueOf(latitude), BigDecimal.valueOf(longitude), placeId);
             renderSuggestions(matches);
             showAddForm(name);
@@ -233,11 +258,11 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
 
     /**
      * Google Maps is unavailable — no coordinate fallback. Show the inline add form with no coordinates
-     * (and no nearby list), if the user has add permission.
+     * (and no nearby list), if the user may add to this workspace.
      */
     @ClientCallable
     public void onMapsUnavailable() {
-        if (!authorityChecker.hasAuthority(Permissions.Location.CREATE)) {
+        if (!canCreate()) {
             Notification.show(localization.i18n("location.maps.unavailable"));
             return;
         }
@@ -246,7 +271,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         showAddForm(null);
     }
 
-    /** Inline add form (replaces the former dialog): name (pre-filled) + description + save/cancel. */
+    /** Inline add form: name (pre-filled) + description + save/cancel. */
     private void showAddForm(String prefillName) {
         addForm.removeAll();
         addForm.addClassName("semantic-card");
@@ -313,7 +338,8 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
                 .googlePlaceId(acquiredPlaceId)
                 .build();
         try {
-            locationService.create(model);
+            // The workspace comes from the operation, never from the model.
+            locationService.create(workspaceId, model);
             hideAddForm();
             // Re-render the nearby list (the new location, at ~0 m, sorts to the top) and the View tab.
             afterCreate();
@@ -410,7 +436,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
     /**
      * The collapsible detail panel shown beneath a list entry: description, coordinate/place-id info
      * rows, a primary "open in Google Maps" action (when coordinates exist), and — subject to
-     * permissions — edit and delete actions. An inner wrapper lets the panel animate its height open.
+     * authority — edit and delete actions. An inner wrapper lets the panel animate its height open.
      */
     private Div buildDetailPanel(LocationModel model) {
         var panel = new Div();
@@ -460,17 +486,18 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         }
 
         // Management actions live inside the panel, revealed only on intent. Edit opens the form dialog;
-        // delete is confirmed first. The row hides itself when the user has neither permission.
+        // delete is confirmed first. The row hides itself when the user may do neither. Each check
+        // addresses the location's own identifier, which resolves to its workspace.
         var actions = new Div();
         actions.addClassName("location-row__actions");
-        if (authorityChecker.hasAuthority(Permissions.Location.UPDATE)) {
+        if (authorityChecker.hasAuthority(model.getUniqueId(), LocalPermissions.Location.UPDATE)) {
             var edit = new Button(localization.i18n("location.form.edit.title"), VaadinIcon.EDIT.create(),
                     event -> LocationFormDialog.forEdit(localization, locationService, model,
                             this::afterChange).open());
             edit.addThemeVariants(ButtonVariant.TERTIARY);
             actions.add(edit);
         }
-        if (authorityChecker.hasAuthority(Permissions.Location.DELETE)) {
+        if (authorityChecker.hasAuthority(model.getUniqueId(), LocalPermissions.Location.DELETE)) {
             var delete = new Button(localization.i18n("location.delete"), VaadinIcon.TRASH.create(),
                     event -> confirmDelete(model));
             delete.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR);
@@ -537,7 +564,7 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
         // Refresh the nearby suggestions (when coordinates were acquired) and the View-tab list so the
         // newly created location appears — at ~0 m it sorts to the top of the nearby list.
         if (acquiredLatitude != null && acquiredLongitude != null) {
-            renderSuggestions(locationService.findNearby(
+            renderSuggestions(locationService.findNearby(workspaceId,
                     new ProximityQuery(acquiredLatitude, acquiredLongitude, null)));
         } else {
             suggestions.removeAll();
@@ -553,6 +580,11 @@ public class LocationsView extends VerticalLayout implements BeforeEnterObserver
             url += "&query_place_id=" + URLEncoder.encode(model.getGooglePlaceId(), StandardCharsets.UTF_8);
         }
         return url;
+    }
+
+    /** May the caller add a location to the active workspace? Addresses the workspace, per the create verb. */
+    private boolean canCreate() {
+        return authorityChecker.hasAuthority(workspaceId, LocalPermissions.Location.CREATE);
     }
 
     private boolean hasNoEffectivePermissions() {

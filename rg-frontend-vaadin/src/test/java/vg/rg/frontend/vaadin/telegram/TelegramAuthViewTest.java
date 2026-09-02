@@ -98,7 +98,7 @@ class TelegramAuthViewTest {
     @Test
     void authenticate_authorizedOutcome_installsPrincipal() {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Test User", Set.of("location:read"), true,
+                new UniqueId(1234L), "Test User", Set.of("reports:read"), true,
                 AuthenticationFlow.TELEGRAM);
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var view = view();
@@ -195,7 +195,7 @@ class TelegramAuthViewTest {
 
     private AuthenticatedUserPrincipal principal(UniqueId userUniqueId) {
         return new AuthenticatedUserPrincipal(
-                userUniqueId, "Test User", Set.of("location:read"), true, AuthenticationFlow.TELEGRAM);
+                userUniqueId, "Test User", Set.of("reports:read"), true, AuthenticationFlow.TELEGRAM);
     }
 
     private String renderedText(Component component) {

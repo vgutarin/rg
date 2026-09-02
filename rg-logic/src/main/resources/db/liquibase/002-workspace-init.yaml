@@ -1,0 +1,235 @@
+databaseChangeLog:
+  # Workspace layer. Locations move inside workspaces; the former global rg_location table is NOT
+  # dropped here -- it is marked unused and retained as the migration's rollback. Dropping it is a
+  # separate later change, made only after the one-time migration has been verified against real data.
+  - changeSet:
+      id: 002-workspace-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: rg_workspace
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              # Nullable on purpose: a workspace the SYSTEM created (the auto-provisioned default, and
+              # every workspace the migration creates) stores no name, because a stored name cannot
+              # follow the viewer's locale. NULL means "render the localized label". A user-supplied
+              # name is stored here and displayed verbatim from then on.
+              - column:
+                  name: name
+                  type: VARCHAR(512)
+              - column:
+                  name: description
+                  type: VARCHAR(2048)
+              - column:
+                  name: owner_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              # Set to owner_unique_id on the owner's default workspace, NULL on every other. The unique
+              # index below then permits at most one default per owner while allowing any number of
+              # non-default workspaces, because MySQL unique indexes ignore NULLs. This closes the
+              # concurrent-provisioning race in the database rather than in application code.
+              - column:
+                  name: default_for_owner
+                  type: BIGINT
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uq_rg_workspace_default_for_owner
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: ix_rg_workspace_owner_unique_id
+            tableName: rg_workspace
+            columns:
+              - column:
+                  name: owner_unique_id
+
+  - changeSet:
+      id: 002-workspace-2
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        # One row per user: the primary key IS the "exactly one active workspace per user" rule.
+        - createTable:
+            tableName: rg_workspace_selection
+            columns:
+              - column:
+                  name: user_unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace_selection
+              - column:
+                  name: workspace_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_selection_workspace
+            baseTableName: rg_workspace_selection
+            baseColumnNames: workspace_unique_id
+            referencedTableName: rg_workspace
+            referencedColumnNames: unique_id
+
+  - changeSet:
+      id: 002-workspace-3
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        # Replaces rg_location. workspace_unique_id is NOT NULL, so a location without a workspace is
+        # unrepresentable -- there is no scope predicate for a query to forget. It is also the
+        # containment link the authority check joins through to find the owning workspace.
+        - createTable:
+            tableName: rg_workspace_location
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace_location
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workspace_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: latitude
+                  type: DECIMAL(9, 6)
+              - column:
+                  name: longitude
+                  type: DECIMAL(9, 6)
+              - column:
+                  name: name
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(2048)
+              - column:
+                  name: google_place_id
+                  type: VARCHAR(512)
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_location_workspace
+            baseTableName: rg_workspace_location
+            baseColumnNames: workspace_unique_id
+            referencedTableName: rg_workspace
+            referencedColumnNames: unique_id
+        # Workspace-leading composite indexes: every query is scoped to one workspace, so the scope
+        # column leads. Mirrors the single-column latitude/name indexes the former table carried.
+        - createIndex:
+            indexName: ix_rg_workspace_location_ws_lat
+            tableName: rg_workspace_location
+            columns:
+              - column:
+                  name: workspace_unique_id
+              - column:
+                  name: latitude
+        - createIndex:
+            indexName: ix_rg_workspace_location_ws_name
+            tableName: rg_workspace_location
+            columns:
+              - column:
+                  name: workspace_unique_id
+              - column:
+                  name: name
+
+  - changeSet:
+      id: 002-workspace-4
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        # Records that the one-time global-location migration completed. Written inside the migration's
+        # own transaction, so its presence means the copy committed in full. It is what makes the
+        # migration idempotent, and what a later change checks before dropping rg_location.
+        - createTable:
+            tableName: rg_migration_marker
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(128)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_migration_marker
+              - column:
+                  name: completed_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 002-workspace-5
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      # Mark the retired table so a future reader of the schema cannot mistake a dead table for a live
+      # one. Deliberately NOT a dropTable: the data is the rollback for the one-time migration, and
+      # Liquibase runs before application startup, so dropping here would delete the source before the
+      # migration could copy it.
+      preConditions:
+        - onFail: MARK_RAN
+        - onFailMessage: rg_location is absent, so there is nothing to mark unused.
+        - tableExists:
+            tableName: rg_location
+      changes:
+        - setTableRemarks:
+            tableName: rg_location
+            remarks: >-
+              UNUSED, retained pending removal. Superseded by rg_workspace_location; every row was
+              copied per author by the GLOBAL_LOCATION_TO_WORKSPACE migration. No application code
+              reads this table. Drop only after that migration has been verified in the environment.

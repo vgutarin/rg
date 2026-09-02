@@ -79,7 +79,7 @@ the configured timeouts and safe-state deadline.
 - Raw Telegram `initData` uses a positive startup-validated configurable limit, default 32 KiB with
   no application hard ceiling; it is request-scoped, opaque outside the secure facade, and never
   retained, displayed, persisted, or logged.
-- `rg.secure-service.enabled=true` selects only `DevSecureAuthorizationFacade`; false or missing
+- `rg.dev-secure-service.enabled=true` selects only `DevSecureAuthorizationFacade`; false or missing
   selects only `IdentitySecureAuthorizationFacade`. Missing or ambiguous facade wiring fails startup.
 - Identity transport must have finite timeouts, no implicit retry, a positive configurable raw-response
   limit defaulting to 256 KiB and enforced before parsing, and duplicate-permission visibility. Until
@@ -247,8 +247,8 @@ evidence. Snapshot versions are development-only and cannot satisfy release comp
 
 Spring component selection is intentionally asymmetric:
 
-- `rg.secure-service.enabled=true`: development facade only.
-- `rg.secure-service.enabled=false` or missing: identity facade only.
+- `rg.dev-secure-service.enabled=true`: development facade only.
+- `rg.dev-secure-service.enabled=false` or missing: identity facade only.
 - Identity-rest-client auto-configuration may create its client in development mode. Supply a clearly
   fake, non-secret local API key paired with a loopback/non-production base URL if validation requires
   one; the development facade remains the sole selected facade and never calls the identity client.

@@ -69,13 +69,15 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 
 ## TODO
 
+- analyze tests to possible refactor. I.e. - authentication helpers can be centralized etc
+- make sure EnableMethodSecurity is enabled on logic model level
 - add user contacts - Some structure related to user. {uniqueId, holderUniqueId, contactUniqueId nullable, ... } (unique(holderUniqueId, contactUniqueId))
   - (use uniqueId for all further refs)
 - add user groups - group is subset of contacts 
-
+- Go over paginable methods (list locations, list workspaces, filters) and make sure we  have ORDER BY
 - UI
+  - when Add location tab is opened - activate Map selector. Do not show tab if no permission to add
   - when permission is unknow - UI is blocked with "Obsolete APP" message. Need solution
-  - avoid asking location access
   - Some errors happed on saving location to db level - UI became frozen.
     - we need some generic for all app approach to show/handle errors on frontend
     - any action on connection losted - should clearly say so

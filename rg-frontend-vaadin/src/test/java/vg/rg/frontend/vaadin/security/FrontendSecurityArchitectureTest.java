@@ -38,6 +38,26 @@ class FrontendSecurityArchitectureTest {
                 "localStorage", "sessionStorage", "document.cookie");
     }
 
+    /**
+     * Method security is declared once, in {@code RgLogicConfig}, beside the guards it activates. This
+     * module therefore relies on that configuration being reachable from its component scan — so the two
+     * halves of that arrangement are pinned here.
+     *
+     * <p>Worth pinning because the failure is silent: if {@code vg.rg} left the scan, every
+     * {@code @PreAuthorize} in the business layer would be ignored rather than rejected, and no test in
+     * this module would notice.
+     */
+    @Test
+    void sourceCode_methodSecurity_isInheritedFromTheModuleThatDeclaresTheGuards() throws IOException {
+        var application = read(FRONTEND.resolve("java/vg/rg/frontend/vaadin/FrontendApplication.java"));
+
+        assertThat(application).contains("scanBasePackages", "\"vg.rg\"");
+        // Exactly one declaration in the repository, and it is not this module's.
+        assertThat(textUnder(FRONTEND.resolve("java"))).doesNotContain("@EnableMethodSecurity");
+        assertThat(read(ROOT.resolve("rg-logic/src/main/java/vg/rg/RgLogicConfig.java")))
+                .contains("@EnableMethodSecurity");
+    }
+
     @Test
     void sourceCode_permissionViewInspection_containsNoRoleSemantics() throws IOException {
         assertThat(textUnder(FRONTEND.resolve("java"))).doesNotContain(

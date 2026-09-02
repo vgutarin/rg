@@ -3,7 +3,8 @@ package vg.rg.frontend.vaadin.service;
 import org.springframework.stereotype.Component;
 import vg.rg.model.ProximityMatch;
 import vg.rg.model.ProximityQuery;
-import vg.rg.service.LocationService;
+import vg.rg.service.WorkspaceLocationService;
+import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,10 +21,10 @@ public class MapsResolutionBridge {
     /** Upper bound on a stored Google Place ID (see data-model / FR-009). */
     public static final int MAX_PLACE_ID_LENGTH = 512;
 
-    private final LocationService locationService;
+    private final WorkspaceLocationService workspaceLocationService;
 
-    public MapsResolutionBridge(LocationService locationService) {
-        this.locationService = Objects.requireNonNull(locationService);
+    public MapsResolutionBridge(WorkspaceLocationService workspaceLocationService) {
+        this.workspaceLocationService = Objects.requireNonNull(workspaceLocationService);
     }
 
     /** Acquired coordinates with an optional Google Place ID (null when the user picked a point only). */
@@ -45,13 +46,19 @@ public class MapsResolutionBridge {
     }
 
     /**
-     * Validates the payload and returns the advisory proximity suggestion for the acquired coordinates.
-     * Authorized against {@code location:read} inside {@link LocationService#findNearby}.
+     * Validates the payload and returns the advisory proximity suggestion for the acquired coordinates,
+     * which never looks outside the given workspace. Authorization happens inside
+     * {@link WorkspaceLocationService#findNearby}, which resolves the workspace to its owner.
+     *
+     * <p>A workspace is always required: there is no unscoped overload to reach for, which is why the
+     * former global one was removed rather than left as a convenience.
      */
-    public List<ProximityMatch> resolveAndSuggest(Double latitude, Double longitude, String placeId) {
+    public List<ProximityMatch> resolveAndSuggest(UniqueId workspaceId,
+                                                  Double latitude, Double longitude, String placeId) {
+        Objects.requireNonNull(workspaceId, "workspaceId");
         var coordinates = validate(latitude, longitude, placeId);
-        return locationService.findNearby(
-                new ProximityQuery(coordinates.latitude(), coordinates.longitude(), null));
+        return workspaceLocationService.findNearby(
+                workspaceId, new ProximityQuery(coordinates.latitude(), coordinates.longitude(), null));
     }
 
     private static double requireCoordinate(Double value, String name, double absoluteBound) {

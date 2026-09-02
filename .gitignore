@@ -25,3 +25,4 @@ Thumbs.db
 .env.local
 .env.*.local
 /local-db/
+/rg-frontend-vaadin/local-db/

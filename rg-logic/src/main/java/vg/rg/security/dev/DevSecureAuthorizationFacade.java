@@ -16,7 +16,7 @@ import vg.unique.id.model.UniqueId;
 import java.time.Clock;
 
 @Service
-@ConditionalOnProperty(prefix = "rg.secure-service", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "rg.dev-secure-service", name = "enabled", havingValue = "true")
 public class DevSecureAuthorizationFacade implements SecureAuthorizationFacade {
 
     private final TelegramInitDataVerifier verifier;
@@ -58,8 +58,6 @@ public class DevSecureAuthorizationFacade implements SecureAuthorizationFacade {
     }
 
     private static String botToken(DevSecureServiceProperties properties, Environment environment) {
-        return properties.getBotToken().isBlank()
-                ? environment.getProperty("telegram.bot.token", "")
-                : properties.getBotToken();
+        return properties.getBotToken();
     }
 }

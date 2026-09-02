@@ -79,8 +79,8 @@ outcomes identity-api cannot currently distinguish.
 
 | Configuration | Required bean |
 |---|---|
-| `rg.secure-service.enabled=true` | Development facade only |
-| `rg.secure-service.enabled=false` | Identity-service facade only |
+| `rg.dev-secure-service.enabled=true` | Development facade only |
+| `rg.dev-secure-service.enabled=false` | Identity-service facade only |
 | Property missing | Identity-service facade only |
 
 Missing or multiple facade beans fail application startup. In development mode the identity client

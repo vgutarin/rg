@@ -9,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.frontend.vaadin.service.LocalizationService;
+import vg.rg.security.AuthorityChecker;
+import vg.rg.service.WorkspaceSelectionService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
@@ -31,6 +33,8 @@ class LocaleRefreshIntegrationTest {
 
     @Mock LocalizationService localization;
     @Mock AuthenticationContext authenticationContext;
+    @Mock AuthorityChecker authorityChecker;
+    @Mock WorkspaceSelectionService selectionService;
 
     @Test
     void localeChange_existingShell_preservesNavigation() {
@@ -101,6 +105,6 @@ class LocaleRefreshIntegrationTest {
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
-        return new MainView(localization, authenticationContext);
+        return new MainView(localization, authenticationContext, authorityChecker, selectionService);
     }
 }

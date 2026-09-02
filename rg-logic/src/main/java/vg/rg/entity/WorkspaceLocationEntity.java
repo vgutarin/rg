@@ -29,9 +29,16 @@ import java.util.Objects;
 import static vg.utils.HibernateHelper.effectiveClass;
 
 /**
- * A place saved in the shared collection. Coordinates are the primary match key (not a uniqueness
- * constraint). {@code author}/{@code lastEditor} are abstract user identities recorded for auditing
- * only (never for access control) and are never mapped to a natural person.
+ * A place saved inside a workspace — the only kind of location that exists. Replaces the former global
+ * collection, whose table is retained but unused.
+ *
+ * <p>{@code workspaceUniqueId} is <strong>not null</strong> and never updated, so a location without a
+ * workspace is unrepresentable and a location cannot move between workspaces. It serves two purposes:
+ * it scopes every query by construction, and it is the containment link the authority check joins
+ * through to find the owning workspace.
+ *
+ * <p>Coordinates remain optional — a location may be saved without them when Google Maps is
+ * unavailable. {@code author}/{@code lastEditor} are for auditing only, never for access control.
  */
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,15 +47,19 @@ import static vg.utils.HibernateHelper.effectiveClass;
 @ToString
 @Builder
 @Entity
-@Table(name = "rg_location")
+@Table(name = "rg_workspace_location")
 @EntityListeners(AuditingEntityListener.class)
-public class LocationEntity implements UniqueIdEntity {
+public class WorkspaceLocationEntity implements UniqueIdEntity {
 
     @Id
     private Long uniqueId;
 
     @Version
     private int version;
+
+    @Column(name = "workspace_unique_id", nullable = false, updatable = false)
+    @Convert(converter = UniqueIdLongConverter.class)
+    private UniqueId workspaceUniqueId;
 
     // Coordinates are optional: a location may be added without them when Google Maps is unavailable.
     @Column(precision = 9, scale = 6)
@@ -57,10 +68,10 @@ public class LocationEntity implements UniqueIdEntity {
     @Column(precision = 9, scale = 6)
     private BigDecimal longitude;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 512)
     private String name;
 
-    @Column(length = 1024)
+    @Column(length = 2048)
     private String description;
 
     @Column(name = "google_place_id", length = 512)
@@ -72,14 +83,15 @@ public class LocationEntity implements UniqueIdEntity {
     private UniqueId author;
 
     @LastModifiedBy
+    @Column(name = "last_editor")
     @Convert(converter = UniqueIdLongConverter.class)
     private UniqueId lastEditor;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate
     private Instant createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     @LastModifiedDate
     private Instant updatedAt;
 
@@ -88,7 +100,7 @@ public class LocationEntity implements UniqueIdEntity {
         if (this == o) return true;
         if (o == null) return false;
         if (effectiveClass(this) != effectiveClass(o)) return false;
-        LocationEntity that = (LocationEntity) o;
+        WorkspaceLocationEntity that = (WorkspaceLocationEntity) o;
         return getUniqueId() != null && Objects.equals(getUniqueId(), that.getUniqueId());
     }
 

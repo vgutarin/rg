@@ -24,9 +24,13 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import jakarta.annotation.security.PermitAll;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.telegram.TelegramAuthView;
+import vg.rg.security.AuthorityChecker;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.rg.security.model.AuthenticationFlow;
+import vg.rg.security.model.LocalPermissions;
 import vg.rg.security.model.Permissions;
+import vg.rg.service.WorkspaceSelectionService;
+import vg.unique.id.model.UniqueId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +42,8 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
     private final transient AuthenticationContext authenticationContext;
     private final LocalizationService localization;
+    private final AuthorityChecker authorityChecker;
+    private final transient WorkspaceSelectionService selectionService;
     private final boolean authenticated;
     private final boolean telegramFlow;
     private final Set<String> permissions;
@@ -50,9 +56,14 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
     private record NavBinding(SideNavItem item, String key) { }
 
-    public MainView(LocalizationService localization, AuthenticationContext authenticationContext) {
+    public MainView(LocalizationService localization,
+                    AuthenticationContext authenticationContext,
+                    AuthorityChecker authorityChecker,
+                    WorkspaceSelectionService selectionService) {
         this.localization = localization;
         this.authenticationContext = authenticationContext;
+        this.authorityChecker = authorityChecker;
+        this.selectionService = selectionService;
         var principal = authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class);
         this.authenticated = principal.isPresent();
         this.telegramFlow = principal
@@ -86,6 +97,11 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
     List<String> navigationLabels() {
         return navigation.stream().map(binding -> binding.item().getLabel()).toList();
+    }
+
+    /** Where each entry actually goes — a label can move without the route moving with it. */
+    List<String> navigationPaths() {
+        return navigation.stream().map(binding -> binding.item().getPath()).toList();
     }
 
     Set<String> visiblePermissions() {
@@ -140,9 +156,14 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         if (permissions.contains(Permissions.Reports.READ)) {
             addNav(nav, "nav.reports", "/reports", VaadinIcon.CHART.create());
         }
-        if (permissions.contains(Permissions.Location.READ)) {
-            addNav(nav, "nav.locations", "/locations", VaadinIcon.MAP_MARKER.create());
-        }
+        // Locations sit at the top level even though a location lives inside a workspace: the workspace
+        // is the scope, not a place the user has to navigate through.
+        addLocationsNav(nav);
+
+        // The workspace section's own entry is deliberately not rendered yet. Its routes, layout and gate
+        // all still work -- only the way in from the drawer is withheld, so restoring it means adding one
+        // addNav call back here, together with a `nav.workspaces` label.
+
         var scroller = new Scroller(nav);
         scroller.setSizeFull();
         var drawer = new VerticalLayout(appTitle, scroller);
@@ -152,6 +173,39 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         drawer.setSizeFull();
         drawer.expand(scroller);
         return drawer;
+    }
+
+    /**
+     * The locations entry, shown only when the caller may actually list locations in the workspace they
+     * are working in.
+     *
+     * <p>The app-wide gate is checked first, and not as a shortcut: resolving the active workspace is
+     * itself guarded by it, so asking a non-holder would raise an access denial and take the whole
+     * navigation shell down with it.
+     */
+    private void addLocationsNav(SideNav nav) {
+        var workspaceId = activeWorkspaceId();
+        if (workspaceId == null
+                || !authorityChecker.hasAuthority(workspaceId, LocalPermissions.Location.LIST)) {
+            return;
+        }
+        addNav(nav, "nav.locations", "/workspaces/locations", VaadinIcon.MAP_MARKER.create());
+    }
+
+    /**
+     * The workspace the caller is working in, or null when they hold no workspace permission.
+     *
+     * <p>Note this provisions the caller's default workspace on their first page load rather than on
+     * their first visit to a workspace screen — resolving the active workspace is what creates one. That
+     * is the same guarantee stated earlier, reached earlier; a user without the permission still gets
+     * nothing.
+     */
+    private UniqueId activeWorkspaceId() {
+        if (!permissions.contains(Permissions.Workspace.OWNER)) {
+            return null;
+        }
+        var active = selectionService.activeWorkspace();
+        return active == null ? null : active.getUniqueId();
     }
 
     private void addNav(SideNav nav, String key, String path, Component icon) {

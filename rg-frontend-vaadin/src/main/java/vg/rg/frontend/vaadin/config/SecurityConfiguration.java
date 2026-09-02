@@ -7,15 +7,16 @@ import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import vg.rg.frontend.vaadin.telegram.TelegramAuthView;
 
 import static com.vaadin.flow.spring.security.VaadinSecurityConfigurer.vaadin;
 
+// Method security is enabled by RgLogicConfig, alongside the @PreAuthorize guards it activates; this
+// module declares none of its own. Two declarations with differing attributes would make the effective
+// proxying strategy depend on configuration order, so there is deliberately only one.
 @EnableWebSecurity
-@EnableMethodSecurity
 @Configuration
 public class SecurityConfiguration {
 

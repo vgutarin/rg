@@ -427,6 +427,119 @@ vaadin-side-nav::part(label) {
   }
 }
 
+/* ---------------------------------------------------------------- workspace layer
+
+   Mobile-first throughout: one column by default, every action full width, and long text wrapped
+   rather than clipped -- a workspace name may be up to `rg.workspace.name-max-length` characters, and
+   at 320px that has to wrap somewhere instead of widening the page. Wider layouts arrive only through
+   min-width queries, never max-width. */
+
+/* The active-workspace selector, hosted by the section layout so it cannot appear outside it. */
+.workspace-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-m);
+  min-width: 0;
+}
+
+.workspace-header {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  min-width: 0;
+}
+
+.workspace-selector {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.workspace-active-caption {
+  color: var(--vaadin-text-color-secondary);
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+.workspace-content {
+  min-width: 0;
+}
+
+/* The list of owned workspaces. */
+.workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-m);
+  min-width: 0;
+}
+
+.workspace-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  min-width: 0;
+  padding: 0.6rem 0.9rem;
+}
+
+.workspace-row-name {
+  font-weight: 600;
+  /* A maximum-length name has no spaces to break at if the user typed none. */
+  overflow-wrap: anywhere;
+}
+
+.workspace-default-badge {
+  align-self: flex-start;
+  background: var(--aura-accent-surface);
+  border-radius: var(--vaadin-radius-s);
+  color: var(--aura-accent-text-color);
+  font-size: 0.8em;
+  padding: 0.1rem 0.5rem;
+}
+
+/* Rename / remove: stacked and full width on a narrow screen so both stay tappable. */
+.workspace-row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  width: 100%;
+}
+
+.workspace-row-actions > vaadin-button {
+  min-height: 44px;
+  width: 100%;
+}
+
+.workspace-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  min-width: 0;
+}
+
+@media (min-width: 30rem) {
+  .workspace-row-actions {
+    flex-direction: row;
+  }
+
+  .workspace-row-actions > vaadin-button {
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (min-width: 48rem) {
+  .workspace-header {
+    align-items: center;
+    flex-direction: row;
+    gap: var(--vaadin-gap-m);
+  }
+
+  .workspace-selector {
+    width: 18rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .authorization-status-card {
     transition: none;

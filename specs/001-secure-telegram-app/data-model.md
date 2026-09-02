@@ -115,8 +115,8 @@ occurrence information or an equivalent duplicate indicator long enough to suppo
 
 | Input | Selected implementation | Rules |
 |---|---|---|
-| `rg.secure-service.enabled=true` | Development facade | Explicit development-only mode; unused identity client may initialize with a fake non-secret local API key and loopback/non-production base URL |
-| `rg.secure-service.enabled=false` | Identity-service facade | Production-oriented path |
+| `rg.dev-secure-service.enabled=true` | Development facade | Explicit development-only mode; unused identity client may initialize with a fake non-secret local API key and loopback/non-production base URL |
+| `rg.dev-secure-service.enabled=false` | Identity-service facade | Production-oriented path |
 | Property absent | Identity-service facade | Secure default |
 | Missing or multiple resulting beans | None | Application startup fails |
 

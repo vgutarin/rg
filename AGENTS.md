@@ -1,5 +1,12 @@
 # Agent Instructions
 
+- Current-state behaviour lives in `specs/current/`. Read the relevant domain file before changing
+  behaviour in that area, and update it as part of the same change. A feature directory under
+  `specs/NNN-*/` is a frozen decision record — no later work updates it, so it describes the system only
+  as of that feature.
+- Before your first build or test run in a session, read `specs/current/engineering-notes.md`: build,
+  test and deployment facts that are not derivable from the code and have each cost debugging time.
+  `specs/current/open-decisions.md` lists work that is neither finished nor abandoned.
 - Work only in this repository for project tasks; never switch to or use the `knowledge-storage` repository.
 - Never use `tango-cli` for this project.
 - Never use tango skills for this project.

@@ -6,6 +6,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import vg.rg.frontend.vaadin.service.LocalizationService;
+import vg.rg.security.AuthorityChecker;
+import vg.rg.service.WorkspaceSelectionService;
 import vg.rg.security.model.AuthenticatedUserPrincipal;
 import vg.unique.id.model.UniqueId;
 import vg.rg.security.model.AuthenticationFlow;
@@ -26,6 +28,8 @@ class MainViewTest {
 
     @Mock LocalizationService localization;
     @Mock AuthenticationContext authenticationContext;
+    @Mock AuthorityChecker authorityChecker;
+    @Mock WorkspaceSelectionService selectionService;
 
     @Test
     void constructor_permittedPrincipal_createsOnlyPermittedNavigation() {
@@ -38,7 +42,7 @@ class MainViewTest {
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.navigationLabels()).containsExactly("nav.home");
     }
@@ -50,14 +54,14 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), "Test User",
-                Set.of(Permissions.Location.READ, Permissions.Request.SUBMIT), true,
+                Set.of(Permissions.Reports.READ, Permissions.Request.SUBMIT), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Location.READ, Permissions.Request.SUBMIT);
+                Permissions.Reports.READ, Permissions.Request.SUBMIT);
     }
 
     @Test
@@ -66,11 +70,11 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Test User", Set.of(Permissions.Location.READ), true,
+                new UniqueId(1234L), "Test User", Set.of(Permissions.Reports.READ), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.getElement().getText()).doesNotContain(principal.userUniqueId().toString());
     }
@@ -81,7 +85,7 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         view.selectLocale(Locale.ENGLISH);
 
@@ -95,7 +99,7 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.getClass().getDeclaredFields())
                 .extracting(field -> field.getType().getName())
@@ -114,7 +118,7 @@ class MainViewTest {
         });
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.selectedLocale()).isEqualTo(LocalizationService.DEFAULT_LOCALE);
     }
@@ -131,7 +135,7 @@ class MainViewTest {
         });
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.localeLabel(LocalizationService.DEFAULT_LOCALE)).isEqualTo("Українська");
     }
@@ -148,7 +152,7 @@ class MainViewTest {
         });
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.localeLabel(Locale.ENGLISH)).isEqualTo("English");
     }
@@ -162,7 +166,7 @@ class MainViewTest {
                 new UniqueId(1234L), "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.visiblePermissions()).isEmpty();
     }
@@ -176,7 +180,7 @@ class MainViewTest {
                 new UniqueId(1234L), "Test User", Set.of(), true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         // Telegram Mini App sessions have no local login to return to, so the logout action is hidden.
         assertThat(view.sessionActionVisible()).isFalse();
@@ -189,7 +193,7 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.empty());
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         // Hiding is scoped to the Telegram flow; an unauthenticated visitor still sees the login action.
         assertThat(view.sessionActionVisible()).isTrue();
@@ -205,7 +209,7 @@ class MainViewTest {
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         // Home navigation is always present; a null subject exposes no effective permissions and no
         // permission-gated navigation beyond Home.
@@ -231,7 +235,7 @@ class MainViewTest {
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
 
-        var view = new MainView(localization, authenticationContext);
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
         assertThat(view.navigationLabels()).containsExactly("Головна", "Звіти");
         assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(

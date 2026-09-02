@@ -268,7 +268,7 @@ brittle).
 ## Decision 15: Facade implementation selection
 
 **Decision**: Select `DevSecureAuthorizationFacade` only when
-`rg.secure-service.enabled=true`. Select `IdentitySecureAuthorizationFacade` when the property is
+`rg.dev-secure-service.enabled=true`. Select `IdentitySecureAuthorizationFacade` when the property is
 false or absent. Exactly one facade must exist. Identity-rest-client auto-configuration may remain
 active in development mode; if it requires an API key, local configuration supplies a
 clearly fake, non-secret value paired with a loopback/non-production base URL. The selected

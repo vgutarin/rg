@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 
 @Getter
-@ConfigurationProperties("rg.secure-service")
+@ConfigurationProperties("rg.dev-secure-service")
 @Component
-@ConditionalOnProperty(prefix = "rg.secure-service", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "rg.dev-secure-service", name = "enabled", havingValue = "true")
 public class DevSecureServiceProperties {
 
     private Duration authDateTtl = Duration.ofHours(1);

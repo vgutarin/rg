@@ -2,13 +2,35 @@
 
 Current-state specification of the geolocation module as implemented. Full requirements, clarifications,
 and rationale live in [../002-geolocation-module/spec.md](../002-geolocation-module/spec.md); design in
-[../002-geolocation-module/plan.md](../002-geolocation-module/plan.md).
+[../002-geolocation-module/plan.md](../002-geolocation-module/plan.md). The workspace scoping that now
+governs access is specified in [workspace.md](./workspace.md), with rationale in
+[../003-workspace-layer/spec.md](../003-workspace-layer/spec.md).
 
 ## Purpose
 
-Authenticated, permission-holding users maintain a **shared collection of saved locations** (points of
-interest) and, when adding one, are shown already-registered places nearby so they can reuse an existing
-one instead of creating a duplicate.
+Users maintain **saved locations** (points of interest) **inside a workspace**, and, when adding one, are
+shown already-registered places nearby **in that same workspace** so they can reuse an existing one
+instead of creating a duplicate.
+
+A location exists only inside a workspace. The former single collection shared by every permission holder
+is retired — see [Scope](#scope) below.
+
+## Scope
+
+Every location belongs to exactly one workspace, and that is a property of the schema rather than a
+convention: `rg_workspace_location.workspace_unique_id` is **NOT NULL and never updated**. A location
+without a workspace is unrepresentable, and a location cannot move between workspaces.
+
+Consequently:
+
+- Every read takes a workspace, so an unscoped query cannot be written — the repository has no overload
+  that omits it.
+- The navigation entry is gated on the *active workspace*, not on a permission the principal holds, so
+  what the drawer offers and what the service will allow are the same question asked once each.
+- The proximity suggestion never looks outside the active workspace, and neither does name search.
+- Removing a workspace removes its locations and changes no other workspace's contents.
+- A user without `workspace:owner` reaches **no** locations at all, because the only route to one is
+  through its workspace.
 
 ## Capabilities
 
@@ -23,15 +45,15 @@ one instead of creating a duplicate.
   where the browser API is unreliable), otherwise a **Kyiv** default. This is **centering only** — never
   the saved coordinate. On confirm, coordinates and the optional Place ID are handed to the server.
 - **No-Maps fallback**: if Google Maps is unavailable (missing/blocked key, load timeout) there is **no
-  coordinate fallback** — the add form opens directly so a permitted user can save a location **without
+  coordinate fallback** — the add form opens directly so a user can save a location **without
   coordinates** (name/description only). Coordinates are optional throughout.
-- **Proximity suggestion**: given coordinates, suggest saved locations within a configurable radius
-  (default **±500 m**), nearest-first. Advisory only — the user may always create a new location, even
-  within the radius (no dedup/uniqueness gate).
-- **Name search**: case-insensitive filter over the shared collection; blank query returns all
-  (bounded); clear returns to the full list; empty result shows a no-results state.
-- **Display**: browsable list of the collection and a detail view with name, description, and — **when
-  present** — coordinates, the **Google Place ID**, and an "open in Google Maps" action (derived on
+- **Proximity suggestion**: given coordinates, suggest locations **in the active workspace** within a
+  configurable radius (default **±500 m**), nearest-first. Advisory only — the user may always create a
+  new location, even within the radius (no dedup/uniqueness gate).
+- **Name search**: case-insensitive filter **within one workspace**; blank query returns all (bounded);
+  clear returns to the full list; empty result shows a no-results state.
+- **Display**: browsable list of the workspace's locations and a detail view with name, description, and —
+  **when present** — coordinates, the **Google Place ID**, and an "open in Google Maps" action (derived on
   demand from coordinates, refined by the Place ID). A location saved without coordinates simply omits
   the coordinates line and the maps link. The action opens via `Telegram.WebApp.openLink` inside a Mini
   App (a plain `target=_blank` anchor does not open in the Telegram webview), falling back to
@@ -41,37 +63,63 @@ one instead of creating a duplicate.
 
 ## Data
 
-**Location** (table `rg_location`): coordinates (latitude/longitude, `DECIMAL(9,6)`, **optional/nullable**
-— the proximity match key when present, **not** unique), name (required), description (optional),
-optional **Google Place ID** (no Maps URL is stored — the link is derived), a version token for
-optimistic concurrency, `author` and `lastEditor` (abstract user `UniqueId`, audit only), and
-created/updated timestamps.
+**Workspace location** (table `rg_workspace_location`): `workspace_unique_id` (**required, immutable** —
+the scope, and the link the authority check joins through), coordinates (latitude/longitude,
+`DECIMAL(9,6)`, **optional/nullable** — the proximity match key when present, **not** unique), name
+(required), description (optional), optional **Google Place ID** (no Maps URL is stored — the link is
+derived), a version token for optimistic concurrency, `author` and `lastEditor` (abstract user `UniqueId`,
+audit only), and created/updated timestamps.
+
+The superseded table `rg_location` is **retained on disk and entirely unmapped** — no entity, no
+repository, nothing that reaches it — marked by a table comment as replaced by `rg_workspace_location`. It
+is the rollback for the one-time copy into workspaces, which has itself been deleted; dropping the table
+is a separate later change. See [workspace.md](./workspace.md#the-retired-global-scope).
 
 No personal data about natural persons is persisted; free-text fields show localized guidance
 discouraging others' personal data but are stored as-is (the user's own content).
 
 ## Access control
 
-Governed by the application's existing permissions model via `location:read`, `location:create`,
-`location:update`, `location:delete` (colon syntax, in `Permissions.Location`). Ownership is never used
-for access; author/last-editor are audit-only. Concurrent edits use optimistic concurrency (JPA
-`@Version`); a stale save is rejected with the localized "reload and retry" message.
+Governed by the workspace layer, not by app-wide location capabilities. The app-wide gate is
+**`workspace:owner`**; the location capabilities (`location:read|list|create|update|delete`) live in
+`LocalPermissions` and are **declared, not held** — **owning the workspace grants complete authority over
+its locations**, so an owner holding none of them is still allowed.
+
+Each service method guards with one resource-addressed check, passing the identifier of the thing being
+acted on — the location's own id for `update`/`delete`, the workspace for `create` and for reads:
+
+```java
+@PreAuthorize("@authorityChecker.hasAuthority(#locationId, 'location:update')")
+```
+
+The location resolves to its workspace in a single joined query, so the check costs one round trip
+regardless of how deep a type sits. Author and last-editor remain audit-only and are never used for
+access. Concurrent edits use optimistic concurrency (JPA `@Version`); a stale save is rejected with the
+localized "reload and retry" message.
 
 ## Where it lives
 
-- **`rg-logic`** (business logic): `LocationService` (public interface) / `LocationServiceImpl`
-  (package-private), `LocationEntity`, `LocationRepository` (bounding-box query + name search),
-  `LocationMapper`, `GeoDistance` (great-circle distance + bounding box), `GeoProperties`
-  (`rg.geo.match-radius-meters`, default 500), `CurrentUserAuditorAware`, and the `location:*`
-  permissions. Schema: `rg-logic/src/main/resources/db/liquibase/001-location-init.yaml`.
-- **`rg-frontend-vaadin`** (UI, mobile-first, i18n): `LocationsView` (`/locations`, gated on
-  `location:read`, in the nav), `LocationFormDialog` (add/edit), `MapsResolutionBridge` (validates
-  browser-acquired coordinates and runs the proximity suggestion), `MapsClientProperties` (browser
-  config), and the browser connector `../../rg-frontend-vaadin/src/main/frontend/google-maps-connector.ts`. The connector loads
-  the Google Maps JS API on demand and exposes `rgInitGoogleMapsConnector` (the map picker, including
-  best-effort centering); results return via the `LocationsView` `@ClientCallable` methods
-  (`onCoordinatesAcquired`, `onMapsUnavailable`). Server→client element wiring passes the view element
-  explicitly as `$0` (so `$0.$server.*` resolves).
+- **`rg-logic`** (business logic): `WorkspaceLocationService` (public interface) /
+  `WorkspaceLocationServiceImpl` (package-private), `WorkspaceLocationEntity`,
+  `WorkspaceLocationRepository` (workspace-scoped bounding-box query, name search, and the scope join),
+  `WorkspaceLocationMapper`, `LocationScopeProvider` (resolves a location to its workspace),
+  `LocationWorkspaceContentContributor` (removal with its workspace), `GeoDistance` (great-circle
+  distance + bounding box), `GeoProperties` (`rg.geo.match-radius-meters`, default 500),
+  `CurrentUserAuditorAware`, and the `location:*` capabilities in `LocalPermissions`. Schema:
+  `rg-logic/src/main/resources/db/liquibase/002-workspace-init.yaml`, plus
+  `003-retire-global-location-migration.yaml`; the superseded `001-location-init.yaml` remains, since its
+  table is retained.
+- **`rg-frontend-vaadin`** (UI, mobile-first, i18n): `WorkspaceLocationsView`
+  (**`/workspaces/locations`**, reached from a **top-level** navigation entry shown only when
+  `hasAuthority(activeWorkspaceId, "location:list")` holds — the workspace is the scope, not a place to
+  navigate through), `LocationFormDialog` (edit), `MapsResolutionBridge` (validates browser-acquired
+  coordinates and runs the **workspace-scoped** proximity suggestion — it requires a workspace, there is
+  no unscoped overload), `MapsClientProperties` (browser config), and the browser connector
+  `../../rg-frontend-vaadin/src/main/frontend/google-maps-connector.ts`. The connector loads the Google
+  Maps JS API on demand and exposes `rgInitGoogleMapsConnector` (the map picker, including best-effort
+  centering); results return via the view's `@ClientCallable` methods (`onCoordinatesAcquired`,
+  `onMapsUnavailable`). Server→client element wiring passes the view element explicitly as `$0` (so
+  `$0.$server.*` resolves).
 - **Google Maps configuration** (all browser-side, non-secret, referrer-scoped):
   - `google.maps.browser-api-key` — the browser API key (required for the Maps picker; when blank the
     picker fails fast and the user adds a location without coordinates).

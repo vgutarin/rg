@@ -32,7 +32,7 @@ class SecureServiceApplicationContextTest {
             .withConfiguration(AutoConfigurations.of(IdentityRestClientAutoConfig.class))
             .withUserConfiguration(SecureComponents.class)
             .withPropertyValues(
-                    "rg.secure-service.bot-token=synthetic-test-token",
+                    "rg.dev-secure-service.bot-token=synthetic-test-token",
                     "vg.identity.rest-client.base-url=http://127.0.0.1:9",
                     "vg.identity.rest-client.api-key=clearly-fake-test-key",
                     "vg.identity.rest-client.connect-timeout=PT2S",
@@ -40,7 +40,7 @@ class SecureServiceApplicationContextTest {
 
     @Test
     void applicationContext_missingLimits_usesDefaults() {
-        runner.withPropertyValues("rg.secure-service.enabled=true")
+        runner.withPropertyValues("rg.dev-secure-service.enabled=true")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     var limits = context.getBean(IdentityAuthorizationLimitsProperties.class);
@@ -52,7 +52,7 @@ class SecureServiceApplicationContextTest {
     @Test
     void applicationContext_customPositiveLimits_usesConfiguredValues() {
         runner.withPropertyValues(
-                        "rg.secure-service.enabled=true",
+                        "rg.dev-secure-service.enabled=true",
                         COUNT + "=7",
                         LENGTH + "=19")
                 .run(context -> {
@@ -72,7 +72,7 @@ class SecureServiceApplicationContextTest {
 
     @Test
     void applicationContext_fakeKeyDevelopmentMode_selectsOnlyDevelopmentFacade() {
-        runner.withPropertyValues("rg.secure-service.enabled=true")
+        runner.withPropertyValues("rg.dev-secure-service.enabled=true")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
                     assertThat(context).hasSingleBean(SecureAuthorizationFacade.class);
@@ -83,14 +83,14 @@ class SecureServiceApplicationContextTest {
 
     @Test
     void applicationContext_falseOrMissingSelection_selectsOnlyIdentityFacade() {
-        runner.withPropertyValues("rg.secure-service.enabled=false")
+        runner.withPropertyValues("rg.dev-secure-service.enabled=false")
                 .run(SecureServiceApplicationContextTest::assertIdentityFacade);
         runner.run(SecureServiceApplicationContextTest::assertIdentityFacade);
     }
 
     private void assertInvalid(String property, String configuredValue) {
         runner.withPropertyValues(
-                        "rg.secure-service.enabled=true",
+                        "rg.dev-secure-service.enabled=true",
                         property + "=" + configuredValue)
                 .run(context -> {
                     assertThat(context).hasFailed();

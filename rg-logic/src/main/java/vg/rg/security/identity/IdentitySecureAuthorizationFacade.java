@@ -19,7 +19,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @ConditionalOnProperty(
-        prefix = "rg.secure-service", name = "enabled", havingValue = "false", matchIfMissing = true)
+        prefix = "rg.dev-secure-service", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class IdentitySecureAuthorizationFacade implements SecureAuthorizationFacade {
 
     private final IdentityApplicationApi identityApplicationApi;

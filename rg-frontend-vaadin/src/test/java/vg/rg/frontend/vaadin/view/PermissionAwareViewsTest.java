@@ -16,6 +16,7 @@ import vg.rg.security.model.AuthenticationFlow;
 import vg.rg.security.model.Permissions;
 import vg.rg.service.ProtectedActionService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -43,6 +44,17 @@ class PermissionAwareViewsTest {
     }
 
     @Test
+    void annotations_workspaceViews_usePermissionSemanticsToo() {
+        // The workspace section follows the same convention: permission-based, never role-based. Its
+        // own gate behaviour is covered by WorkspaceAccessGateTest.
+        for (var view : List.of(
+                WorkspaceLayout.class, WorkspacesView.class, WorkspaceLocationsView.class)) {
+            assertThat(view).hasAnnotation(PermitAll.class);
+            assertThat(view.isAnnotationPresent(RolesAllowed.class)).isFalse();
+        }
+    }
+
+    @Test
     void beforeEnter_missingPrincipal_reroutesToAccessDenied() {
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.empty());
@@ -58,7 +70,7 @@ class PermissionAwareViewsTest {
     void beforeEnter_presentPrincipal_rendersHome() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
@@ -91,7 +103,7 @@ class PermissionAwareViewsTest {
     void localeChange_presentPrincipal_reRendersContent() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
@@ -120,13 +132,13 @@ class PermissionAwareViewsTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(authorityChecker.hasAuthority(Permissions.Request.SUBMIT)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Location.READ, "unknown:view"))));
+                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ, "unknown:view"))));
         var landing = new LandingView(
                 localization, authorityChecker, authenticationContext, protectedActionService);
 
         landing.beforeEnter(event);
 
-        verify(localization).i18n("permission." + Permissions.Location.READ);
+        verify(localization).i18n("permission." + Permissions.Reports.READ);
         verify(localization, never()).i18n("permission.unknown:view");
     }
 

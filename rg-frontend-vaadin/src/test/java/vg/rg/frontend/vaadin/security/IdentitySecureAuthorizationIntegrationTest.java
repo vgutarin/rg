@@ -39,7 +39,7 @@ class IdentitySecureAuthorizationIntegrationTest {
     @Test
     void loopback_success_mapsPublishedClientResponse() throws IOException {
         start(exchange -> respond(exchange, 200, """
-                {"userUniqueId":"8","name":null,"permissions":["location:read"],"consentGiven":true}
+                {"userUniqueId":"8","name":null,"permissions":["reports:read"],"consentGiven":true}
                 """));
 
         clientRunner(Duration.ofSeconds(1), Duration.ofSeconds(1)).run(context -> {
@@ -48,7 +48,7 @@ class IdentitySecureAuthorizationIntegrationTest {
                     .redeemAuthorizationGrant(request());
 
             assertThat(outcome.status()).isEqualTo(AuthorizationOutcome.Status.AUTHORIZED);
-            assertThat(outcome.principal().orElseThrow().permissions()).containsExactly("location:read");
+            assertThat(outcome.principal().orElseThrow().permissions()).containsExactly("reports:read");
         });
     }
 

@@ -43,7 +43,7 @@ class PrimaryActionInteractionTest {
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(new AuthenticatedUserPrincipal(
                         new UniqueId(1234L), null,
-                        Set.of(Permissions.Location.READ, Permissions.Request.SUBMIT),
+                        Set.of(Permissions.Reports.READ, Permissions.Request.SUBMIT),
                         true, AuthenticationFlow.TELEGRAM)));
         when(protectedActionService.submit(org.mockito.ArgumentMatchers.any(UUID.class)))
                 .thenAnswer(invocation -> {
