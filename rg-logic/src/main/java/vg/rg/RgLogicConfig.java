@@ -1,11 +1,17 @@
 package vg.rg;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import vg.rg.config.EncryptionProperties;
+import vg.rg.config.GeoProperties;
+import vg.rg.config.WorkspaceProperties;
+import vg.rg.security.SecureAuthorizationLimitsProperties;
+import vg.rg.security.identity.IdentityAuthorizationLimitsProperties;
 
 import java.time.Clock;
 
@@ -27,6 +33,13 @@ import java.time.Clock;
 @EnableJpaAuditing(auditorAwareRef = "currentUserAuditorAware")
 @EnableJpaRepositories
 @EntityScan
+@EnableConfigurationProperties({
+        EncryptionProperties.class,
+        GeoProperties.class,
+        WorkspaceProperties.class,
+        SecureAuthorizationLimitsProperties.class,
+        IdentityAuthorizationLimitsProperties.class
+})
 public class RgLogicConfig {
 
     @Bean

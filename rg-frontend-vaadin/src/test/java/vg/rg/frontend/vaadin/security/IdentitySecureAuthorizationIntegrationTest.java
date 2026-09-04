@@ -6,7 +6,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.mock.env.MockEnvironment;
 import vg.identity.rest.IdentityRestClientAutoConfig;
 import vg.identity.rest.IdentityRestClientProperties;
 import vg.identity.service.IdentityApplicationApi;
@@ -115,7 +114,7 @@ class IdentitySecureAuthorizationIntegrationTest {
     }
 
     private IdentitySecureAuthorizationFacade facade(IdentityApplicationApi api) {
-        var limits = new IdentityAuthorizationLimitsProperties(new MockEnvironment());
+        var limits = new IdentityAuthorizationLimitsProperties(null, null);
         return new IdentitySecureAuthorizationFacade(
                 api, new IdentityAuthorizationResponseValidator(limits));
     }

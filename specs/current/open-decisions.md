@@ -7,18 +7,26 @@ A feature directory under `specs/NNN-*/` freezes when its feature ships, so anyt
 it. This file is where that lands. **Remove an entry when it closes** — a stale "open" item is worse than
 no list, because it invites re-litigating something already settled.
 
-Last reviewed: 2026-09-03.
+Last reviewed: 2026-09-04.
 
-## 1. Rebuild and verify the production frontend bundle — *blocking a known prod defect*
+## 1. Verify the production frontend bundle in the deployed environment — *status changed*
 
-Tabs on the locations screen render their captions but do not respond to clicks in the production
-assembly. Cause is diagnosed: the cached `prod.bundle` predates the `workspaces/locations` route, so the
-route key the server sends has no branch in the bundle's `loadOnDemand` switch and the chunk defining
-`vaadin-tabs`/`vaadin-tabsheet` is never fetched.
+Tabs on the locations screen rendered their captions but did not respond to clicks in the production
+assembly. The cause was diagnosed: a cached `prod.bundle` predating the `workspaces/locations` route, so
+the route key the server sent had no branch in the bundle's `loadOnDemand` switch and the chunk defining
+`vaadin-tabs`/`vaadin-tabsheet` was never fetched.
 
-Needs a machine with node/npm — this cannot be done from an environment without it, which will silently
-reuse the cache while reporting success. Full mechanism and the verification greps are in
+**The local cache is now gone** — `rg-frontend-vaadin/src/main/bundles/` holds only its `README.md` — so
+the next production build here generates a fresh bundle and the local half of this is closed.
+
+What remains is unverified rather than known-broken: **whether the deployed environment is still running
+the old assembly.** Check the deployed app rather than this working copy. The mechanism and the
+verification greps are in
 [engineering-notes.md](./engineering-notes.md#production-frontend-bundle).
+
+Worth knowing while checking: a stale bundle is not the only way the frontend can look outdated — a
+client-cached `styles.css` produces a similar "the code is right but the screen is wrong" impression, and
+is diagnosed differently. See the stylesheet-caching note in the same file.
 
 ## 2. Drop `rg_location` — *unblocked, not urgent*
 
@@ -57,3 +65,34 @@ One pitfall found while prototyping it: match only *this project's* types. A nai
 CamelCase names flags framework classes these documents legitimately mention — `ApplicationRunner`,
 `@SpringBootTest` — as missing. Resolve candidates against the `vg.rg` sources rather than against every
 `.java` stem, or restrict the pattern to names the repo actually declares.
+
+## 6. Let an invited participant actually bind to an identity — *blocked on a consent step*
+
+A workspace owner can register a participant, but there is no way for that person to become a platform
+user and have their `user_unique_id` filled in. Two pieces are missing, and the second blocks the first.
+
+**An invite issue/redeem pair in the identity service.** Redemption authenticates the person, links
+their Telegram channel to a subject, and returns that subject so this application can bind it. Nothing
+about *registration* needs identity — that is deliberate, so registration cannot become a
+phone-number-lookup oracle — so this is the only part that does.
+
+**The hard prerequisite:** `IdentitySecureAuthorizationFacade.java:41` hardcodes
+`consentToKeepPersonalData = false`. Identity's `authenticateTelegram` is consent-gated create-on-demand,
+so with `false` and no existing user it returns a provisional principal with `userUniqueId == null` and
+persists nothing — and `AuthorityChecker` fails closed on a null subject. **An invited person can
+therefore authenticate and do nothing, and the invite can never bind.** A real consent step has to feed
+that argument before any invitation flow works end to end.
+
+Contract tests at that boundary are mandatory when it changes: success, validation failure,
+authorization failure, timeout, unavailability, incompatible response — plus that consent-given now
+yields a non-null subject.
+
+## 7. Two latent bugs that only real membership surfaces — *dormant, recorded deliberately*
+
+Both are harmless while a workspace has exactly one owner, and both become live the moment a non-owner
+can select or use someone else's workspace. Whichever change introduces membership owns them.
+
+- `WorkspaceServiceImpl.repointSelectionAwayFrom` repoints only the **caller's** selection, so a
+  non-owner's selection pointing at a removed workspace would violate the foreign key.
+- `WorkspaceSelectionServiceImpl.activeWorkspace()` falls back to provisioning a workspace **owned by the
+  caller**, which is the wrong answer for someone who is a member of one rather than an owner of any.

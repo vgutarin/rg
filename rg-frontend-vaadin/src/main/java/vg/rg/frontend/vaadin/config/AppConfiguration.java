@@ -1,15 +1,13 @@
 package vg.rg.frontend.vaadin.config;
 
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Clock;
-
+/**
+ * This module's Spring configuration. {@code @ConfigurationProperties} types are not component-scanned,
+ * so every holder this module owns is registered here.
+ */
 @Configuration
+@EnableConfigurationProperties(MapsClientProperties.class)
 public class AppConfiguration {
-
-//    @Bean
-//    public Clock clock() {
-//        return Clock.systemUTC();
-//    }
 }

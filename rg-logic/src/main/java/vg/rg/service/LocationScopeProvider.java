@@ -1,5 +1,7 @@
 package vg.rg.service;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import vg.rg.repository.WorkspaceLocationRepository;
 import vg.rg.repository.WorkspaceRepository;
@@ -8,7 +10,6 @@ import vg.rg.security.WorkspaceScopeProvider;
 import vg.rg.security.model.LocalPermissions;
 import vg.unique.id.model.UniqueId;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -21,16 +22,11 @@ import java.util.Optional;
  * into because no location identifier exists yet.
  */
 @Component
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class LocationScopeProvider implements WorkspaceScopeProvider {
 
     private final WorkspaceLocationRepository locationRepository;
     private final WorkspaceRepository workspaceRepository;
-
-    LocationScopeProvider(WorkspaceLocationRepository locationRepository,
-                          WorkspaceRepository workspaceRepository) {
-        this.locationRepository = Objects.requireNonNull(locationRepository, "locationRepository");
-        this.workspaceRepository = Objects.requireNonNull(workspaceRepository, "workspaceRepository");
-    }
 
     @Override
     public boolean supports(String permission) {

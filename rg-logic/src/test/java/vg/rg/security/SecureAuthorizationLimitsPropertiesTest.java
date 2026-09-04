@@ -2,7 +2,7 @@ package vg.rg.security;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,7 +65,7 @@ class SecureAuthorizationLimitsPropertiesTest {
         return result;
     }
 
-    @Import(SecureAuthorizationLimitsProperties.class)
+    @EnableConfigurationProperties(SecureAuthorizationLimitsProperties.class)
     static class Configuration {
     }
 }

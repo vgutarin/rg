@@ -5,7 +5,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.mock.env.MockEnvironment;
 import vg.identity.model.IdentityApplicationUserPrincipal;
 import vg.identity.service.IdentityApplicationApi;
 import vg.unique.id.model.UniqueId;
@@ -44,7 +43,7 @@ class SecureAuthorizationObservabilityTest {
             SecureAuthorizationFacade facade = request -> AuthorizationOutcome.denied();
             var sensitiveMarker = "synthetic-sensitive-telegram-payload";
 
-            var limits = new SecureAuthorizationLimitsProperties(new MockEnvironment());
+            var limits = new SecureAuthorizationLimitsProperties(null);
             new AuthorizationApplicationService(
                     facade, new TelegramAuthorizationRequestValidator(limits))
                     .redeem(new TelegramInitDataRequest(sensitiveMarker));
@@ -79,7 +78,7 @@ class SecureAuthorizationObservabilityTest {
         var service = new AuthorizationApplicationService(
                 facade,
                 new TelegramAuthorizationRequestValidator(
-                        new SecureAuthorizationLimitsProperties(new MockEnvironment())));
+                        new SecureAuthorizationLimitsProperties(null)));
 
         var messages = captureLogs(() -> {
             for (int attempt = 0; attempt < 5; attempt++) {
@@ -104,7 +103,7 @@ class SecureAuthorizationObservabilityTest {
         var sensitivePermission = "synthetic:permission";
         var sensitiveCredential = "synthetic-sensitive-credential";
         var sensitiveUpstreamDetail = "synthetic-sensitive-upstream-detail";
-        var limits = new IdentityAuthorizationLimitsProperties(new MockEnvironment());
+        var limits = new IdentityAuthorizationLimitsProperties(null, null);
         var validator = new IdentityAuthorizationResponseValidator(limits);
         var api = mock(IdentityApplicationApi.class);
         when(api.authenticateTelegram(any()))
@@ -176,9 +175,16 @@ class SecureAuthorizationObservabilityTest {
     }
 
     /**
-     * No workspace entity carries personal data. The identity fields it does carry are the abstract
-     * {@code UniqueId} — an owner for access control, an author and last editor for auditing — and are
-     * never mapped to a natural person.
+     * No workspace entity carries personal data <em>in a plainly named field</em>. The identity fields
+     * these types do carry are the abstract {@code UniqueId} — an owner for access control, an author
+     * and last editor for auditing — and are never mapped to a natural person.
+     *
+     * <p>{@code WorkspaceParticipantEntity} is deliberately absent from this list, and that is not an
+     * oversight. It <strong>does</strong> carry personal data, under the narrow allowance amended into
+     * Principle I, so including it here would make this assertion pass for the wrong reason: the field
+     * is called {@code descriptor}, which no naming rule would ever catch. What actually has to hold for
+     * that entity is a different property, asserted in
+     * {@link #participantContactData_hasNoPlaintextRouteOutOfTheEntity()}.
      */
     @Test
     void noWorkspaceEntityDeclaresAPersonalDataField() {
@@ -196,6 +202,34 @@ class SecureAuthorizationObservabilityTest {
                             .as("%s.%s looks like personal data", entity.getSimpleName(), field)
                             .noneMatch(field::contains));
         }
+    }
+
+    /**
+     * The participant entity's counterpart to the naming check above, which cannot help here.
+     *
+     * <p>Two structural facts, and together they are the reason the personal data on this entity is
+     * permitted at all. First, <strong>the entity declares no {@code String} field</strong>: there is no
+     * plaintext text column for anything to leak through, so the contact data has exactly one route in
+     * and out. Second, that route is {@code descriptor}, and it is annotated with the encrypting
+     * converter — so removing the annotation, or pointing it at a converter that does not encrypt, fails
+     * here rather than in production.
+     */
+    @Test
+    void participantContactData_hasNoPlaintextRouteOutOfTheEntity() throws NoSuchFieldException {
+        var stringFields = java.util.Arrays.stream(
+                        vg.rg.entity.WorkspaceParticipantEntity.class.getDeclaredFields())
+                .filter(field -> field.getType() == String.class)
+                .map(java.lang.reflect.Field::getName)
+                .toList();
+        assertThat(stringFields)
+                .as("a plaintext text column on the participant entity")
+                .isEmpty();
+
+        var descriptor = vg.rg.entity.WorkspaceParticipantEntity.class.getDeclaredField("descriptor");
+        assertThat(descriptor.getType()).isEqualTo(vg.rg.model.ParticipantDescriptor.class);
+        assertThat(descriptor.getAnnotation(jakarta.persistence.Convert.class)).isNotNull();
+        assertThat(descriptor.getAnnotation(jakarta.persistence.Convert.class).converter())
+                .isEqualTo(vg.rg.entity.ParticipantDescriptorConverter.class);
     }
 
     private java.util.List<String> captureLogs(Runnable action) {

@@ -1,0 +1,82 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 004-participant-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        # People a workspace owner registers who have not authenticated and may never do so. Records,
+        # not members: a row here grants no access to anything.
+        #
+        # Two identifiers, deliberately. unique_id is minted here and is the ONLY id other rg content
+        # ever references, so a later identity binding never rewrites a reference. user_unique_id is
+        # the identity subject, filled in if the person ever redeems an invite, and is never a foreign
+        # key from rg content.
+        #
+        # There is no label and no phone column. Both live inside `descriptor`, encrypted -- a reader
+        # of this schema must not be able to see a person. See specs/current/encryption.md.
+        - createTable:
+            tableName: rg_workspace_participant
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace_participant
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workspace_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_unique_id
+                  type: BIGINT
+              # The sealed envelope: [keyId:1][iv:12][ciphertext+tag] over the descriptor's JSON.
+              # Deliberately unbounded here -- the size limit is rg.workspace.participant-descriptor-
+              # max-bytes, so tightening or relaxing it is a property change, not a migration.
+              - column:
+                  name: descriptor
+                  type: BLOB
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        # A plain FK with no onDelete, exactly like fk_rg_workspace_location_workspace. That
+        # restrictiveness is load-bearing: it is what makes a forgotten WorkspaceContentContributor
+        # fail loudly instead of silently mass-deleting rows with no audit and no chance to refuse.
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_participant_workspace
+            baseTableName: rg_workspace_participant
+            baseColumnNames: workspace_unique_id
+            referencedTableName: rg_workspace
+            referencedColumnNames: unique_id
+        # Workspace-leading: every query is scoped to one workspace. created_at follows it because the
+        # roster is paged in insertion order -- the encrypted column cannot be sorted in SQL.
+        - createIndex:
+            indexName: ix_rg_workspace_participant_ws_created
+            tableName: rg_workspace_participant
+            columns:
+              - column:
+                  name: workspace_unique_id
+              - column:
+                  name: created_at

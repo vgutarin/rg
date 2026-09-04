@@ -1,5 +1,7 @@
 package vg.rg.service;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import vg.rg.repository.WorkspaceLocationRepository;
@@ -13,15 +15,12 @@ import java.util.Objects;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class LocationWorkspaceContentContributor implements WorkspaceContentContributor {
 
     static final String RESOURCE_TYPE = "LOCATION";
 
     private final WorkspaceLocationRepository repository;
-
-    LocationWorkspaceContentContributor(WorkspaceLocationRepository repository) {
-        this.repository = Objects.requireNonNull(repository, "repository");
-    }
 
     @Override
     public String resourceType() {

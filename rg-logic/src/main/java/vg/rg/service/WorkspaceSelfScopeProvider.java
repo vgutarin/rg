@@ -1,13 +1,14 @@
 package vg.rg.service;
 
 import org.springframework.stereotype.Component;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import vg.rg.repository.WorkspaceRepository;
 import vg.rg.security.WorkspaceScope;
 import vg.rg.security.WorkspaceScopeProvider;
 import vg.rg.security.model.LocalPermissions;
 import vg.unique.id.model.UniqueId;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -16,13 +17,10 @@ import java.util.Optional;
  * in the check itself.
  */
 @Component
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class WorkspaceSelfScopeProvider implements WorkspaceScopeProvider {
 
     private final WorkspaceRepository repository;
-
-    WorkspaceSelfScopeProvider(WorkspaceRepository repository) {
-        this.repository = Objects.requireNonNull(repository, "repository");
-    }
 
     @Override
     public boolean supports(String permission) {

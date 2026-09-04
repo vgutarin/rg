@@ -16,6 +16,18 @@
 - Keep Vaadin views strictly mobile-first: default Java layout choices and CSS must work on narrow screens, with wider layouts added through `min-width` media queries.
 - Prefer IntelliJ MCP refactoring tools for symbol/package renames when they are available and appropriate.
 - Keep package declarations, imports, filesystem paths, and Spring metadata aligned after Java package changes.
+- Use Lombok for boilerplate rather than writing it by hand: `@Data`/`@Getter`/`@Setter` for accessors,
+  `@RequiredArgsConstructor` for dependency injection, `@Builder` with
+  `@NoArgsConstructor`/`@AllArgsConstructor` on models and entities, `@Slf4j` for loggers. Two limits.
+  Keep the generated member's visibility the same as the code it replaces — `@RequiredArgsConstructor`
+  defaults to `public`, so a package-private constructor needs `(access = AccessLevel.PACKAGE)`. And
+  leave a constructor hand-written when it does real work: validating configuration, copying an injected
+  collection defensively, or enforcing a value-object invariant. Null-checking an injected Spring
+  collaborator is not real work — a single-constructor `@Component` fails context startup rather than
+  ever being handed a null.
+- Construct instances through their builder in both production code and tests
+  (`WorkspaceParticipantModel.builder()...build()`), not through positional constructors: a positional
+  call reads as a row of unlabelled values and silently reorders when a field is added.
 - Verify code changes with the narrowest relevant Gradle task first, then broaden to `./gradlew test` when the change affects multiple modules.
 - In Mockito-based unit tests, use `MockitoExtension` for mock initialization.
 - Do not verify methods that were already explicitly stubbed unless the interaction itself is the behavior under test.

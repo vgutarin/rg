@@ -32,10 +32,10 @@ import static org.mockito.Mockito.when;
 /**
  * Navigation visibility for the workspace layer.
  *
- * <p>Locations sit at the <strong>top level</strong>: the workspace is the scope a location lives in, not
- * a place the user has to navigate through. The entry is shown only when the caller may actually list
- * locations in the workspace they are working in, which is a check against that workspace rather than
- * against a capability the principal carries around.
+ * <p>Locations and participants sit at the <strong>top level</strong>: the workspace is the scope they
+ * live in, not a place the user has to navigate through. Each entry is shown only when the caller may
+ * actually list that type in the workspace they are working in, which is a check against that workspace
+ * rather than against a capability the principal carries around.
  *
  * <p>The workspace section's own entry is <strong>withheld for everyone</strong> for now. Its routes,
  * layout and gate all still work — only the way in from the drawer is absent.
@@ -88,10 +88,56 @@ class WorkspaceNavigationTest {
     }
 
     @Test
+    void permittedInTheActiveWorkspace_seesTheTopLevelParticipantsEntry() {
+        var view = mainViewFor(Set.of(Permissions.Workspace.OWNER), true, true);
+
+        assertThat(view.navigationLabels()).contains("nav.participants");
+        // SideNavItem normalizes away the leading slash, so the stored path has none.
+        assertThat(view.navigationPaths()).contains("workspaces/participants");
+    }
+
+    /**
+     * The two entries are independently gated. One scoped check denying must not take the other entry
+     * with it — which a single combined condition would do, and which is easy to introduce when both
+     * checks live in one method.
+     */
+    @Test
+    void theTwoWorkspaceScopedEntriesAreGatedIndependently() {
+        var locationsOnly = mainViewFor(Set.of(Permissions.Workspace.OWNER), true, false);
+        assertThat(locationsOnly.navigationLabels())
+                .contains("nav.locations")
+                .doesNotContain("nav.participants");
+
+        var participantsOnly = mainViewFor(Set.of(Permissions.Workspace.OWNER), false, true);
+        assertThat(participantsOnly.navigationLabels())
+                .contains("nav.participants")
+                .doesNotContain("nav.locations");
+    }
+
+    @Test
+    void withoutTheWorkspacePermission_thereIsNoParticipantsEntryEither() {
+        var view = mainViewFor(Set.of(Permissions.Request.SUBMIT), true, true);
+
+        assertThat(view.navigationLabels()).doesNotContain("nav.participants");
+        verify(selectionService, never()).activeWorkspace();
+    }
+
+    /**
+     * Resolving the active workspace <em>provisions a default</em> as a side effect, so it must happen
+     * once per page load however many workspace-scoped entries the drawer grows.
+     */
+    @Test
+    void theActiveWorkspaceIsResolvedOncePerRender() {
+        mainViewFor(Set.of(Permissions.Workspace.OWNER), true, true);
+
+        verify(selectionService, org.mockito.Mockito.times(1)).activeWorkspace();
+    }
+
+    @Test
     void theWorkspaceSectionEntryIsWithheldFromEveryone() {
         // Including from a holder of every app-wide permission there is.
-        var owner = mainViewFor(Permissions.APP_WIDE, true);
-        var stranger = mainViewFor(Set.of(), true);
+        var owner = mainViewFor(Permissions.APP_WIDE, true, true);
+        var stranger = mainViewFor(Set.of(), true, true);
 
         assertThat(owner.navigationLabels()).doesNotContain("nav.workspaces");
         assertThat(stranger.navigationLabels()).doesNotContain("nav.workspaces");
@@ -109,6 +155,11 @@ class WorkspaceNavigationTest {
     }
 
     private MainView mainViewFor(Set<String> permissions, boolean mayListLocations) {
+        return mainViewFor(permissions, mayListLocations, false);
+    }
+
+    private MainView mainViewFor(
+            Set<String> permissions, boolean mayListLocations, boolean mayListParticipants) {
         when(localization.getProvidedLocales())
                 .thenReturn(List.of(LocalizationService.DEFAULT_LOCALE, Locale.ENGLISH));
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
@@ -121,6 +172,8 @@ class WorkspaceNavigationTest {
                 .thenReturn(WorkspaceModel.builder().uniqueId(WORKSPACE).defaultWorkspace(true).build());
         when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.Location.LIST))
                 .thenReturn(mayListLocations);
+        when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.WorkspaceParticipant.LIST))
+                .thenReturn(mayListParticipants);
 
         return new MainView(localization, authenticationContext, authorityChecker, selectionService);
     }

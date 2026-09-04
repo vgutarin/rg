@@ -74,40 +74,55 @@ vaadin-side-nav::part(label) {
   background: var(--aura-surface-color-solid);
 }
 
+/* One row at every width: drawer toggle at the start, the current view's title next to it, the
+   language selector and session action at the end. The actions used to occupy a second row on narrow
+   screens (grid-column: 1 / -1), which doubled the header's height on exactly the screens with the
+   least of it to spare. */
 .main-header {
-  display: grid;
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
   gap: var(--vaadin-gap-s);
-  grid-template-columns: auto minmax(0, 1fr);
   min-height: 64px;
   padding: var(--vaadin-padding-s);
   width: 100%;
 }
 
+/* Takes the slack between the toggle and the actions, and truncates rather than wrapping -- wrapping
+   would grow the single row it now shares. */
 .view-title {
-  align-self: center;
+  flex: 1 1 auto;
   font-size: var(--aura-font-size-l);
   line-height: var(--aura-line-height-l);
   margin: 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Pinned to the end, and never shrunk: these are controls, not text. */
 .header-actions {
-  display: grid;
+  display: flex;
+  flex: 0 0 auto;
   gap: var(--vaadin-gap-s);
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) auto;
-  width: 100%;
+  margin-inline-start: auto;
 }
 
+/* An EXPLICIT width, because `width: auto` does not work here: a vaadin-select renders at its own
+   default width -- measured at 192px, regardless of how short its labels are -- and `auto` leaves that
+   default in place rather than shrinking to content. At 192px on a 375px screen the actions squeezed the
+   view title down to 16px.
+   8rem measures at 128px, which fits "Українська" plus the chevron and leaves the title 167px in the
+   Telegram flow (where the session action is hidden) or 80px in a browser (where it is not). */
 .locale-picker {
   min-width: 0;
-  width: 100%;
+  width: 8.4rem;
 }
 
 .session-action {
-  align-self: end;
-  white-space: normal;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .drawer-content {
@@ -156,8 +171,14 @@ vaadin-side-nav::part(label) {
   margin-block: 0 var(--vaadin-gap-s);
 }
 
+/* ---------------------------------------------------------------------------------------------------
+   Disclosure list: a single-open accordion of tappable rows with collapsible detail panels. Named for
+   the pattern rather than for a screen, because the locations and participants screens share it -- see
+   DisclosureList.java. A rule here changes both, which is the point.
+   --------------------------------------------------------------------------------------------------- */
+
 /* Full-width list container so its rows span the whole width even inside a non-stretching layout. */
-.location-list {
+.disclosure-list {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -165,20 +186,20 @@ vaadin-side-nav::part(label) {
 
 /* Each list entry: a clickable header row plus a collapsible detail panel. Zebra striping and the
    separator live on the entry so alternating shades and the divider survive the header/panel split. */
-.location-item {
+.disclosure-item {
   border-block-end: 1px solid var(--vaadin-border-color-secondary);
 }
 
-.location-item:nth-of-type(odd) {
+.disclosure-item:nth-of-type(odd) {
   background: var(--vaadin-background-container);
 }
 
-.location-item:nth-of-type(even) {
+.disclosure-item:nth-of-type(even) {
   background: var(--vaadin-background-color);
 }
 
 /* Header row: name (+ meta) on the left, disclosure chevron on the right. */
-.location-row {
+.disclosure-row {
   align-items: center;
   cursor: pointer;
   display: flex;
@@ -190,28 +211,44 @@ vaadin-side-nav::part(label) {
   transition: background-color 0.15s ease;
 }
 
-.location-row:hover,
-.location-row:focus-visible {
+.disclosure-row:hover,
+.disclosure-row:focus-visible {
   background: var(--aura-accent-surface);
 }
 
-.location-row__text {
+.disclosure-row__text {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.location-row__name {
+.disclosure-row__name {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.location-row__meta {
+.disclosure-row__meta {
   color: var(--vaadin-text-color-secondary);
   font-size: 0.85em;
 }
 
-.location-row__icon {
+/* An informational glyph in the header row -- present only when it applies, so its presence is the
+   signal. Sits before the chevron and is deliberately dimmer, so it reads as status rather than as an
+   action. */
+.disclosure-row__marker {
+  color: var(--vaadin-text-color-secondary);
+  flex: none;
+  height: 18px;
+  margin-inline-start: auto;
+  width: 18px;
+}
+
+/* With a marker present, the chevron no longer needs to claim the free space. */
+.disclosure-row__marker ~ .disclosure-row__icon {
+  margin-inline-start: 0;
+}
+
+.disclosure-row__icon {
   color: var(--aura-accent-color);
   flex: none;
   height: 20px;
@@ -221,22 +258,22 @@ vaadin-side-nav::part(label) {
 }
 
 /* Chevron rotates from pointing right to pointing down when the entry is expanded. */
-.location-item--open .location-row__icon {
+.disclosure-item--open .disclosure-row__icon {
   transform: rotate(90deg);
 }
 
 /* Collapsible detail panel: a plain show/hide toggle. (The grid 0fr/1fr height-animation trick is not
    honored by several in-app webviews — notably Telegram's — which leaves every panel expanded, so we
    collapse with display instead.) */
-.location-row__panel {
+.disclosure-row__panel {
   display: none;
 }
 
-.location-item--open .location-row__panel {
+.disclosure-item--open .disclosure-row__panel {
   display: block;
 }
 
-.location-row__panel-inner {
+.disclosure-row__panel-inner {
   display: flex;
   flex-direction: column;
   gap: var(--vaadin-gap-m);
@@ -244,17 +281,26 @@ vaadin-side-nav::part(label) {
 }
 
 /* Edit / delete sit side by side, each taking half the width. */
-.location-row__actions {
+.disclosure-row__actions {
   display: flex;
   gap: var(--vaadin-gap-s);
 }
 
-.location-row__actions > vaadin-button {
+.disclosure-row__actions > vaadin-button {
   flex: 1;
 }
 
-/* Inline add-form actions: stacked full-width on mobile, side-by-side on wider screens. */
-.location-form__actions {
+/* A plain stacked form: fields and their submit in one column with consistent gaps. Needed wherever a
+   form is a Div rather than a VerticalLayout, which is otherwise the only thing providing the gaps. */
+.stacked-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  min-width: 0;
+}
+
+/* Inline form actions, shared by both add forms: stacked full-width on mobile, side-by-side wider. */
+.form-actions {
   display: flex;
   flex-direction: column;
   gap: var(--vaadin-gap-s);
@@ -262,59 +308,59 @@ vaadin-side-nav::part(label) {
 }
 
 @media (min-width: 30rem) {
-  .location-form__actions {
+  .form-actions {
     flex-direction: row;
   }
 
-  .location-form__actions > vaadin-button {
+  .form-actions > vaadin-button {
     flex: 1;
   }
 }
 
 
-/* Location detail (inline panel): icon-led info rows and a prominent, full-width maps action. */
-.location-detail__description {
+/* Detail panel content: icon-led info rows, and (locations only) a full-width maps action. */
+.disclosure-detail__description {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.location-detail__meta {
+.disclosure-detail__meta {
   display: flex;
   flex-direction: column;
   gap: var(--vaadin-gap-s);
 }
 
 /* First line: icon + label together; second line: the value beneath, aligned past the icon. */
-.location-detail__row {
+.disclosure-detail__row {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.location-detail__heading {
+.disclosure-detail__heading {
   align-items: center;
   display: flex;
   gap: var(--vaadin-gap-s);
 }
 
-.location-detail__icon {
+.disclosure-detail__icon {
   color: var(--aura-accent-color);
   flex: none;
   height: 20px;
   width: 20px;
 }
 
-.location-detail__label {
+.disclosure-detail__label {
   color: var(--vaadin-text-color-secondary);
   font-size: 0.8em;
 }
 
-.location-detail__value {
+.disclosure-detail__value {
   overflow-wrap: anywhere;
   padding-inline-start: calc(20px + var(--vaadin-gap-s));
 }
 
-.location-detail__value--mono {
+.disclosure-detail__value--mono {
   font-family: monospace;
 }
 
@@ -395,21 +441,10 @@ vaadin-side-nav::part(label) {
 }
 
 @media (min-width: 48rem) {
+  /* Same single row as on mobile; only the breathing room changes. */
   .main-header {
-    align-items: center;
-    display: flex;
     gap: var(--vaadin-gap-m);
     padding-inline: var(--vaadin-padding-m);
-  }
-
-  .header-actions {
-    display: flex;
-    flex: 0 0 auto;
-    width: auto;
-  }
-
-  .locale-picker {
-    width: 11rem;
   }
 
   .content-grid {
@@ -538,6 +573,32 @@ vaadin-side-nav::part(label) {
   .workspace-selector {
     width: 18rem;
   }
+}
+
+/* Below the browse list: how much of the roster is shown, and the way to get more. */
+.browse-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vaadin-gap-s);
+  padding-block-start: var(--vaadin-gap-s);
+}
+
+.browse-count {
+  color: var(--vaadin-text-color-secondary);
+  font-size: 0.85em;
+  margin: 0;
+  text-align: center;
+}
+
+/* The revealed phone number: the one place a number is on screen, so it is set apart deliberately
+   rather than blending into the row it came from. Everything else about the participants screen comes
+   from the shared .disclosure-* vocabulary above. */
+.participant-revealed-phone {
+  font-size: 1.15em;
+  font-weight: 600;
+  /* Digits are easier to read back aloud when they do not shift width. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: reduce) {

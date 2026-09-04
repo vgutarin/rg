@@ -6,12 +6,10 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.JavaScript;
 import com.vaadin.flow.component.dependency.JsModule;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -89,16 +87,14 @@ public class WorkspaceLocationsView extends VerticalLayout
     private static final int VIEW_PAGE_SIZE = 10;
 
     private final Div content = new Div();
-    private final Div viewList = new Div();
+    private final DisclosureList viewList = new DisclosureList();
     private final Div suggestions = new Div();
+    private final DisclosureList suggestionList = new DisclosureList();
     private final Div addForm = new Div();
     private final TextField viewSearch = new TextField();
 
     /** Preserved across re-renders (e.g. language switch) so the selected tab stays selected. */
     private int selectedTabIndex;
-
-    /** The list entry whose inline detail panel is currently expanded (single-open), or {@code null}. */
-    private Div expandedItem;
 
     /** The workspace every query on this screen is scoped to, resolved once per navigation. */
     private UniqueId workspaceId;
@@ -127,9 +123,9 @@ public class WorkspaceLocationsView extends VerticalLayout
         viewSearch.setValueChangeMode(ValueChangeMode.LAZY);
         viewSearch.addValueChangeListener(event -> renderViewList(event.getValue()));
 
-        // Full-width list containers so the rows span the whole width (see .location-list CSS).
-        viewList.addClassName("location-list");
-        suggestions.addClassName("location-list");
+        // The accordion shape and its styles come from DisclosureList, shared with the participants
+        // screen so the two cannot drift apart.
+        suggestions.setWidthFull();
 
         addClassName("secure-view");
         add(content);
@@ -191,8 +187,7 @@ public class WorkspaceLocationsView extends VerticalLayout
     }
 
     private void renderViewList(String query) {
-        viewList.removeAll();
-        expandedItem = null;
+        viewList.reset();
         var trimmed = query == null ? "" : query.trim();
         List<LocationModel> results = trimmed.isBlank()
                 ? locationService.browse(workspaceId, PageRequest.of(0, VIEW_PAGE_SIZE)).getContent()
@@ -202,7 +197,7 @@ public class WorkspaceLocationsView extends VerticalLayout
                     trimmed.isBlank() ? "locations.empty" : "locations.search.no-results")));
             return;
         }
-        results.forEach(model -> viewList.add(locationCard(model)));
+        results.forEach(model -> addItem(viewList, model, null));
     }
 
     // --- Add tab ------------------------------------------------------------------------------------
@@ -301,9 +296,9 @@ public class WorkspaceLocationsView extends VerticalLayout
         save.setWidthFull();
         var cancel = new Button(localization.i18n("location.cancel"), event -> hideAddForm());
         cancel.setWidthFull();
-        // Stacked full-width on mobile; side-by-side on wider screens (see .location-form__actions CSS).
+        // Stacked full-width on mobile; side-by-side on wider screens (see .form-actions CSS).
         var actions = new Div(save, cancel);
-        actions.addClassName("location-form__actions");
+        actions.addClassName("form-actions");
         actions.setWidthFull();
 
         var form = new VerticalLayout();
@@ -362,75 +357,30 @@ public class WorkspaceLocationsView extends VerticalLayout
     /** Advisory nearby list (±500 m), nearest-first. The add affordance is the inline form above. */
     private void renderSuggestions(List<ProximityMatch> matches) {
         suggestions.removeAll();
-        expandedItem = null;
+        suggestionList.reset();
         if (matches.isEmpty()) {
             suggestions.add(new Paragraph(localization.i18n("location.no-suggestion")));
             return;
         }
         suggestions.add(new H2(localization.i18n("location.suggestions.title")));
-        matches.forEach(match -> suggestions.add(suggestionCard(match)));
-    }
-
-    private Div suggestionCard(ProximityMatch match) {
-        // Picking an existing suggestion expands its detail inline (no new location created).
-        var distance = localization.getTranslation("location.distance-meters",
-                localization.getCurrentLocale(), Math.round(match.distanceMeters()));
-        return locationItem(match.location(), distance);
-    }
-
-    private Div locationCard(LocationModel model) {
-        return locationItem(model, null);
+        suggestions.add(suggestionList);
+        matches.forEach(match -> {
+            // Picking an existing suggestion expands its detail inline (no new location created).
+            var distance = localization.getTranslation("location.distance-meters",
+                    localization.getCurrentLocale(), Math.round(match.distanceMeters()));
+            addItem(suggestionList, match.location(), distance);
+        });
     }
 
     /**
-     * A list entry: a clickable header row (name + optional meta + disclosure chevron) with an inline,
-     * collapsible detail panel beneath it. Tapping the header expands the panel; tapping again collapses
-     * it, and opening one entry collapses whichever was open (single-open, accordion-style).
+     * Appends one location to the given accordion. The header shape, the chevron and the single-open
+     * behaviour all come from {@link DisclosureList}; this method only decides what goes in the panel.
      */
-    private Div locationItem(LocationModel model, String meta) {
-        var item = new Div();
-        item.addClassName("location-item");
-
-        var header = new Div();
-        header.addClassName("location-row");
-        header.getElement().setAttribute("role", "button");
-        header.getElement().setAttribute("tabindex", "0");
-
-        var text = new Div();
-        text.addClassName("location-row__text");
-        var title = new Span(model.getName());
-        title.addClassName("location-row__name");
-        text.add(title);
-        if (meta != null) {
-            var metaSpan = new Span(meta);
-            metaSpan.addClassName("location-row__meta");
-            text.add(metaSpan);
-        }
-
-        // The chevron points right when collapsed and rotates to point down when open (CSS-driven).
-        var icon = VaadinIcon.ANGLE_RIGHT.create();
-        icon.addClassName("location-row__icon");
-        icon.getElement().setAttribute("aria-hidden", "true");
-
-        header.add(text, icon);
-        header.addClickListener(event -> toggleItem(item));
-
-        item.add(header, buildDetailPanel(model));
-        return item;
-    }
-
-    /** Expand the given entry, collapsing whichever entry was previously open (single-open). */
-    private void toggleItem(Div item) {
-        if (item.hasClassName("location-item--open")) {
-            item.removeClassName("location-item--open");
-            expandedItem = null;
-            return;
-        }
-        if (expandedItem != null) {
-            expandedItem.removeClassName("location-item--open");
-        }
-        item.addClassName("location-item--open");
-        expandedItem = item;
+    private void addItem(DisclosureList list, LocationModel model, String meta) {
+        // The location's identifier is the entry's key: it is what keeps an expanded row expanded across
+        // the re-render that follows an edit, so the user sees their change in the panel they were
+        // already reading rather than having to find and reopen the row.
+        fillDetailPanel(list.addItem(model.getUniqueId(), model.getName(), meta), model);
     }
 
     /**
@@ -438,16 +388,10 @@ public class WorkspaceLocationsView extends VerticalLayout
      * rows, a primary "open in Google Maps" action (when coordinates exist), and — subject to
      * authority — edit and delete actions. An inner wrapper lets the panel animate its height open.
      */
-    private Div buildDetailPanel(LocationModel model) {
-        var panel = new Div();
-        panel.addClassName("location-row__panel");
-        var inner = new Div();
-        inner.addClassName("location-row__panel-inner");
-        panel.add(inner);
-
+    private void fillDetailPanel(Div inner, LocationModel model) {
         if (model.getDescription() != null && !model.getDescription().isBlank()) {
             var description = new Paragraph(model.getDescription());
-            description.addClassName("location-detail__description");
+            description.addClassName(DisclosureList.DETAIL_DESCRIPTION);
             inner.add(description);
         }
 
@@ -455,13 +399,15 @@ public class WorkspaceLocationsView extends VerticalLayout
         // is unavailable); each is shown as an icon-led info row only when present.
         var hasCoordinates = model.getLatitude() != null && model.getLongitude() != null;
         var info = new Div();
-        info.addClassName("location-detail__meta");
+        info.addClassName(DisclosureList.DETAIL_META);
         if (hasCoordinates) {
-            info.add(detailRow(VaadinIcon.MAP_MARKER, localization.i18n("location.field.coordinates"),
+            info.add(DisclosureList.detailRow(
+                    VaadinIcon.MAP_MARKER, localization.i18n("location.field.coordinates"),
                     model.getLatitude().toPlainString() + ", " + model.getLongitude().toPlainString(), false));
         }
         if (model.getGooglePlaceId() != null && !model.getGooglePlaceId().isBlank()) {
-            info.add(detailRow(VaadinIcon.INFO_CIRCLE, localization.i18n("location.place-id"),
+            info.add(DisclosureList.detailRow(
+                    VaadinIcon.INFO_CIRCLE, localization.i18n("location.place-id"),
                     model.getGooglePlaceId(), true));
         }
         if (info.getElement().getChildCount() > 0) {
@@ -489,7 +435,7 @@ public class WorkspaceLocationsView extends VerticalLayout
         // delete is confirmed first. The row hides itself when the user may do neither. Each check
         // addresses the location's own identifier, which resolves to its workspace.
         var actions = new Div();
-        actions.addClassName("location-row__actions");
+        actions.addClassName(DisclosureList.ROW_ACTIONS);
         if (authorityChecker.hasAuthority(model.getUniqueId(), LocalPermissions.Location.UPDATE)) {
             var edit = new Button(localization.i18n("location.form.edit.title"), VaadinIcon.EDIT.create(),
                     event -> LocationFormDialog.forEdit(localization, locationService, model,
@@ -506,54 +452,29 @@ public class WorkspaceLocationsView extends VerticalLayout
         if (actions.getElement().getChildCount() > 0) {
             inner.add(actions);
         }
-
-        return panel;
     }
 
     /**
-     * One detail entry: the icon and its label share the first line, the value sits on the line below.
-     * {@code monospace} suits opaque ids.
+     * Removal, confirmed first. The shape — including the guarantee that a double press deletes once —
+     * belongs to {@link Dialogs#confirmDeletion}, so all three screens that delete something behave
+     * identically by construction rather than by three people remembering to.
+     *
+     * @return the opened confirmation dialog and its buttons, so the flow can be driven directly
      */
-    private Div detailRow(VaadinIcon icon, String label, String value, boolean monospace) {
-        var row = new Div();
-        row.addClassName("location-detail__row");
-
-        var heading = new Div();
-        heading.addClassName("location-detail__heading");
-        var glyph = icon.create();
-        glyph.addClassName("location-detail__icon");
-        glyph.getElement().setAttribute("aria-hidden", "true");
-        var labelSpan = new Span(label);
-        labelSpan.addClassName("location-detail__label");
-        heading.add(glyph, labelSpan);
-
-        var valueSpan = new Span(value);
-        valueSpan.addClassName("location-detail__value");
-        if (monospace) {
-            valueSpan.addClassName("location-detail__value--mono");
-        }
-
-        row.add(heading, valueSpan);
-        return row;
+    Prompt confirmDelete(LocationModel model) {
+        return Dialogs.confirmDeletion(localization,
+                "location.delete", "location.delete.confirm", "location.delete",
+                "location.cancel", () -> delete(model));
     }
 
-    private void confirmDelete(LocationModel model) {
-        var confirm = new Dialog();
-        confirm.setHeaderTitle(localization.i18n("location.delete"));
-        confirm.add(new Paragraph(localization.i18n("location.delete.confirm")));
-        confirm.getFooter().add(
-                new Button(localization.i18n("location.cancel"), event -> confirm.close()),
-                new Button(localization.i18n("location.delete"), event -> {
-                    try {
-                        locationService.delete(model.getUniqueId());
-                        confirm.close();
-                        // The list re-renders, which removes the deleted entry and its inline panel.
-                        afterChange();
-                    } catch (RuntimeException exception) {
-                        Notification.show(localization.i18n(exception));
-                    }
-                }));
-        confirm.open();
+    private void delete(LocationModel model) {
+        try {
+            locationService.delete(model.getUniqueId());
+            // The list re-renders, which removes the deleted entry and its inline panel.
+            afterChange();
+        } catch (RuntimeException exception) {
+            Notification.show(localization.i18n(exception));
+        }
     }
 
     private void afterChange() {

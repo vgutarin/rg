@@ -103,13 +103,15 @@ class SecureServiceComponentWiringTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(DevSecureServiceProperties.class)
+    @EnableConfigurationProperties({
+            DevSecureServiceProperties.class,
+            IdentityAuthorizationLimitsProperties.class,
+            SecureAuthorizationLimitsProperties.class
+    })
     @Import({
             DevSecureAuthorizationFacade.class,
             IdentitySecureAuthorizationFacade.class,
-            IdentityAuthorizationLimitsProperties.class,
             IdentityAuthorizationResponseValidator.class,
-            SecureAuthorizationLimitsProperties.class,
             TelegramAuthorizationRequestValidator.class,
             AuthorizationApplicationService.class,
             AuthorityChecker.class,
@@ -138,8 +140,8 @@ class SecureServiceComponentWiringTest {
     }
 
     @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(SecureAuthorizationLimitsProperties.class)
     @Import({
-            SecureAuthorizationLimitsProperties.class,
             TelegramAuthorizationRequestValidator.class,
             AuthorizationApplicationService.class
     })

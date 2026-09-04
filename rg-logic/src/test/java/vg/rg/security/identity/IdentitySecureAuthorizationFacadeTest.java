@@ -6,7 +6,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.mock.env.MockEnvironment;
 import vg.identity.model.IdentityApplicationUserPrincipal;
 import vg.identity.service.IdentityApplicationApi;
 import vg.unique.id.model.UniqueId;
@@ -147,18 +146,14 @@ class IdentitySecureAuthorizationFacadeTest {
     }
 
     private IdentitySecureAuthorizationFacade facade() {
-        var limits = new IdentityAuthorizationLimitsProperties(new MockEnvironment());
+        var limits = new IdentityAuthorizationLimitsProperties(null, null);
         return new IdentitySecureAuthorizationFacade(
                 identityApplicationApi, new IdentityAuthorizationResponseValidator(limits));
     }
 
     private IdentitySecureAuthorizationFacade facade(int count, int length) {
-        var environment = new MockEnvironment()
-                .withProperty(IdentityAuthorizationLimitsProperties.MAX_PERMISSION_COUNT_PROPERTY,
-                        Integer.toString(count))
-                .withProperty(IdentityAuthorizationLimitsProperties.MAX_PERMISSION_LENGTH_PROPERTY,
-                        Integer.toString(length));
-        var limits = new IdentityAuthorizationLimitsProperties(environment);
+        var limits = new IdentityAuthorizationLimitsProperties(
+                Integer.toString(count), Integer.toString(length));
         return new IdentitySecureAuthorizationFacade(
                 identityApplicationApi, new IdentityAuthorizationResponseValidator(limits));
     }

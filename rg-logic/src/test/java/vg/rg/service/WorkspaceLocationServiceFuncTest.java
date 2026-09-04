@@ -32,14 +32,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>The central assertion is isolation: a workspace read must never return another workspace's rows,
  * and a location must not be reachable while a different workspace is in context.
  *
- * <p>Method security is enabled explicitly here. {@code BaseFuncTest} does not enable it — the
- * application's {@code @EnableMethodSecurity} lives in the UI module — so without this the
- * {@code @PreAuthorize} guards would be inert and every "is denied" assertion below would pass
- * vacuously. With it, these tests exercise the real authority boundary against the real database.
+ * <p>Method security needs no setup here: {@code @EnableMethodSecurity} lives in {@code RgLogicConfig},
+ * the module that declares the guards, so it is active in every context scanning {@code vg.rg} —
+ * {@code BaseFuncTest} included. That placement is what keeps the denial assertions below meaningful:
+ * a guard that never activates is not a weaker guard but no guard, and every such assertion would pass
+ * vacuously. See {@code specs/current/engineering-notes.md}.
  */
 class WorkspaceLocationServiceFuncTest extends BaseFuncTest {
-
-    /** Nested {@code @TestConfiguration} classes are picked up automatically by {@code @SpringBootTest}. */
 
     private static final UniqueId OWNER = new UniqueId(3101L);
     private static final UniqueId STRANGER = new UniqueId(3102L);

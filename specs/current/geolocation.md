@@ -104,7 +104,8 @@ localized "reload and retry" message.
   `WorkspaceLocationRepository` (workspace-scoped bounding-box query, name search, and the scope join),
   `WorkspaceLocationMapper`, `LocationScopeProvider` (resolves a location to its workspace),
   `LocationWorkspaceContentContributor` (removal with its workspace), `GeoDistance` (great-circle
-  distance + bounding box), `GeoProperties` (`rg.geo.match-radius-meters`, default 500),
+  distance + bounding box), `GeoProperties` (`rg.geo.match-radius-meters`, default 500, and `rg.geo.max-name-search-results`,
+  default 50 — see [configuration.md](./configuration.md)),
   `CurrentUserAuditorAware`, and the `location:*` capabilities in `LocalPermissions`. Schema:
   `rg-logic/src/main/resources/db/liquibase/002-workspace-init.yaml`, plus
   `003-retire-global-location-migration.yaml`; the superseded `001-location-init.yaml` remains, since its
@@ -112,7 +113,10 @@ localized "reload and retry" message.
 - **`rg-frontend-vaadin`** (UI, mobile-first, i18n): `WorkspaceLocationsView`
   (**`/workspaces/locations`**, reached from a **top-level** navigation entry shown only when
   `hasAuthority(activeWorkspaceId, "location:list")` holds — the workspace is the scope, not a place to
-  navigate through), `LocationFormDialog` (edit), `MapsResolutionBridge` (validates browser-acquired
+  navigate through), `DisclosureList` — the single-open accordion this screen's rows are built from,
+  **shared with the participants screen** so the two cannot be restyled apart; see
+  [workspace-participants.md](./workspace-participants.md#shared-presentation) —
+  `LocationFormDialog` (edit), `MapsResolutionBridge` (validates browser-acquired
   coordinates and runs the **workspace-scoped** proximity suggestion — it requires a workspace, there is
   no unscoped overload), `MapsClientProperties` (browser config), and the browser connector
   `../../rg-frontend-vaadin/src/main/frontend/google-maps-connector.ts`. The connector loads the Google

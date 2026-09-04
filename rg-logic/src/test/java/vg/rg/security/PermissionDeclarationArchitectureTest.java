@@ -38,7 +38,8 @@ class PermissionDeclarationArchitectureTest {
      */
     private static final Pattern FLAT_CHECK_WITH_LOCAL_PERMISSION = Pattern.compile(
             "hasAuthority\\((?![^)]*,)[^)]*"
-                    + "(?:LocalPermissions|location:|workspace:(?:create|read|update|delete))");
+                    + "(?:LocalPermissions|location:|workspace-participant:"
+                    + "|workspace:(?:create|read|update|delete))");
 
     @Test
     void theAppWideDeclarationSharesNothingWithTheLocalOne() {
@@ -54,8 +55,8 @@ class PermissionDeclarationArchitectureTest {
 
         // Literals, not symbols: a local capability re-entering this file would arrive as a string.
         assertThat(declaration).doesNotContain(
-                "\"location:", "\"workspace:create\"", "\"workspace:read\"",
-                "\"workspace:update\"", "\"workspace:delete\"");
+                "\"location:", "\"workspace-participant:", "\"workspace:create\"",
+                "\"workspace:read\"", "\"workspace:update\"", "\"workspace:delete\"");
         // And the transitional escape hatch that let location capabilities sit in APP_WIDE is gone.
         assertThat(declaration).doesNotContain("TRANSITIONAL");
     }

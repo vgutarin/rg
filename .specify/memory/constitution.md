@@ -1,24 +1,36 @@
 <!--
 Sync Impact Report
-- Version change: 3.0.0 -> 3.1.0
-- Modified principles: none
-- Added sections:
-  - Specification Artifacts and Organization
+- Version change: 3.1.0 -> 4.0.0
+- Modified principles:
+  - I. Personal-Data Prohibition and Permitted Business Data (added a narrow, exhaustive allowance
+    for encrypted workspace-participant contact attributes, and an explicit statement of what
+    encryption at rest does not protect against)
+- Added sections: none
 - Modified sections:
-  - Development Workflow and Mandatory Test Coverage (added a mandatory final actualization phase
-    that keeps the current specification set in sync with each implemented change)
+  - Architecture and Data Constraints (the personal-data service remains authoritative for identity
+    mapping; the blanket "MUST NOT persist personal data" bullet now carries the Principle I
+    exception)
+  - Development Workflow and Mandatory Test Coverage (the review confirmation is no longer "no
+    personal data is persisted", which would be false, but that persisted personal data is confined
+    to what Principle I permits and carries its required controls)
 - Removed sections: none
-- Amendment rationale: establish a single, discoverable home and naming/ordering convention for
-  active specifications, allow features and domains to live in dedicated cross-referencing files,
-  and require every task plan to conclude by actualizing the current specification set so that
-  `specs/current/` always reflects implemented behavior.
-- Compatibility impact: additive. Existing specifications SHOULD be relocated into `specs/current/`
-  and split by feature or domain as they are next revised; task plans MUST henceforth end with an
-  actualization phase.
-- Migration needs: move active specifications into `specs/current/`, use self-explaining file names
-  (optionally adding an explicit ordering prefix only if a genuine ordering need arises), and add the
-  final actualization phase to any in-flight `tasks.md`.
-- Approval: approved by a project maintainer on 2026-08-26.
+- Amendment rationale: a workspace owner must be able to register participants -- a plumber, a
+  client, a neighbour -- who have not authenticated through Telegram and may never do so, yet must
+  still take part in workspace content. Such a person has no record in the identity service, so
+  neither an identity claim nor an abstract user ID can carry the owner's label for them or a phone
+  number to reach them. The data therefore has to live in this application or the capability cannot
+  exist. Rather than contort the design around the prohibition, the prohibition is narrowed by an
+  exhaustive, controlled allowance.
+- Compatibility impact: MAJOR. This redefines a governance guarantee that reviews, specifications,
+  and the security posture relied on: the application was previously guaranteed to persist no
+  personal data about natural persons at all. It now MAY persist a bounded, encrypted contact set
+  for workspace participants only. Nothing already implemented becomes non-compliant, and no other
+  category of personal data is permitted.
+- Migration needs: none for existing data -- the allowance is additive and no personal data is
+  persisted today. The first use MUST land with its encryption, masking, bounding, and
+  no-leak coverage in the same change; `specs/current/` MUST record the allowance's controls.
+- Approval: approved by the project maintainer on 2026-09-04, as part of the workspace-participants
+  plan review.
 - Follow-up TODOs: none.
 -->
 # RG Telegram Bot Constitution
@@ -28,12 +40,13 @@ Sync Impact Report
 ### I. Personal-Data Prohibition and Permitted Business Data
 The application MUST NOT collect, persist, derive, or expose personal data about natural persons,
 including emails, phone numbers, addresses, Telegram identity data, or equivalent identifiers,
-except for the narrowly scoped display-name allowance below. This prohibition applies to databases,
-client storage, logs, metrics, traces, analytics, error reports, and support artifacts. The
-application MAY hold and process company data and payment data when each payment record is bound
-only to an abstract user ID supplied by the designated secure service; it MUST NOT store or obtain
-the mapping from that ID to a person. This boundary permits the business domain while keeping
-personal data under the secure service's control.
+except for the two narrowly scoped allowances below—a display name, and a workspace participant's
+contact attributes. This prohibition applies to databases, client storage, logs, metrics, traces,
+analytics, error reports, and support artifacts. The application MAY hold and process company data
+and payment data when each payment record is bound only to an abstract user ID supplied by the
+designated secure service; it MUST NOT store or obtain the mapping from that ID to a person. This
+boundary permits the business domain while keeping personal data under the secure service's
+control.
 
 The application MAY temporarily retain a display name supplied by the designated secure service
 only in server-side authenticated session state or a bounded server-side cache and only for the
@@ -43,6 +56,27 @@ traces, analytics, errors, or support artifacts. The retained value MUST be remo
 logs out, the session expires, authentication is replaced, or the cache entry is evicted, whichever
 occurs first. Cache entries MUST have a finite lifetime no longer than the associated authenticated
 session.
+
+The application MAY persist a bounded set of contact attributes for a **workspace participant**—a
+person whom a workspace owner registers, who has not authenticated and may never do so—and MAY
+obtain them for authorized display, only when all of the following hold: the attributes are limited
+to a display label chosen by the registering owner and a single contact phone number; they are
+encrypted at rest through the project's field-encryption capability, under keys supplied by
+approved runtime configuration and never present in source control; they are masked by default in
+every interface, with plaintext disclosed only by a separate, deliberate, authorized action; they
+are never written to logs, metrics, traces, analytics, client storage, error reports, or support
+artifacts; they are never used as an identity, authorization, ownership, or audit input; their
+count and serialized size are bounded by configuration; and they are erasable on request. This
+allowance is exhaustive: it extends to no other personal data and to no other subject, it does not
+permit resolving a participant to a natural person outside the application's own records, and it
+does not weaken Principle II's delegation of authentication and Telegram handling to the designated
+secure service, which remains the sole authority for identity.
+
+Encryption at rest under this allowance addresses disclosure to a reader of the stored data—a
+database dump, a backup, a replica, or direct database access. It MUST NOT be presented as
+protection against compromise of the application itself, which holds the keys, and it does not
+reach data already written to a backup when an erasure request is honored. Residual risk MUST be
+recorded explicitly rather than implied away.
 
 The sole Telegram-data exception is request-scoped transport of a size-bounded raw Telegram
 `initData` value directly from the authentication callback to the designated secure-service facade.
@@ -137,13 +171,16 @@ behavior reusable, independently testable, and free of presentation concerns.
 
 ## Architecture and Data Constraints
 
-- The external personal-data service is the sole authoritative store for personal data.
+- The external personal-data service is the sole authoritative store for personal data about
+  authenticated users, and for every mapping between an abstract user ID and a natural person.
 - This application MAY persist and process company data, payment data bound to secure-service
   abstract user IDs, technical configuration, opaque external references, and non-personal
   operational state when their purpose and lifetime are documented.
 - The application MUST NOT persist or attempt to resolve personal data, including the association
-  between an abstract user ID and a natural person. It MAY process and temporarily retain only the
-  secure-service-provided display name under Principle I.
+  between an abstract user ID and a natural person. Two allowances under Principle I are exhaustive
+  exceptions: it MAY process and temporarily retain the secure-service-provided display name, and it
+  MAY persist the encrypted contact attributes of a workspace participant subject to that
+  principle's controls.
 - Temporary sensitive values MUST remain in memory for the shortest practical time and MUST NOT
   be written to durable storage, client storage, telemetry, or diagnostic artifacts.
 - Telegram authorization and verification are secure-service responsibilities. The application may
@@ -192,8 +229,10 @@ handling, and MUST NOT impose end-to-end latency percentages or fixed completion
 the project controls the full path or an enforceable dependency latency contract is in scope.
 
 Changes MUST pass formatting, static analysis, relevant unit and integration tests, and dependency
-checks before merge. Reviews MUST explicitly confirm that no personal data is persisted or leaked
-through logs and telemetry and that any retained display name obeys its session/cache lifetime.
+checks before merge. Reviews MUST explicitly confirm that any persisted personal data is
+confined to Principle I's allowances and carries their required controls—encryption at rest,
+masking by default, configured bounds, and erasability—that no personal data is leaked through
+logs or telemetry, and that any retained display name obeys its session/cache lifetime.
 Breaking contract changes require a migration and rollback plan.
 Deployments MUST support health checks, actionable non-personal telemetry, rollback, and staged
 verification proportional to risk. Unresolved violations MUST block release unless Governance
@@ -220,4 +259,4 @@ Impact Report. Compliance MUST be reviewed during feature planning and pull-requ
 must be audited before each production release. Exceptions MUST be explicit, risk-assessed,
 approved by a maintainer, assigned to an owner, and expire on a recorded date.
 
-**Version**: 3.1.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-26
+**Version**: 4.0.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-09-04

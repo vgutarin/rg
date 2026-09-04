@@ -117,13 +117,15 @@ class SecureServiceApplicationContextTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(DevSecureServiceProperties.class)
+    @EnableConfigurationProperties({
+            DevSecureServiceProperties.class,
+            SecureAuthorizationLimitsProperties.class,
+            IdentityAuthorizationLimitsProperties.class
+    })
     @Import({
             DevSecureAuthorizationFacade.class,
             IdentitySecureAuthorizationFacade.class,
-            SecureAuthorizationLimitsProperties.class,
             TelegramAuthorizationRequestValidator.class,
-            IdentityAuthorizationLimitsProperties.class,
             IdentityAuthorizationResponseValidator.class,
             AuthorizationApplicationService.class
     })

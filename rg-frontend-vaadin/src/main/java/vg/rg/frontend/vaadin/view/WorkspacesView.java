@@ -31,7 +31,6 @@ import vg.rg.service.WorkspaceLimitReachedException;
 import vg.rg.service.WorkspaceNotRemovableException;
 import vg.rg.service.WorkspaceService;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Lists the workspaces a user owns and lets them create another. Mobile-first: a single column, a
@@ -126,20 +125,13 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
         return row;
     }
 
-    /**
-     * A dialog together with the buttons that drive it. Footer components live in a virtual slot that
-     * cannot be walked from the dialog, so the flow hands them back rather than being reachable only
-     * through Vaadin internals.
-     */
-    record Prompt(Dialog dialog, Button confirm, Button cancel) { }
-
     private Component rowActions(WorkspaceModel workspace) {
         var actions = new Div();
         actions.addClassName("workspace-row-actions");
 
         var rename = new Button(localization.i18n("workspaces.rename"), VaadinIcon.EDIT.create(),
                 event -> openRenameDialog(workspace));
-        rename.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        rename.addThemeVariants(ButtonVariant.TERTIARY);
         actions.add(rename);
 
         // The default workspace cannot be removed -- it is what guarantees the user always has one --
@@ -147,7 +139,7 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
         if (!workspace.isDefaultWorkspace()) {
             var remove = new Button(localization.i18n("workspaces.remove"), VaadinIcon.TRASH.create(),
                     event -> confirmRemove(workspace));
-            remove.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
+            remove.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR);
             actions.add(remove);
         }
         return actions;
@@ -210,32 +202,14 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
     }
 
     /**
-     * Removal, confirmed first and guarded against a double press.
+     * Removal, confirmed first; see {@link Dialogs#confirmDeletion} for the shape and its guarantee.
      *
      * @return the opened confirmation dialog and its buttons, so the flow can be driven directly
      */
     Prompt confirmRemove(WorkspaceModel workspace) {
-        var dialog = new Dialog();
-        dialog.setHeaderTitle(localization.i18n("workspaces.remove"));
-        dialog.add(new Paragraph(localization.i18n("workspaces.remove.confirm")));
-
-        var confirm = new Button(localization.i18n("workspaces.remove"));
-        confirm.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
-        // Disabling the button is presentation; this flag is the enforcement. A destructive action must
-        // not run twice because of a double tap, a slow round trip, or a repeated request.
-        var submitted = new AtomicBoolean();
-        confirm.addClickListener(event -> {
-            if (!submitted.compareAndSet(false, true)) {
-                return;
-            }
-            confirm.setEnabled(false);
-            remove(workspace);
-            dialog.close();
-        });
-        var cancel = new Button(localization.i18n("workspaces.cancel"), event -> dialog.close());
-        dialog.getFooter().add(cancel, confirm);
-        dialog.open();
-        return new Prompt(dialog, confirm, cancel);
+        return Dialogs.confirmDeletion(localization,
+                "workspaces.remove", "workspaces.remove.confirm", "workspaces.remove",
+                "workspaces.cancel", () -> remove(workspace));
     }
 
     private void remove(WorkspaceModel workspace) {

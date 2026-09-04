@@ -69,6 +69,7 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 
 ## TODO
 
+- upgrade to java 25
 - analyze tests to possible refactor. I.e. - authentication helpers can be centralized etc
 - make sure EnableMethodSecurity is enabled on logic model level
 - add user contacts - Some structure related to user. {uniqueId, holderUniqueId, contactUniqueId nullable, ... } (unique(holderUniqueId, contactUniqueId))

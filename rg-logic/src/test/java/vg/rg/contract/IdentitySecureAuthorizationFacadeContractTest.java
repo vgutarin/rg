@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.env.MockEnvironment;
 import vg.identity.model.IdentityApplicationUserPrincipal;
 import vg.unique.id.model.UniqueId;
 import vg.identity.service.IdentityApplicationApi;
@@ -36,7 +35,7 @@ class IdentitySecureAuthorizationFacadeContractTest extends SecureAuthorizationF
             return Optional.of(new IdentityApplicationUserPrincipal(
                     new UniqueId(91L), null, Set.of(Permissions.Reports.READ), false));
         });
-        var limits = new IdentityAuthorizationLimitsProperties(new MockEnvironment());
+        var limits = new IdentityAuthorizationLimitsProperties(null, null);
         facade = new IdentitySecureAuthorizationFacade(
                 identityApplicationApi, new IdentityAuthorizationResponseValidator(limits));
     }

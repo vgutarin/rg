@@ -8,7 +8,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.config.GeoProperties;
 import vg.rg.entity.WorkspaceLocationEntity;
@@ -35,6 +34,10 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class WorkspaceLocationServiceImplTest {
 
+    // Deliberately not the production defaults (500/50): only non-default bounds prove the configured
+    // values actually reach the service rather than being hard-coded in it.
+    private static final int MATCH_RADIUS_METERS = 400;
+    private static final int MAX_NAME_SEARCH_RESULTS = 7;
     private static final UniqueId WORKSPACE = new UniqueId(5001L);
     private static final UniqueId OTHER_WORKSPACE = new UniqueId(5002L);
     private static final UniqueId LOCATION = new UniqueId(6001L);
@@ -51,7 +54,8 @@ class WorkspaceLocationServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new WorkspaceLocationServiceImpl(
-                uniqueIdService, repository, mapper, new GeoProperties(new MockEnvironment()));
+                uniqueIdService, repository, mapper, new GeoProperties(
+                        String.valueOf(MATCH_RADIUS_METERS), String.valueOf(MAX_NAME_SEARCH_RESULTS)));
         when(mapper.toEntity(any())).thenAnswer(invocation -> {
             LocationModel model = invocation.getArgument(0);
             return WorkspaceLocationEntity.builder()
@@ -203,7 +207,7 @@ class WorkspaceLocationServiceImplTest {
         service.searchByName(WORKSPACE, null, 0);
 
         verify(repository).findByWorkspaceUniqueIdAndNameContainingIgnoreCase(
-                eq(WORKSPACE), eq(""), eq(PageRequest.of(0, 50)));
+                eq(WORKSPACE), eq(""), eq(PageRequest.of(0, MAX_NAME_SEARCH_RESULTS)));
     }
 
     @Test
@@ -223,7 +227,7 @@ class WorkspaceLocationServiceImplTest {
 
     @Test
     void findNearby_beyondTheRadius_isExcluded() {
-        // 500 m default radius; ~1.1 km away.
+        // 400 m configured radius; ~1.1 km away.
         when(repository.findWithinBoundingBox(eq(WORKSPACE), any(), any(), any(), any()))
                 .thenReturn(List.of(entityAt(50.0100, 30.0000)));
 

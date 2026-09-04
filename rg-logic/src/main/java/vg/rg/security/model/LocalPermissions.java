@@ -58,6 +58,43 @@ public final class LocalPermissions {
     }
 
     /**
+     * Capabilities over a person a workspace owner registered — see {@code WorkspaceParticipantEntity}.
+     *
+     * <p><strong>Why the resource is {@code workspace-participant} and not {@code participant}</strong>,
+     * breaking the shape {@link Location} set: these people are meant to take part in groups and events
+     * too, so a second participant-like type is likely, and the bare noun would then have two claimants.
+     * {@code location} has no such contested sibling, so it is left as it is rather than renamed for
+     * symmetry.
+     *
+     * <p>{@link #REVEAL_CONTACT} is the one capability here that is not CRUD. It exists because
+     * disclosing a phone number in plaintext is a different act from reading the roster, and it must be
+     * a separate, deliberate one. Like every local permission it is <em>formal</em> today — owning the
+     * workspace already grants it — but it names the boundary now, so granular non-owner access later
+     * does not have to invent it.
+     */
+    public static final class WorkspaceParticipant {
+        /** Read one participant, addressed by its own identifier. Excludes the contact number. */
+        public static final String READ = "workspace-participant:read";
+        /** List a workspace's participants, addressed by the workspace. */
+        public static final String LIST = "workspace-participant:list";
+        public static final String CREATE = "workspace-participant:create";
+        public static final String UPDATE = "workspace-participant:update";
+        public static final String DELETE = "workspace-participant:delete";
+        /** Disclose one participant's contact number in plaintext, addressed by its own identifier. */
+        public static final String REVEAL_CONTACT = "workspace-participant:reveal-contact";
+
+        public static final Set<String> ALL = PermissionSyntax.validateAndFreeze(List.of(
+                READ, LIST, CREATE, UPDATE, DELETE, REVEAL_CONTACT));
+
+        /** Whether this permission addresses a participant. See {@link Location#contains(String)}. */
+        public static boolean contains(String permission) {
+            return permission != null && ALL.contains(permission);
+        }
+
+        private WorkspaceParticipant() { }
+    }
+
+    /**
      * Capabilities over a workspace itself. Distinct from {@link Permissions.Workspace#OWNER}, which is
      * app-wide and gates the layer: these address one particular workspace, which is what lets a single
      * resource-scoped check cover both a workspace and its contents.
@@ -84,7 +121,8 @@ public final class LocalPermissions {
     }
 
     /** Every declared local permission. */
-    public static final Set<String> ALL = concat(Location.ALL, Workspace.ALL);
+    public static final Set<String> ALL =
+            concat(Location.ALL, concat(WorkspaceParticipant.ALL, Workspace.ALL));
 
     /**
      * Whether the permission is a declared local one. The resource-scoped authority check accepts only
@@ -105,7 +143,9 @@ public final class LocalPermissions {
      */
     public static boolean addressesContainer(String permission) {
         return Location.CREATE.equals(permission)
-                || Location.LIST.equals(permission);
+                || Location.LIST.equals(permission)
+                || WorkspaceParticipant.CREATE.equals(permission)
+                || WorkspaceParticipant.LIST.equals(permission);
     }
 
     private static Set<String> concat(Set<String> first, Set<String> second) {

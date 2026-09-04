@@ -3,7 +3,6 @@ package vg.rg.frontend.vaadin.view;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
-import com.vaadin.flow.component.HasStyle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -46,6 +45,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -149,7 +150,7 @@ class WorkspaceLocationsViewTest {
         var view = entered(model("Depot"));
 
         var item = onlyItem(view);
-        assertThat(item.hasClassName("location-item--open")).isFalse();
+        assertThat(item.hasClassName(DisclosureList.ITEM_OPEN)).isFalse();
         assertThat(chevronIcons(item)).hasSize(1);
     }
 
@@ -159,10 +160,10 @@ class WorkspaceLocationsViewTest {
         var item = onlyItem(view);
 
         click(header(item));
-        assertThat(item.hasClassName("location-item--open")).isTrue();
+        assertThat(item.hasClassName(DisclosureList.ITEM_OPEN)).isTrue();
 
         click(header(item));
-        assertThat(item.hasClassName("location-item--open")).isFalse();
+        assertThat(item.hasClassName(DisclosureList.ITEM_OPEN)).isFalse();
     }
 
     @Test
@@ -174,8 +175,76 @@ class WorkspaceLocationsViewTest {
         click(header(items.get(0)));
         click(header(items.get(1)));
 
-        assertThat(items.get(0).hasClassName("location-item--open")).isFalse();
-        assertThat(items.get(1).hasClassName("location-item--open")).isTrue();
+        assertThat(items.get(0).hasClassName(DisclosureList.ITEM_OPEN)).isFalse();
+        assertThat(items.get(1).hasClassName(DisclosureList.ITEM_OPEN)).isTrue();
+    }
+
+    /**
+     * Saving an edit re-queries and rebuilds the list, so the expanded row is a different element
+     * afterwards. It has to stay expanded, showing the updated values — otherwise the panel the user was
+     * reading collapses and they have to find and reopen the row to see whether their edit took. The
+     * mechanism is {@link DisclosureList}'s entry key; this pins that this screen supplies one.
+     */
+    @Test
+    void reRendering_keepsTheExpandedRowExpanded_withItsUpdatedContent() {
+        var view = entered(model("Depot"));
+        click(header(onlyItem(view)));
+        assertThat(onlyItem(view).hasClassName(DisclosureList.ITEM_OPEN)).isTrue();
+
+        // The re-query an edit triggers: same location, new name.
+        when(locationService.browse(eq(WORKSPACE), any())).thenReturn(new PageImpl<>(List.of(
+                LocationModel.builder().uniqueId(LOCATION).name("Depot North").build())));
+        view.beforeEnter(event);
+
+        assertThat(names(view)).containsExactly("Depot North");
+        assertThat(onlyItem(view).hasClassName(DisclosureList.ITEM_OPEN)).isTrue();
+    }
+
+    // --- removal, mirroring WorkspaceParticipantsViewTest ------------------------------------------
+
+    @Test
+    void removal_isConfirmedFirst() {
+        var view = entered(model("Depot"));
+
+        view.confirmDelete(model("Depot"));
+
+        verify(locationService, never()).delete(any());
+    }
+
+    /**
+     * The guard this screen was missing: it had neither the flag nor a disabled button, so a double tap
+     * issued two deletes. Its confirmation returned {@code void}, which is why nothing noticed.
+     */
+    @Test
+    void removal_doubleTap_deletesOnce() {
+        var view = entered(model("Depot"));
+        var prompt = view.confirmDelete(model("Depot"));
+
+        click(prompt.confirm());
+        click(prompt.confirm());
+
+        verify(locationService, times(1)).delete(LOCATION);
+    }
+
+    @Test
+    void removal_cancel_deletesNothing() {
+        var view = entered(model("Depot"));
+        var prompt = view.confirmDelete(model("Depot"));
+
+        click(prompt.cancel());
+
+        verify(locationService, never()).delete(any());
+        assertThat(prompt.dialog().isOpened()).isFalse();
+    }
+
+    /** The destructive action has to look destructive, as it does on the other two screens. */
+    @Test
+    void removal_confirmButtonIsStyledAsTheDestructiveAction() {
+        var view = entered(model("Depot"));
+
+        var prompt = view.confirmDelete(model("Depot"));
+
+        assertThat(prompt.confirm().getThemeNames()).contains("primary", "error");
     }
 
     @Test
@@ -237,6 +306,32 @@ class WorkspaceLocationsViewTest {
 
     // ---------------------------------------------------------------------------------- fixtures
 
+    /**
+     * A dialog auto-adds itself to the current UI when opened, so the removal flow needs one.
+     *
+     * <p>Held in a field on purpose: Vaadin keeps the current UI behind a weak reference, so one with no
+     * other referent can be collected mid-test and {@code dialog.open()} then fails intermittently with
+     * "No currently active UI found". See {@code specs/current/engineering-notes.md}.
+     */
+    private com.vaadin.flow.component.UI ui;
+
+    @org.junit.jupiter.api.BeforeEach
+    void attachUi() {
+        ui = new com.vaadin.flow.component.UI();
+        com.vaadin.flow.component.UI.setCurrent(ui);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void detachUi() {
+        com.vaadin.flow.component.UI.setCurrent(null);
+        ui = null;
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void resetIdentifiers() {
+        IDS.clear();
+    }
+
     private WorkspaceLocationsView entered(LocationModel... models) {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
@@ -252,8 +347,18 @@ class WorkspaceLocationsViewTest {
         return view;
     }
 
+    /**
+     * Distinct identifiers per name, because they key the accordion's open entry: two fixtures sharing
+     * one would be indistinguishable to it, and a test asserting that <em>this</em> row stayed open
+     * would pass because a different row opened.
+     */
+    private static final java.util.Map<String, UniqueId> IDS = new java.util.LinkedHashMap<>();
+
     private static LocationModel model(String name) {
-        return LocationModel.builder().uniqueId(LOCATION).name(name).build();
+        var id = IDS.computeIfAbsent(name, key -> IDS.isEmpty()
+                ? LOCATION
+                : new UniqueId(LOCATION.getLongValue() + IDS.size()));
+        return LocationModel.builder().uniqueId(id).name(name).build();
     }
 
     private static LocationModel withCoordinates() {
@@ -277,14 +382,14 @@ class WorkspaceLocationsViewTest {
     private List<String> names(Component view) {
         return descendants(view).stream()
                 .filter(Span.class::isInstance).map(Span.class::cast)
-                .filter(span -> span.hasClassName("location-row__name"))
+                .filter(span -> span.hasClassName(DisclosureList.ROW_NAME))
                 .map(Span::getText).toList();
     }
 
     private List<Div> items(Component view) {
         return descendants(view).stream()
                 .filter(Div.class::isInstance).map(Div.class::cast)
-                .filter(div -> div.hasClassName("location-item"))
+                .filter(div -> div.hasClassName(DisclosureList.ITEM))
                 .toList();
     }
 
@@ -297,19 +402,18 @@ class WorkspaceLocationsViewTest {
     private Div header(Div item) {
         return item.getChildren()
                 .filter(Div.class::isInstance).map(Div.class::cast)
-                .filter(div -> div.hasClassName("location-row"))
+                .filter(div -> div.hasClassName(DisclosureList.ROW))
                 .findFirst().orElseThrow();
     }
 
     private List<String> chevronIcons(Div item) {
         return descendants(item).stream()
-                .filter(component -> component instanceof HasStyle style
-                        && style.hasClassName("location-row__icon"))
+                .filter(component -> component.hasClassName(DisclosureList.ROW_ICON))
                 .map(component -> component.getElement().getAttribute("icon"))
                 .toList();
     }
 
-    private void click(Div element) {
+    private void click(Component element) {
         ComponentUtil.fireEvent(element, new ClickEvent<>(element));
     }
 

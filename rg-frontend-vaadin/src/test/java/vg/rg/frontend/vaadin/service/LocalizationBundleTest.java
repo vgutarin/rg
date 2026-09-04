@@ -20,9 +20,22 @@ class LocalizationBundleTest {
 
     private static final Path ROOT = repositoryRoot();
 
-    /** Every literal key the application asks for by name. */
+    /**
+     * Every literal key the application asks for by name.
+     *
+     * <p>{@code getTranslation} counts as well as {@code i18n}: a key with placeholders has to go
+     * through the parameterised overload, so a family looked up only that way would otherwise be
+     * invisible here — the same blind spot that let {@code permission.workspace:owner} ship missing.
+     *
+     * <p>Each alternative requires its own terminator, and that is what keeps <em>composed</em> keys
+     * out: {@code i18n("permission." + p)} has no {@code ")} after the literal, and a composed
+     * {@code getTranslation} argument has no {@code ",}. A composed key cannot be resolved from its
+     * prefix, so matching one here would report a fragment as a missing translation.
+     */
     private static final Pattern LITERAL_LOOKUP = Pattern.compile(
-            "(?:i18n\\(\"([^\"]+)\"\\)|@PageTitle\\(\"([^\"]+)\"\\))");
+            "(?:i18n\\(\"([^\"]+)\"\\)"
+                    + "|getTranslation\\(\"([^\"]+)\","
+                    + "|@PageTitle\\(\"([^\"]+)\"\\))");
 
     /**
      * A dot-separated lowercase token — the shape of a key in these bundles. Used to decide whether an
@@ -81,6 +94,7 @@ class LocalizationBundleTest {
 
         var codes = keyShapedLiteralsUnder(ROOT.resolve("rg-logic/src/main/java")).stream()
                 .filter(literal -> literal.startsWith("workspace.error.")
+                        || literal.startsWith("workspace.participant.error.")
                         || literal.startsWith("workspace.default."))
                 .toList();
 
@@ -133,7 +147,10 @@ class LocalizationBundleTest {
         named.addAll(keyShapedLiteralsUnder(ROOT.resolve("rg-logic/src/main/java")));
 
         var dead = load("messages.properties").stringPropertyNames().stream()
-                .filter(key -> key.startsWith("workspace") || key.startsWith("nav.workspace"))
+                .filter(key -> key.startsWith("workspace")
+                        || key.startsWith("participant")
+                        || key.startsWith("nav.workspace")
+                        || key.startsWith("nav.participant"))
                 .filter(key -> !named.contains(key))
                 .toList();
 
@@ -150,7 +167,13 @@ class LocalizationBundleTest {
         var matcher = LITERAL_LOOKUP.matcher(
                 textUnder(ROOT.resolve("rg-frontend-vaadin/src/main/java")));
         while (matcher.find()) {
-            keys.add(matcher.group(1) == null ? matcher.group(2) : matcher.group(1));
+            // First non-null group, so adding another lookup form to the pattern needs no change here.
+            for (var group = 1; group <= matcher.groupCount(); group++) {
+                if (matcher.group(group) != null) {
+                    keys.add(matcher.group(group));
+                    break;
+                }
+            }
         }
         return keys;
     }

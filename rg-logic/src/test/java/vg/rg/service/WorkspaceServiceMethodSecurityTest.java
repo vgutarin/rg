@@ -6,7 +6,6 @@ import org.mockito.Mockito;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -131,7 +130,12 @@ class WorkspaceServiceMethodSecurityTest {
                                           AuthorityChecker authorityChecker) {
             return new WorkspaceServiceImpl(
                     Mockito.mock(UniqueIdService.class), repository, mapper,
-                    new WorkspaceProperties(new MockEnvironment()), authorityChecker,
+                    WorkspaceProperties.builder()
+                            .maxPerUser("20")
+                            .nameMaxLength("128")
+                            .descriptionMaxLength("1024")
+                            .build(),
+                    authorityChecker,
                     Mockito.mock(vg.rg.repository.WorkspaceSelectionRepository.class),
                     // No contributors: this slice is about which callers the guards admit, not removal.
                     List.of());

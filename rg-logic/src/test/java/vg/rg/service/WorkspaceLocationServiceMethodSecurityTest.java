@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -216,7 +215,7 @@ class WorkspaceLocationServiceMethodSecurityTest {
                                                           WorkspaceLocationMapper mapper) {
             return new WorkspaceLocationServiceImpl(
                     Mockito.mock(UniqueIdService.class), repository, mapper,
-                    new GeoProperties(new MockEnvironment()));
+                    new GeoProperties("500", "50"));
         }
 
         @Bean

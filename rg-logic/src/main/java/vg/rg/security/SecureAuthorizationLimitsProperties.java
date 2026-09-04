@@ -1,45 +1,47 @@
 package vg.rg.security;
 
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.unit.DataSize;
 
-import java.util.Objects;
+import static vg.rg.config.ConfigurationBounds.positiveBytesOrDefault;
 
-@Component
+/**
+ * Immutable startup bound on the size of opaque authorization input.
+ *
+ * <p>Bound through {@code @ConfigurationProperties}, but with a {@code String} constructor parameter
+ * rather than a {@link DataSize} one: letting Spring convert would report a malformed value as
+ * {@code … for value [<the value>]}, and this limit is covered by a test asserting that a rejected value
+ * is never disclosed. {@code ConfigurationBounds} parses it instead and names only the key. See
+ * {@code ConfigurationBounds} for the full reasoning.
+ *
+ * <p>Registered explicitly in {@code RgLogicConfig}: {@code @ConfigurationProperties} types are not
+ * component-scanned.
+ */
+@ConfigurationProperties(SecureAuthorizationLimitsProperties.PREFIX)
 public final class SecureAuthorizationLimitsProperties {
 
-    public static final String MAX_INIT_DATA_SIZE_PROPERTY =
-            "rg.secure-service.max-init-data-size";
-    private static final String DEFAULT_MAX_INIT_DATA_SIZE = "32KB";
+    static final String PREFIX = "rg.secure-service";
 
-    private final long maxInitDataBytes;
+    public static final String MAX_INIT_DATA_SIZE_PROPERTY = PREFIX + ".max-init-data-size";
 
-    public SecureAuthorizationLimitsProperties(Environment environment) {
-        Objects.requireNonNull(environment);
-        var configuredValue = environment.getProperty(
-                MAX_INIT_DATA_SIZE_PROPERTY, DEFAULT_MAX_INIT_DATA_SIZE);
-        this.maxInitDataBytes = parsePositiveBytes(configuredValue);
+    private static final DataSize DEFAULT_MAX_INIT_DATA_SIZE = DataSize.ofKilobytes(32);
+
+    /**
+     * Largest accepted opaque init-data payload, configured as a {@code DataSize} string such as
+     * {@code 32KB}. Must be positive; defaults to 32KB.
+     *
+     * <p>Named for the property rather than for what it holds — the configuration processor matches a
+     * field to its key by name, and this is what puts the sentence above into the generated metadata.
+     * The resolved value is in <strong>bytes</strong>, which is what {@link #maxInitDataBytes()} returns.
+     */
+    private final long maxInitDataSize;
+
+    public SecureAuthorizationLimitsProperties(String maxInitDataSize) {
+        this.maxInitDataSize = positiveBytesOrDefault(
+                maxInitDataSize, DEFAULT_MAX_INIT_DATA_SIZE, MAX_INIT_DATA_SIZE_PROPERTY);
     }
 
     public long maxInitDataBytes() {
-        return maxInitDataBytes;
-    }
-
-    private static long parsePositiveBytes(String configuredValue) {
-        try {
-            var bytes = DataSize.parse(configuredValue).toBytes();
-            if (bytes <= 0) {
-                throw invalidConfiguration();
-            }
-            return bytes;
-        } catch (RuntimeException exception) {
-            throw invalidConfiguration();
-        }
-    }
-
-    private static IllegalStateException invalidConfiguration() {
-        return new IllegalStateException(
-                "Invalid configuration for " + MAX_INIT_DATA_SIZE_PROPERTY);
+        return maxInitDataSize;
     }
 }

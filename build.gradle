@@ -10,8 +10,30 @@ allprojects {
         mavenCentral()
     }
 
-    java {
-        sourceCompatibility = '21'
+    // The Java version, applied as a TOOLCHAIN and not only as a source/target level.
+    //
+    // A toolchain makes javac itself a Java ${java_version} javac and runs the tests on that same JVM,
+    // so what compiles here is what runs in production. Without one, Gradle compiles with whatever JDK
+    // its daemon happens to use -- it provisions its own newer one under ~/.gradle/jdks -- and a call to
+    // a Java 22+ method compiles cleanly and then fails with NoSuchMethodError on a real 21 runtime.
+    // options.release is kept alongside it as defence in depth, from an explicit constant.
+    //
+    // Both parts are applied through pluginManager.withPlugin, which reacts to the java plugin actually
+    // being applied. Configuring the `java` extension directly inside `allprojects` does NOT work here:
+    // the subprojects have no java plugin at the time this block runs (they apply it further down), so
+    // the setting reached only the root project and every module silently kept the daemon JDK's version.
+    // Because options.release was derived from that same unset value, the guard it exists to provide
+    // resolved to the daemon's version and did nothing -- a daemon on JDK 25 produced class file 69,
+    // which a Java 21 runtime refuses to load with UnsupportedClassVersionError.
+    pluginManager.withPlugin('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(java_version as int)
+            }
+        }
+        tasks.withType(JavaCompile).configureEach {
+            options.release = java_version as int
+        }
     }
 
     group = 'vg.rg'

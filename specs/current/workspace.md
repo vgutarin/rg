@@ -4,21 +4,27 @@ Current-state specification of the workspace layer as implemented. Full requirem
 rationale live in [../003-workspace-layer/spec.md](../003-workspace-layer/spec.md); design in
 [../003-workspace-layer/plan.md](../003-workspace-layer/plan.md).
 
-See also [geolocation.md](./geolocation.md) — a location is a workspace's content, scoped by the active
-workspace, though its screen is reached from a top-level navigation entry.
+See also [geolocation.md](./geolocation.md) and
+[workspace-participants.md](./workspace-participants.md) — a location and a participant are both a
+workspace's content, scoped by the active workspace, though each screen is reached from a top-level
+navigation entry.
 
 ## Purpose
 
 A **workspace** is a private container a single user works inside. Everything a workspace holds derives
 its access from the workspace: **owning it grants complete authority over its contents, at any depth.**
 
-Locations are the only contained type today. The layer exists so that further types (contacts, groups)
-inherit that authority by construction rather than by each one re-deriving access rules.
+Locations and **participants** are the contained types today. The layer exists so that further types
+(groups, events) inherit that authority by construction rather than by each one re-deriving access rules.
+Adding participants is the evidence that it works: one scope provider, one content contributor, one
+permission group, and **no change to any access rule** — see
+[workspace-participants.md](./workspace-participants.md).
 
 ## The container
 
 - **Single-owner.** A workspace cannot be shared; there is no membership, invitation, or role. `owner`
-  is the scope authority and the only identity field used for access. `author`/`lastEditor` remain
+  is the scope authority and the only identity field used for access. A registered *participant* is not
+  a counter-example: participants are records the owner keeps, and hold no access to anything. `author`/`lastEditor` remain
   audit-only, as everywhere else in the application.
 - **One active at a time.** The active workspace is stored per user and survives sign-out, so returning
   lands in the same place.
@@ -42,7 +48,8 @@ inherit that authority by construction rather than by each one re-deriving acces
 - **Switch** the active workspace from the selector. One action replaces the visible content entirely;
   nothing carries over.
 - **Work inside** the active workspace: the locations screen at `/workspaces/locations` behaves exactly as
-  the retired global screen did, restricted to one workspace.
+  the retired global screen did, restricted to one workspace, and the participants screen at
+  `/workspaces/participants` lists the people registered in it.
 
 Concurrent edits use optimistic concurrency (JPA `@Version`). A stale save is rejected with the localized
 "reload and retry" guidance, and the dialog keeps the typed text so the user retries rather than retypes.
@@ -56,7 +63,9 @@ Two permission declarations, deliberately disjoint.
   gate on the whole section — a second gate on a contained capability would hide a screen the owner can
   actually use.
 - **`LocalPermissions`** — capabilities that only mean something *inside* a workspace
-  (`location:read|list|create|update|delete`, `workspace:create|read|update|delete`). These are never
+  (`location:read|list|create|update|delete`,
+  `workspace-participant:read|list|create|update|delete|reveal-contact`,
+  `workspace:create|read|update|delete`). These are never
   tested against what a principal *holds*, so they never become Spring authorities and are dropped from
   the sanitised permission set. The flat, resource-less check **rejects every one of them**.
 
@@ -102,17 +111,20 @@ resource id, or the reverse) **denies at runtime** rather than failing to compil
 the way in from the drawer is withheld, pending further work on the section itself. Restoring it is one
 `addNav` call plus its label.
 
-**Locations sit at the top level**, because the workspace is the *scope* a location lives in rather than a
-place the user must navigate through. The entry appears only when
-`hasAuthority(activeWorkspaceId, "location:list")` holds — a question about the workspace being worked in,
+**Locations and participants sit at the top level**, because the workspace is the *scope* they live in
+rather than a place the user must navigate through. Each entry appears only when the matching scoped
+check — `hasAuthority(activeWorkspaceId, "location:list")` or
+`hasAuthority(activeWorkspaceId, "workspace-participant:list")` — holds — a question about the workspace being worked in,
 not about a capability the principal carries around. The app-wide gate is checked first, and not as a
 shortcut: resolving the active workspace is itself guarded by it, so asking a non-holder would raise an
-access denial and take the navigation shell down with it. The entry still opens the workspace-scoped route
-`/workspaces/locations`; the retired global route stays gone.
+access denial and take the navigation shell down with it. The entries open the workspace-scoped routes
+`/workspaces/locations` and `/workspaces/participants`; the retired global route stays gone. The two are
+gated **independently**, and the active workspace is resolved **once** per render — resolving it
+provisions a default, so it must not happen once per entry.
 
-One consequence worth naming: resolving the active workspace is what provisions a default, so a permission
-holder now gets theirs on their first page load rather than on their first visit to a workspace screen.
-Same guarantee, reached earlier. A user without the permission still gets nothing.
+One consequence worth naming: resolving the active workspace is what provisions a default, and the
+navigation gate resolves it — so a permission holder's default workspace is created on their first page
+load, before they visit any workspace screen. A user without the permission still gets nothing.
 
 The active-workspace selector is hosted by a nested router layout, so it appears on every route inside the
 section and **structurally cannot** appear outside it. The active workspace is named beneath it **only
@@ -134,13 +146,19 @@ English second; a system-named workspace's label follows the viewer's locale.
   updated**. A location without a workspace is unrepresentable and a location cannot move between
   workspaces. The column serves two purposes: it scopes every query by construction, and it is the link
   the authority check joins through.
+- **`rg_workspace_participant`** — the people registered in a workspace, with the same mandatory,
+  never-updated `workspace_unique_id`. Their label and phone number live in one **encrypted** column;
+  see [workspace-participants.md](./workspace-participants.md).
 - **`rg_workspace_selection`** — the active workspace per user, keyed by user, with a foreign key to
   `rg_workspace`. That key is why a removal must repoint the selection **before** deleting the workspace
   row.
 - **`rg_migration_marker`** — one row per completed one-time migration. Unmapped; see below.
 
-No personal data about natural persons is persisted. Free-text fields carry localized guidance
-discouraging others' personal data and are stored as given.
+**Personal data about natural persons is persisted in exactly one place**: a participant's label and
+phone number, encrypted, under the narrow allowance amended into constitution Principle I. Nothing else
+here holds any — the workspace's own free-text fields carry localized guidance discouraging other
+people's personal data and are stored as given, and `owner`/`author`/`lastEditor` are abstract
+identifiers that never map to a person.
 
 ## The retired global scope
 
@@ -175,16 +193,17 @@ them, enforced by an architecture test:
     `Permissions`, `LocalPermissions`, `PermissionSyntax`.
   - Services: `WorkspaceService`/`Impl`, `WorkspaceLocationService`/`Impl`,
     `WorkspaceSelectionService`/`Impl`, `WorkspaceContentContributor` (the removal seam) with
-    `LocationWorkspaceContentContributor`, `WorkspaceLimitReachedException`,
-    `WorkspaceNotRemovableException`.
+    `LocationWorkspaceContentContributor` and `ParticipantWorkspaceContentContributor`,
+    `WorkspaceLimitReachedException`, `WorkspaceNotRemovableException`.
   - Data: `WorkspaceEntity`, `WorkspaceLocationEntity`, `WorkspaceSelectionEntity`, their repositories,
     `WorkspaceScopeRow`, `UniqueIdRow`, `WorkspaceProperties`.
   - Schema: `rg-logic/src/main/resources/db/liquibase/002-workspace-init.yaml`.
 - **`rg-frontend-vaadin`** (UI): `WorkspaceLayout` (the nested layout hosting the selector),
   `WorkspacesView` (`/workspaces`), `WorkspaceLocationsView` (`/workspaces/locations`),
-  `LocationFormDialog`, `MapsResolutionBridge` (workspace-scoped proximity), the workspace navigation
-  section in `MainView`, and the `workspace-*` rules in
-  `rg-frontend-vaadin/src/main/resources/META-INF/resources/styles.css`.
+  `WorkspaceParticipantsView` (`/workspaces/participants`), `DisclosureList` (the accordion both
+  contained-type screens are built from), `LocationFormDialog`, `MapsResolutionBridge`
+  (workspace-scoped proximity), the workspace navigation section in `MainView`, and the `workspace-*`
+  and `disclosure-*` rules in `rg-frontend-vaadin/src/main/resources/META-INF/resources/styles.css`.
 
 ## Configuration
 
@@ -193,3 +212,11 @@ them, enforced by an architecture test:
 | `rg.workspace.max-per-user` | 20 | Workspace count bound per user |
 | `rg.workspace.name-max-length` | 128 | Name bound |
 | `rg.workspace.description-max-length` | 1024 | Description bound |
+| `rg.workspace.participants-max-per-workspace` | 1024 | Roster size bound per workspace |
+| `rg.workspace.participant-descriptor-max-bytes` | 2048 | Sealed participant descriptor bound |
+| `rg.workspace.participant-label-max-length` | 128 | Participant label bound |
+
+Bound by `WorkspaceProperties`, registered in `RgLogicConfig`. A non-positive or non-numeric value fails
+startup naming the offending key and nothing else; a blank value falls back to the default. See
+[configuration.md](./configuration.md) for why the holder parses its own values rather than letting the
+binder do it.

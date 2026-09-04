@@ -15,6 +15,12 @@ class LocalPermissionsTest {
                 LocalPermissions.Location.CREATE,
                 LocalPermissions.Location.UPDATE,
                 LocalPermissions.Location.DELETE,
+                LocalPermissions.WorkspaceParticipant.READ,
+                LocalPermissions.WorkspaceParticipant.LIST,
+                LocalPermissions.WorkspaceParticipant.CREATE,
+                LocalPermissions.WorkspaceParticipant.UPDATE,
+                LocalPermissions.WorkspaceParticipant.DELETE,
+                LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT,
                 LocalPermissions.Workspace.CREATE,
                 LocalPermissions.Workspace.READ,
                 LocalPermissions.Workspace.UPDATE,
@@ -69,6 +75,30 @@ class LocalPermissionsTest {
     }
 
     @Test
+    void workspaceParticipantContains_claimsOnlyParticipantPermissions() {
+        assertThat(LocalPermissions.WorkspaceParticipant.ALL)
+                .allSatisfy(permission ->
+                        assertThat(LocalPermissions.WorkspaceParticipant.contains(permission)).isTrue());
+
+        assertThat(LocalPermissions.WorkspaceParticipant.contains(LocalPermissions.Location.READ)).isFalse();
+        assertThat(LocalPermissions.WorkspaceParticipant.contains(LocalPermissions.Workspace.READ)).isFalse();
+        assertThat(LocalPermissions.WorkspaceParticipant.contains(null)).isFalse();
+    }
+
+    /**
+     * The participant resource shares a prefix with the workspace one, which is exactly the case where
+     * parsing the string instead of testing set membership would go wrong: {@code workspace-participant}
+     * must not be read as the {@code workspace} type, in either direction.
+     */
+    @Test
+    void participantAndWorkspaceResources_areNotConfusedByTheirSharedPrefix() {
+        assertThat(LocalPermissions.Workspace.contains(LocalPermissions.WorkspaceParticipant.READ)).isFalse();
+        assertThat(LocalPermissions.WorkspaceParticipant.contains("workspace:read")).isFalse();
+        assertThat(LocalPermissions.WorkspaceParticipant.contains("workspace-participants:read")).isFalse();
+        assertThat(LocalPermissions.WorkspaceParticipant.contains("workspace-participant:reveal")).isFalse();
+    }
+
+    @Test
     void contains_isSetMembershipNotStringParsing() {
         // A near-miss must claim nothing. Parsing the prefix would read "locationn" as a type.
         assertThat(LocalPermissions.Location.contains("locationn:update")).isFalse();
@@ -81,6 +111,9 @@ class LocalPermissionsTest {
     void groupsAreDisjoint() {
         assertThat(LocalPermissions.Location.ALL)
                 .doesNotContainAnyElementsOf(LocalPermissions.Workspace.ALL);
+        assertThat(LocalPermissions.WorkspaceParticipant.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.Location.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.Workspace.ALL);
     }
 
     @Test
@@ -89,6 +122,10 @@ class LocalPermissionsTest {
         // therefore travel with a container identifier.
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.Location.CREATE)).isTrue();
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.Location.LIST)).isTrue();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.CREATE)).isTrue();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.LIST)).isTrue();
 
         // A workspace is a chain root with no container, so its create verb is not container-addressed:
         // there would be nothing for a container lookup to find.
@@ -99,6 +136,15 @@ class LocalPermissionsTest {
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.Location.UPDATE)).isFalse();
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.Location.DELETE)).isFalse();
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.Workspace.UPDATE)).isFalse();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.READ)).isFalse();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.UPDATE)).isFalse();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.DELETE)).isFalse();
+        // Disclosing a contact number addresses one participant, so it carries a resource identifier.
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT)).isFalse();
         assertThat(LocalPermissions.addressesContainer(null)).isFalse();
     }
 

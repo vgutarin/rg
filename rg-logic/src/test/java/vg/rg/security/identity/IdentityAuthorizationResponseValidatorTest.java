@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.mock.env.MockEnvironment;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -85,23 +84,22 @@ class IdentityAuthorizationResponseValidatorTest {
     }
 
     private IdentityAuthorizationResponseValidator validator(int count, int length) {
-        var environment = new MockEnvironment()
-                .withProperty(IdentityAuthorizationLimitsProperties.MAX_PERMISSION_COUNT_PROPERTY,
-                        Integer.toString(count))
-                .withProperty(IdentityAuthorizationLimitsProperties.MAX_PERMISSION_LENGTH_PROPERTY,
-                        Integer.toString(length));
-        return new IdentityAuthorizationResponseValidator(new IdentityAuthorizationLimitsProperties(environment));
+        return new IdentityAuthorizationResponseValidator(new IdentityAuthorizationLimitsProperties(
+                Integer.toString(count), Integer.toString(length)));
     }
 
     private IdentityAuthorizationLimitsProperties limits() {
-        return new IdentityAuthorizationLimitsProperties(new MockEnvironment());
+        return new IdentityAuthorizationLimitsProperties(null, null);
     }
 
     private void assertInvalid(String property, String value) {
-        var environment = new MockEnvironment().withProperty(property, value);
+        var count = IdentityAuthorizationLimitsProperties.MAX_PERMISSION_COUNT_PROPERTY.equals(property)
+                ? value : null;
+        var length = IdentityAuthorizationLimitsProperties.MAX_PERMISSION_LENGTH_PROPERTY.equals(property)
+                ? value : null;
 
         assertThat(org.assertj.core.api.Assertions.catchThrowable(
-                () -> new IdentityAuthorizationLimitsProperties(environment)))
+                () -> new IdentityAuthorizationLimitsProperties(count, length)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Invalid configuration for " + property)
                 .hasMessageNotContaining(value);

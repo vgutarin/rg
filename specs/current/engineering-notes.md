@@ -43,6 +43,52 @@ reliable check that a rebuild happened is that the file's timestamp moved; delet
 
 Note there is no ignore rule for it, so a rebuilt bundle shows up as an untracked file.
 
+## The application stylesheet is cached by the client, and that failure is asymmetric
+
+`styles.css` is a static resource, so how fresh it is depends entirely on the client. **Telegram's
+in-app webview keeps an old copy even though the server sends `Cache-Control: no-cache`**, and it caches
+separately from a desktop browser — so the same running server can serve a correct layout to one and a
+stale one to the other at the same moment.
+
+**What makes this expensive is the asymmetry.** Server-side Java changes take effect immediately while
+CSS changes appear not to, so the screen looks half-updated and the CSS looks *broken* rather than
+*stale*. Diagnosing it as a CSS bug is the natural first move and it is wrong.
+
+`FrontendApplication` therefore registers the stylesheet from `configurePage` with a token that changes
+once per JVM start, rather than through `@StyleSheet` — an annotation value has to be a compile-time
+constant, so it cannot carry one. A restart now guarantees fresh CSS. Two things to preserve:
+
+- The link must stay in `configurePage`, because links added there land *after* annotated ones, which
+  keeps this stylesheet after `Aura.STYLESHEET` in the cascade. That order is what lets these rules
+  override the theme.
+- The token must be a `static final` computed once, not per call, or every page load busts the cache.
+
+**Before concluding a style rule is wrong, check that the client actually has the current file.** Fetch
+`/styles.css` from the failing client and look for the rule. A rule with an absolute value — a fixed
+`width`, say — that renders as something else entirely is near-proof the stylesheet is stale, because no
+media query or cascade can turn `8rem` into `100%`.
+
+## A `vaadin-select` ignores `width: auto`
+
+It renders at its own default width — **measured at 192px, regardless of how short its labels are** — so
+`width: auto` leaves that default in place instead of shrinking to content. On a 375px screen that was
+enough to squeeze the header's view title down to 16px.
+
+Give these fields an explicit width. Shortening the label text does not help, because the default is not
+content-derived.
+
+## The page title of a nested route is not on `getContent()`
+
+`AppLayout.getContent()` returns the **layout**, not the view, for anything nested: everything under
+`WorkspaceLayout` makes that layout the content, and it declares no `@PageTitle`. Reading the annotation
+from `getContent()` therefore fell through to the application name on every workspace screen.
+
+`MainView` takes it from `AfterNavigationEvent.getActiveChain()` instead, using the first element that
+declares a title — which works whichever end of the chain the leaf sits at. The resolved key is
+remembered because a locale change has to retranslate it and carries no navigation event to ask.
+
+Nothing fails when this is wrong; the title is simply the wrong string. `MainViewTest` covers it.
+
 ## Running in production mode locally
 
 The Gradle flag alone is not enough — the runtime needs the property too, or the app logs
@@ -101,6 +147,17 @@ No constructor parameter names discovered ... vg.unique.id.model.UniqueId
 Select `as uniqueId` into the `UniqueIdRow` interface projection instead. Recompiling with `-parameters`
 is not an option — the affected class is not ours.
 
+**A stateful `AttributeConverter` is resolved by Hibernate from Spring's bean registry, and that path
+only runs when an entity actually carries the annotation.** It fails at runtime, not at compile time, so
+a context that starts cleanly proves nothing about it. `@Component` plus the `vg.rg` component scan is
+what arranges the resolution; `ParticipantDescriptorPersistenceFuncTest` is the test that exercises it
+(persist, flush, **clear**, reload — without the clear, the assertion reads the same instance back out of
+the persistence context and the converter's read direction never runs).
+
+A second, quieter trap in the same area: a round trip alone cannot tell encryption from no encryption.
+Assert the raw column with `JdbcTemplate` as well, or a converter that silently stored plaintext would
+pass.
+
 **Two tables are retained but entirely unmapped**: `rg_location` and `rg_migration_marker`. No entity, no
 repository, nothing reaching them. `PermissionDeclarationArchitectureTest` fails if any production file so
 much as names `rg_location`, so do not "helpfully" map it back. See
@@ -110,6 +167,55 @@ much as names `rg_location`, so do not "helpfully" map it back. See
 `includeAll: db/liquibase/`. Both modules' resources land on one classpath, so a new changeset dropped
 into `rg-logic/src/main/resources/db/liquibase/` is picked up automatically with no registration step.
 Functional tests use their own master changelog with the same `includeAll`.
+
+## The Java version is pinned as a toolchain, and must stay that way
+
+`gradle.properties` carries `java_version=21`, and `build.gradle` applies it as a **toolchain** — so
+javac itself is a Java 21 javac and the tests run on that JVM. `options.release` sits alongside it as
+defence in depth.
+
+**Without the toolchain, Gradle compiles with whatever JDK its daemon happens to run** (it provisions its
+own newer one under `~/.gradle/jdks`), and every module inherits that version. On a daemon running JDK 25
+that produces class file 69, which a Java 21 runtime refuses to load:
+
+```
+UnsupportedClassVersionError: vg/rg/geo/GeoDistance has been compiled by a more recent version of the
+Java Runtime (class file version 69.0) ... only recognizes class file versions up to 65.0
+```
+
+Nothing in the build fails when this happens. It surfaces only when the application is *run* on 21 — so
+it looks like a sudden, unexplained runtime error after a JDK upgrade on the machine.
+
+Two specific traps, both of which this project fell into:
+
+- **`java { ... }` inside `allprojects` reaches only the root project.** The subprojects have no java
+  plugin at the time that block runs, so the setting silently applies to nothing. Configure through
+  `pluginManager.withPlugin('java')`, which reacts to the plugin actually being applied.
+- **Do not derive `options.release` from `java.sourceCompatibility`.** If the compatibility level was
+  never set (see above), the "guard" resolves to the daemon's own version and does nothing — which is the
+  exact failure it exists to prevent. Take it from the explicit constant.
+
+**Compiling at 21 for the first time will surface latent code**, because Java 25 accepts things 21 does
+not. The one this project had: `component instanceof HasStyle style` where `component` is a
+`Component` — Vaadin 25's `Component` already implements `HasStyle`, making the pattern unconditional,
+which is an error on 21 (*"expression type Component is a subtype of pattern type HasStyle"*) and
+accepted on 25. Call `component.hasClassName(...)` directly.
+
+**Switching the toolchain leaves stale incremental-compile state.** The first build afterwards can fail
+with a spurious `cannot access <SomeClass>` against a perfectly good source file. `./gradlew clean` (or
+`--rerun-tasks`) clears it; the failure does not recur.
+
+## Jackson is version 3
+
+`spring-boot-starter-json` on Spring Boot 4.1 brings **`tools.jackson`**, not
+`com.fasterxml.jackson.databind`. Annotations stayed where they were — `com.fasterxml.jackson.annotation`
+— so a file can legitimately import from both, and an import that "looks wrong" may not be.
+
+The practical difference: **Jackson 3's `ObjectMapper` is immutable.** The 2.x mutators are gone, so
+`new ObjectMapper().setSerializationInclusion(...)` does not compile; configuration goes through
+`JsonMapper.builder()…build()`. Inclusion is `changeDefaultPropertyInclusion(UnaryOperator<JsonInclude.Value>)`
+rather than a setter. Also worth knowing before writing a defensive `catch`:
+`writeValueAsString`/`readValue` now throw the **unchecked** `JacksonException`.
 
 ## Referring to history
 

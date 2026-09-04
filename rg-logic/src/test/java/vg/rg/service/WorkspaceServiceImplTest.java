@@ -11,7 +11,6 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.entity.WorkspaceSelectionEntity;
-import org.springframework.mock.env.MockEnvironment;
 import vg.rg.config.WorkspaceProperties;
 import vg.rg.entity.WorkspaceEntity;
 import vg.rg.mapper.WorkspaceMapper;
@@ -37,6 +36,11 @@ import static org.mockito.Mockito.when;
 class WorkspaceServiceImplTest {
 
     private static final UniqueId OWNER = new UniqueId(4001L);
+    // Deliberately not the production defaults (20/128/1024): only non-default bounds prove the
+    // configured values actually reach the service rather than being hard-coded in it.
+    private static final int MAX_PER_USER = 3;
+    private static final int NAME_MAX_LENGTH = 32;
+    private static final int DESCRIPTION_MAX_LENGTH = 64;
 
     @Mock
     private UniqueIdService uniqueIdService;
@@ -55,7 +59,11 @@ class WorkspaceServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        var properties = new WorkspaceProperties(new MockEnvironment());
+        var properties = WorkspaceProperties.builder()
+                .maxPerUser(String.valueOf(MAX_PER_USER))
+                .nameMaxLength(String.valueOf(NAME_MAX_LENGTH))
+                .descriptionMaxLength(String.valueOf(DESCRIPTION_MAX_LENGTH))
+                .build();
         service = new WorkspaceServiceImpl(
                 uniqueIdService, repository, mapper, properties, authorityChecker,
                 selectionRepository, List.of(contributor));
@@ -106,7 +114,7 @@ class WorkspaceServiceImplTest {
 
     @Test
     void create_overlongName_isRejected() {
-        var tooLong = "x".repeat(129);
+        var tooLong = "x".repeat(NAME_MAX_LENGTH + 1);
 
         assertThatThrownBy(() -> service.create(WorkspaceModel.builder().name(tooLong).build()))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -115,7 +123,7 @@ class WorkspaceServiceImplTest {
 
     @Test
     void create_overlongDescription_isRejected() {
-        var model = WorkspaceModel.builder().name("Fine").description("y".repeat(1025)).build();
+        var model = WorkspaceModel.builder().name("Fine").description("y".repeat(DESCRIPTION_MAX_LENGTH + 1)).build();
 
         assertThatThrownBy(() -> service.create(model))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -132,7 +140,7 @@ class WorkspaceServiceImplTest {
 
     @Test
     void create_atTheWorkspaceLimit_isRefusedWithTheLimit() {
-        when(repository.countByOwnerUniqueId(OWNER)).thenReturn(20L);
+        when(repository.countByOwnerUniqueId(OWNER)).thenReturn((long) MAX_PER_USER);
 
         assertThatThrownBy(() -> service.create(WorkspaceModel.builder().name("One too many").build()))
                 .isInstanceOf(WorkspaceLimitReachedException.class)

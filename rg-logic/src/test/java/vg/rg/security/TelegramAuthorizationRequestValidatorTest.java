@@ -1,7 +1,6 @@
 package vg.rg.security;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
 import vg.rg.security.model.AuthorizationOutcome;
 import vg.rg.security.model.TelegramInitDataRequest;
 
@@ -56,11 +55,7 @@ class TelegramAuthorizationRequestValidatorTest {
     }
 
     private static AuthorizationApplicationService service(String limit, AtomicInteger calls) {
-        var environment = new MockEnvironment();
-        if (limit != null) {
-            environment.setProperty("rg.secure-service.max-init-data-size", limit);
-        }
-        var properties = new SecureAuthorizationLimitsProperties(environment);
+        var properties = new SecureAuthorizationLimitsProperties(limit);
         var validator = new TelegramAuthorizationRequestValidator(properties);
         SecureAuthorizationFacade facade = request -> {
             calls.incrementAndGet();
