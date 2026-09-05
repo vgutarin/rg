@@ -91,9 +91,16 @@ anywhere in the layer. A surface that ever needs one should decide *how much may
 since that is a data-exposure rule rather than a formatting one, and not in the view that happens to
 want it.
 
-The edit form opens with an **empty** phone field, and its helper text says so. Pre-filling it would
-disclose the number through a path with no reveal permission behind it, and would erase the distinction
-between looking at a participant and editing one.
+The edit form **pre-fills the number for a caller who holds `reveal-contact`**, and leaves the field
+empty for one who does not — its helper text differs accordingly. Gating it on that permission is what
+stops editing becoming a way around the reveal, and it means **opening the edit form is itself a
+disclosure**: it calls `revealContact` exactly as the reveal action does, so if reveals are ever audited
+this counts as one.
+
+Pre-filling is not a convenience. Saving replaces the whole descriptor, so with an empty field an edit of
+the label alone would silently wipe the number. A caller who cannot see the number therefore still faces
+that, which is what their helper text warns about — and what a future non-owner editing role would need
+to address properly.
 
 ### Ordering, filtering and paging
 

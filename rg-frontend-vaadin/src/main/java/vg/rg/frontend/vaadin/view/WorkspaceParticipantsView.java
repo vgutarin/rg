@@ -384,7 +384,16 @@ public class WorkspaceParticipantsView extends VerticalLayout
         label.setValue(participant.getLabel() == null ? "" : participant.getLabel());
 
         var phone = phoneField();
-        phone.setHelperText(localization.i18n("participant.field.phone.edit-helper"));
+        // Pre-filled only for a caller who may see the number anyway. Saving replaces the whole
+        // descriptor, so without the current value in the field an edit of the label alone would wipe
+        // the number -- which is why the two cases carry different helper text.
+        var current = currentNumberIfPermitted(participant);
+        if (current == null) {
+            phone.setHelperText(localization.i18n("participant.field.phone.edit-helper"));
+        } else {
+            phone.setValue(current);
+            phone.setHelperText(localization.i18n("participant.field.phone.edit-helper-filled"));
+        }
 
         var save = new Button(localization.i18n("participants.save"), event -> {
             if (update(participant, label.getValue(), phone.getValue())) {
@@ -396,6 +405,34 @@ public class WorkspaceParticipantsView extends VerticalLayout
         dialog.add(label, phone);
         dialog.open();
         return new Prompt(dialog, save, cancel);
+    }
+
+    /**
+     * The participant's number, for pre-filling the edit form — or {@code null} when the caller may not
+     * see it.
+     *
+     * <p>Gated on {@code reveal-contact}, the same permission the roster's reveal action carries, so
+     * editing cannot become a way around it. <strong>Note that opening the edit form is therefore a
+     * disclosure</strong>: it calls {@code revealContact} exactly as the reveal button does. If reveals
+     * are ever audited, this counts as one.
+     *
+     * <p>Failure is not fatal — a caller who cannot fetch the number can still edit the label — so the
+     * form falls back to the empty field and its warning helper text. Nothing about the failure is
+     * logged beyond its type: this is the one path that handles plaintext.
+     */
+    private String currentNumberIfPermitted(WorkspaceParticipantModel participant) {
+        if (!participant.isPhoneRecorded() || !authorityChecker.hasAuthority(
+                participant.getUniqueId(), LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT)) {
+            return null;
+        }
+        try {
+            var revealed = participantService.revealContact(participant.getUniqueId());
+            return revealed == null ? null : revealed.phone();
+        } catch (RuntimeException failure) {
+            log.debug("Could not pre-fill a participant's number: {}",
+                    failure.getClass().getSimpleName());
+            return null;
+        }
     }
 
     private boolean update(WorkspaceParticipantModel participant, String label, String phone) {

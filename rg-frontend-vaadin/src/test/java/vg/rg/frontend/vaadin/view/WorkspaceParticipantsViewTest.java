@@ -337,14 +337,59 @@ class WorkspaceParticipantsViewTest {
 
     // --- editing ------------------------------------------------------------------------------------
 
+    /**
+     * The edit form pre-fills the number for a caller who may see it anyway.
+     *
+     * <p>Saving replaces the whole descriptor, so without the current value in the field an edit of the
+     * label alone would silently wipe the number.
+     */
     @Test
-    void editDialog_doesNotPreFillTheNumberItIsEditing() {
+    void editDialog_withRevealPermission_preFillsTheCurrentNumber() {
+        var view = entered(withPhone("Ivan"));
+        when(participantService.revealContact(PARTICIPANT))
+                .thenReturn(ParticipantDescriptor.of("Ivan", PHONE));
+
+        var prompt = view.openEditDialog(withPhone("Ivan"));
+
+        assertThat(values(prompt.dialog())).contains("Ivan", PHONE);
+    }
+
+    /**
+     * Without that permission the field stays empty and nothing is fetched — so editing cannot become a
+     * way around the reveal permission.
+     */
+    @Test
+    void editDialog_withoutRevealPermission_leavesTheNumberEmptyAndFetchesNothing() {
+        deniedLocalPermissions.add(LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT);
         var view = entered(withPhone("Ivan"));
 
         var prompt = view.openEditDialog(withPhone("Ivan"));
 
         assertThat(values(prompt.dialog())).contains("Ivan").doesNotContain(PHONE);
         verify(participantService, never()).revealContact(any());
+    }
+
+    /** A participant with no number needs no lookup either. */
+    @Test
+    void editDialog_forAParticipantWithNoNumber_fetchesNothing() {
+        var view = entered(withoutPhone("Label only"));
+
+        view.openEditDialog(withoutPhone("Label only"));
+
+        verify(participantService, never()).revealContact(any());
+    }
+
+    /** A failed lookup must not block editing the label. */
+    @Test
+    void editDialog_whenTheNumberCannotBeFetched_stillOpensForEditing() {
+        var view = entered(withPhone("Ivan"));
+        when(participantService.revealContact(PARTICIPANT))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("denied"));
+
+        var prompt = view.openEditDialog(withPhone("Ivan"));
+
+        assertThat(prompt.dialog().isOpened()).isTrue();
+        assertThat(values(prompt.dialog())).contains("Ivan").doesNotContain(PHONE);
     }
 
     @Test
