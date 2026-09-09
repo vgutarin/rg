@@ -9,15 +9,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import tools.jackson.databind.ObjectMapper;
 import vg.identity.rest.IdentityRestClientAutoConfig;
-import vg.rg.security.AuthorizationApplicationService;
-import vg.rg.security.SecureAuthorizationFacade;
-import vg.rg.security.SecureAuthorizationLimitsProperties;
-import vg.rg.security.TelegramAuthorizationRequestValidator;
-import vg.rg.security.dev.DevSecureAuthorizationFacade;
-import vg.rg.security.dev.DevSecureServiceProperties;
-import vg.rg.security.identity.IdentityAuthorizationLimitsProperties;
-import vg.rg.security.identity.IdentityAuthorizationResponseValidator;
-import vg.rg.security.identity.IdentitySecureAuthorizationFacade;
+import vg.rg.config.security.DevSecureServiceProperties;
+import vg.rg.config.security.IdentityAuthorizationLimitsProperties;
+import vg.rg.config.security.SecureAuthorizationLimitsProperties;
+import vg.rg.service.security.AuthorizationApplicationService;
+import vg.rg.service.security.DevSecureAuthorizationFacade;
+import vg.rg.service.security.IdentityAuthorizationResponseValidator;
+import vg.rg.service.security.IdentitySecureAuthorizationFacade;
+import vg.rg.service.security.SecureAuthorizationFacade;
+import vg.rg.service.security.TelegramAuthorizationRequestValidator;
 
 import java.time.Clock;
 

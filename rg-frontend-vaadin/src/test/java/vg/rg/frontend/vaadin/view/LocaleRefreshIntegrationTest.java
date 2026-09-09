@@ -1,7 +1,7 @@
-package vg.rg.frontend.vaadin;
+package vg.rg.frontend.vaadin.view;
 
-import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import org.junit.jupiter.api.Test;
@@ -9,12 +9,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.frontend.vaadin.service.LocalizationService;
-import vg.rg.security.AuthorityChecker;
-import vg.rg.service.WorkspaceSelectionService;
-import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticationFlow;
+import vg.rg.model.security.Permissions;
+import vg.rg.service.security.AuthorityChecker;
+import vg.rg.service.workspace.WorkspaceSelectionService;
 import vg.unique.id.model.UniqueId;
-import vg.rg.security.model.AuthenticationFlow;
-import vg.rg.security.model.Permissions;
 
 import java.util.List;
 import java.util.Locale;

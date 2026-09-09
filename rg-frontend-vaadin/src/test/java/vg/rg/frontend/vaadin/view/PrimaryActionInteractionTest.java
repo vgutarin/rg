@@ -10,12 +10,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.frontend.vaadin.service.LocalizationService;
-import vg.rg.security.AuthorityChecker;
-import vg.rg.security.model.AuthenticatedUserPrincipal;
-import vg.unique.id.model.UniqueId;
-import vg.rg.security.model.AuthenticationFlow;
-import vg.rg.security.model.Permissions;
+import vg.rg.frontend.vaadin.view.home.LandingView;
+import vg.rg.model.security.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticationFlow;
+import vg.rg.model.security.Permissions;
 import vg.rg.service.ProtectedActionService;
+import vg.rg.service.security.AuthorityChecker;
+import vg.unique.id.model.UniqueId;
 
 import java.util.Optional;
 import java.util.Set;

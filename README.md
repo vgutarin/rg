@@ -8,6 +8,15 @@
 
 - Provides the mobile-first Vaadin application and Telegram authentication entry point.
 
+### Frontend connector tests
+
+The browser-side time-picker connector is verified separately from the Java Gradle test suite:
+
+```bash
+cd rg-frontend-vaadin
+node --experimental-strip-types --test src/test/frontend/ts/datetime/temporal-time-picker.test.mjs
+```
+
 ## Authorization facade selection
 
 - Authorization services are always enabled. Setting `rg.dev-secure-service.enabled=true` explicitly

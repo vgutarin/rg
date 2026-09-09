@@ -88,8 +88,11 @@ which nothing here does today.
 
 It does not use `StringEncryptionConverter` directly. A participant's contact data is a small record
 serialized to JSON, so it has its own `AttributeConverter<ParticipantDescriptor, byte[]>` —
-`ParticipantDescriptorConverter` — which follows the same `@Component @Converter` shape and calls the
-same `EncryptionService`. The two converters differ only in what they serialize.
+`vg.rg.entity.workspace.ParticipantDescriptorConverter` — which follows the same `@Component @Converter`
+shape and calls the same `EncryptionService`. Its `ParticipantDescriptor` model and
+`WorkspaceParticipantEntity` also live under `vg.rg.model.workspace` and `vg.rg.entity.workspace`.
+The generic `StringEncryptionConverter` remains in `vg.rg.entity`. The two converters differ only in
+what they serialize.
 
 That use is what finally exercises **the Hibernate resolution path**, which no test could reach while no
 entity carried the annotation: a stateful converter has to be obtained from Spring's managed-bean

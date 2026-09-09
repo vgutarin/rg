@@ -1,7 +1,7 @@
 package vg.rg.frontend.vaadin.service;
 
 import org.junit.jupiter.api.Test;
-import vg.rg.security.model.Permissions;
+import vg.rg.model.security.Permissions;
 
 import java.io.IOException;
 import java.io.InputStreamReader;

@@ -9,10 +9,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vg.rg.security.AuthorityChecker;
-import vg.rg.security.model.AuthenticatedUserPrincipal;
-import vg.rg.security.model.AuthenticationFlow;
-import vg.rg.security.model.Permissions;
+import vg.rg.model.security.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticationFlow;
+import vg.rg.model.security.Permissions;
+import vg.rg.service.security.AuthorityChecker;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;

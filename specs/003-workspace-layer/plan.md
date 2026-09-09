@@ -200,14 +200,16 @@ rg-logic/src/test/java/vg/rg/
                                                    #       DELETED — LocationService* tests
 
 rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/
-├── MainView.java                                 # MODIFIED — gated workspace item; locations item moves
-│                                                 #            under it; old /locations item removed
 └── view/
-    ├── WorkspaceLayout.java                      # NEW — @ParentLayout(MainView); hosts the selector
-    ├── WorkspacesView.java                       # NEW — /workspaces
-    ├── WorkspaceLocationsView.java               # NEW — /workspaces/locations (the only locations screen)
-    ├── LocationsView.java                        # DELETED — route /locations removed
-    └── LocationFormDialog.java                   # MODIFIED — reused by the workspace-scoped view
+    ├── MainView.java                             # MODIFIED — gated workspace item; locations item moves
+    │                                             #            under it; old /locations item removed
+    └── workspace/
+        ├── WorkspaceLayout.java                  # NEW — @ParentLayout(MainView); hosts the selector
+        ├── WorkspacesView.java                   # NEW — /workspaces
+        ├── WorkspaceLocationsView.java           # NEW — /workspaces/locations (the only locations screen)
+        └── LocationFormDialog.java               # MODIFIED — reused by the workspace-scoped view
+
+# Removed: former `view/LocationsView.java` and its `/locations` route.
 
 rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/service/
 └── MapsResolutionBridge.java                     # MODIFIED — proximity call re-pointed at the workspace

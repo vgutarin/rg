@@ -1,9 +1,9 @@
 package vg.rg.frontend.vaadin.service;
 
 import org.springframework.stereotype.Component;
-import vg.rg.model.ProximityMatch;
-import vg.rg.model.ProximityQuery;
-import vg.rg.service.WorkspaceLocationService;
+import vg.rg.model.geo.ProximityMatch;
+import vg.rg.model.geo.ProximityQuery;
+import vg.rg.service.workspace.WorkspaceLocationService;
 import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;

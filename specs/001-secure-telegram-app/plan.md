@@ -192,11 +192,14 @@ rg-logic/src/test/java/vg/rg/
 └── service/                          # authorization, subject denial, idempotency
 
 rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/
-├── MainView.java
-├── security/ApplicationSecurityContextService.java
-├── service/LocalizationService.java
-├── telegram/TelegramAuthView.java
-└── view/                              # landing, reports, denial, status components
+├── service/
+│   ├── ApplicationSecurityContextService.java
+│   └── LocalizationService.java
+└── view/
+    ├── MainView.java
+    ├── auth/                          # Telegram entry, denial and status components
+    ├── home/LandingView.java
+    └── reports/ReportsView.java
 
 rg-frontend-vaadin/src/main/resources/
 ├── application.properties
@@ -205,10 +208,11 @@ rg-frontend-vaadin/src/main/resources/
 └── META-INF/resources/                # Aura styles
 
 rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/
-├── security/                          # session and architecture coverage
-├── service/                           # locale and bundle coverage
-├── telegram/                          # secure-entry states
-└── view/                              # permission, locale, state, interaction coverage
+├── security/                          # architecture coverage
+├── service/                           # security-context, locale and bundle coverage
+└── view/                              # shell, permission, locale, state and interaction coverage
+    ├── auth/                          # secure-entry and authorization-status coverage
+    └── reports/                       # permission-aware view coverage
 ```
 
 Unrelated `TemplateModel` and `TemplateService` files are not part of this feature plan. No

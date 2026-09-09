@@ -9,11 +9,11 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import vg.identity.rest.IdentityRestClientAutoConfig;
 import vg.identity.rest.IdentityRestClientProperties;
 import vg.identity.service.IdentityApplicationApi;
-import vg.rg.security.identity.IdentityAuthorizationLimitsProperties;
-import vg.rg.security.identity.IdentityAuthorizationResponseValidator;
-import vg.rg.security.identity.IdentitySecureAuthorizationFacade;
-import vg.rg.security.model.AuthorizationOutcome;
-import vg.rg.security.model.TelegramInitDataRequest;
+import vg.rg.config.security.IdentityAuthorizationLimitsProperties;
+import vg.rg.model.security.AuthorizationOutcome;
+import vg.rg.model.security.TelegramInitDataRequest;
+import vg.rg.service.security.IdentityAuthorizationResponseValidator;
+import vg.rg.service.security.IdentitySecureAuthorizationFacade;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

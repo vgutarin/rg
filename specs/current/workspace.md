@@ -188,15 +188,17 @@ them, enforced by an architecture test:
 ## Where it lives
 
 - **`rg-logic`** (business rules):
-  - Access: `AuthorityChecker` (both overloads), `WorkspaceScopeResolver`/`Impl`,
-    `WorkspaceScopeProvider`, `WorkspaceScope`, `WorkspaceSelfScopeProvider`, `LocationScopeProvider`,
-    `Permissions`, `LocalPermissions`, `PermissionSyntax`.
-  - Services: `WorkspaceService`/`Impl`, `WorkspaceLocationService`/`Impl`,
-    `WorkspaceSelectionService`/`Impl`, `WorkspaceContentContributor` (the removal seam) with
-    `LocationWorkspaceContentContributor` and `ParticipantWorkspaceContentContributor`,
-    `WorkspaceLimitReachedException`, `WorkspaceNotRemovableException`.
-  - Data: `WorkspaceEntity`, `WorkspaceLocationEntity`, `WorkspaceSelectionEntity`, their repositories,
-    `WorkspaceScopeRow`, `UniqueIdRow`, `WorkspaceProperties`.
+  - Security access: `vg.rg.service.security.AuthorityChecker`; `vg.rg.model.security.WorkspaceScope`,
+    `Permissions`, `LocalPermissions`, and `PermissionSyntax`.
+  - Workspace services: `vg.rg.service.workspace.WorkspaceScopeResolver`/`Impl`,
+    `WorkspaceScopeProvider`, `WorkspaceSelfScopeProvider`, `LocationScopeProvider`,
+    `WorkspaceService`/`Impl`, `WorkspaceLocationService`/`Impl`, `WorkspaceSelectionService`/`Impl`,
+    and `WorkspaceContentContributor` (the removal seam) with its content contributors.
+  - Exceptions: `vg.rg.exception.workspace.WorkspaceLimitReachedException` and
+    `WorkspaceNotRemovableException`.
+  - Data: `vg.rg.entity.workspace.WorkspaceEntity`, `WorkspaceLocationEntity`, and
+    `WorkspaceSelectionEntity`; `vg.rg.repository.workspace` repositories and `WorkspaceScopeRow`;
+    `vg.rg.repository.UniqueIdRow`; `vg.rg.config.WorkspaceProperties`.
   - Schema: `rg-logic/src/main/resources/db/liquibase/002-workspace-init.yaml`.
 - **`rg-frontend-vaadin`** (UI): `WorkspaceLayout` (the nested layout hosting the selector),
   `WorkspacesView` (`/workspaces`), `WorkspaceLocationsView` (`/workspaces/locations`),

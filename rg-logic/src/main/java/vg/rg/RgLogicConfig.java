@@ -10,8 +10,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import vg.rg.config.EncryptionProperties;
 import vg.rg.config.GeoProperties;
 import vg.rg.config.WorkspaceProperties;
-import vg.rg.security.SecureAuthorizationLimitsProperties;
-import vg.rg.security.identity.IdentityAuthorizationLimitsProperties;
+import vg.rg.config.security.IdentityAuthorizationLimitsProperties;
+import vg.rg.config.security.SecureAuthorizationLimitsProperties;
 
 import java.time.Clock;
 

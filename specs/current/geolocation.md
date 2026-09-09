@@ -99,14 +99,17 @@ localized "reload and retry" message.
 
 ## Where it lives
 
-- **`rg-logic`** (business logic): `WorkspaceLocationService` (public interface) /
-  `WorkspaceLocationServiceImpl` (package-private), `WorkspaceLocationEntity`,
-  `WorkspaceLocationRepository` (workspace-scoped bounding-box query, name search, and the scope join),
-  `WorkspaceLocationMapper`, `LocationScopeProvider` (resolves a location to its workspace),
-  `LocationWorkspaceContentContributor` (removal with its workspace), `GeoDistance` (great-circle
-  distance + bounding box), `GeoProperties` (`rg.geo.match-radius-meters`, default 500, and `rg.geo.max-name-search-results`,
-  default 50 — see [configuration.md](./configuration.md)),
-  `CurrentUserAuditorAware`, and the `location:*` capabilities in `LocalPermissions`. Schema:
+- **`rg-logic`** (business logic): `vg.rg.service.workspace.WorkspaceLocationService` (public interface) /
+  `WorkspaceLocationServiceImpl` (package-private), `LocationScopeProvider` (resolves a location to its
+  workspace), and `LocationWorkspaceContentContributor` (removal with its workspace);
+  `vg.rg.entity.workspace.WorkspaceLocationEntity`,
+  `vg.rg.repository.workspace.WorkspaceLocationRepository` (workspace-scoped bounding-box query, name
+  search, and the scope join), and `vg.rg.mapper.workspace.WorkspaceLocationMapper`;
+  `vg.rg.model.geo.LocationModel`, `ProximityMatch`, `ProximityQuery`, and `GeoDistance` (great-circle
+  distance + bounding box); `vg.rg.config.GeoProperties` (`rg.geo.match-radius-meters`, default 500,
+  and `rg.geo.max-name-search-results`, default 50 — see [configuration.md](./configuration.md));
+  `vg.rg.service.security.CurrentUserAuditorAware`; and the `location:*` capabilities in
+  `vg.rg.model.security.LocalPermissions`. Schema:
   `rg-logic/src/main/resources/db/liquibase/002-workspace-init.yaml`, plus
   `003-retire-global-location-migration.yaml`; the superseded `001-location-init.yaml` remains, since its
   table is retained.
@@ -119,7 +122,7 @@ localized "reload and retry" message.
   `LocationFormDialog` (edit), `MapsResolutionBridge` (validates browser-acquired
   coordinates and runs the **workspace-scoped** proximity suggestion — it requires a workspace, there is
   no unscoped overload), `MapsClientProperties` (browser config), and the browser connector
-  `../../rg-frontend-vaadin/src/main/frontend/google-maps-connector.ts`. The connector loads the Google
+  `../../rg-frontend-vaadin/src/main/frontend/ts/maps/google-maps-connector.ts`. The connector loads the Google
   Maps JS API on demand and exposes `rgInitGoogleMapsConnector` (the map picker, including best-effort
   centering); results return via the view's `@ClientCallable` methods (`onCoordinatesAcquired`,
   `onMapsUnavailable`). Server→client element wiring passes the view element explicitly as `$0` (so

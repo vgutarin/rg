@@ -3,12 +3,12 @@ package vg.rg.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import vg.rg.security.AuthorityChecker;
-import vg.rg.security.model.Permissions;
+import vg.rg.model.security.Permissions;
+import vg.rg.service.security.AuthorityChecker;
 import vg.unique.id.model.UniqueId;
 
-import java.util.UUID;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service

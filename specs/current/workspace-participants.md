@@ -321,12 +321,17 @@ workspace, and the roster is sorted and filtered in memory, because the database
 ## Where it lives
 
 - **`rg-logic`**:
-  - Access: `LocalPermissions.WorkspaceParticipant`, `WorkspaceParticipantScopeProvider`.
-  - Services: `WorkspaceParticipantService`/`Impl`, `ParticipantWorkspaceContentContributor`,
-    `ParticipantLimitReachedException`, `DuplicateParticipantPhoneException`.
-  - Model: `ParticipantDescriptor`, `ParticipantPhone`, `WorkspaceParticipantModel`.
-  - Data: `WorkspaceParticipantEntity`, `ParticipantDescriptorConverter`,
-    `WorkspaceParticipantRepository`, `WorkspaceParticipantMapper`.
+  - Access: `vg.rg.model.security.LocalPermissions.WorkspaceParticipant`,
+    `vg.rg.service.workspace.WorkspaceParticipantScopeProvider`.
+  - Services: `vg.rg.service.workspace.WorkspaceParticipantService`/`Impl`,
+    `ParticipantWorkspaceContentContributor`.
+  - Exceptions: `vg.rg.exception.workspace.ParticipantLimitReachedException` and
+    `DuplicateParticipantPhoneException`.
+  - Model: `vg.rg.model.workspace.ParticipantDescriptor`, `ParticipantPhone`, and
+    `WorkspaceParticipantModel`.
+  - Data: `vg.rg.entity.workspace.WorkspaceParticipantEntity` and `ParticipantDescriptorConverter`;
+    `vg.rg.repository.workspace.WorkspaceParticipantRepository`; and
+    `vg.rg.mapper.workspace.WorkspaceParticipantMapper`.
   - Schema: `rg-logic/src/main/resources/db/liquibase/004-workspace-participant.yaml`.
 - **`rg-frontend-vaadin`**: `WorkspaceParticipantsView`, `DisclosureList` (shared with
   `WorkspaceLocationsView`), the participants navigation entry in `MainView`, and the `disclosure-*`

@@ -9,7 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import vg.rg.frontend.vaadin.telegram.TelegramAuthView;
+import vg.rg.frontend.vaadin.view.auth.TelegramAuthView;
 
 import static com.vaadin.flow.spring.security.VaadinSecurityConfigurer.vaadin;
 

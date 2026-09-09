@@ -606,3 +606,44 @@ vaadin-side-nav::part(label) {
     transition: none;
   }
 }
+
+/* Date/time examples and reusable editors: one column first, including dialog sub-fields. */
+.date-time-examples { max-width: 76rem; }
+.temporal-examples-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; width: 100%; }
+.temporal-examples-grid > *, .temporal-editor { min-width: 0; width: 100%; }
+.temporal-value { font-size: 1.25rem; font-weight: 600; overflow-wrap: anywhere; padding-block: .75rem; }
+.temporal-actions { display: flex; flex-direction: column; gap: .5rem; }
+.temporal-error { color: var(--vaadin-text-color-error); }
+.temporal-picker::part(input-fields) { flex-direction: column; }
+.temporal-picker > vaadin-date-picker, .temporal-picker > vaadin-time-picker { min-width: 0; width: 100%; }
+/* The native picker remains the value owner; its virtualized options are rendered as hour rows. */
+.temporal-picker > vaadin-time-picker {
+  --vaadin-time-picker-overlay-width: min(20rem, calc(100vw - 2rem));
+}
+.temporal-time-picker-hour::part(content) { padding: 0; }
+.temporal-time-picker-slots {
+  display: grid;
+  grid-template-columns: repeat(var(--temporal-time-picker-slots), minmax(0, 1fr));
+  width: 100%;
+}
+.temporal-time-picker-option {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  min-block-size: 2.75rem;
+  padding-inline: .25rem;
+}
+.temporal-time-picker-option:hover,
+.temporal-time-picker-option-selected { background: color-mix(in srgb, currentColor 12%, transparent); }
+.temporal-time-picker-option:focus-visible {
+  outline: var(--vaadin-focus-ring-width, 2px) solid var(--vaadin-focus-ring-color, currentColor);
+  outline-offset: -2px;
+}
+@media (min-width: 40rem) {
+  .temporal-examples-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .temporal-actions { flex-direction: row; flex-wrap: wrap; }
+}

@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import vg.rg.model.ProximityQuery;
-import vg.rg.service.WorkspaceLocationService;
+import vg.rg.model.geo.ProximityQuery;
+import vg.rg.service.workspace.WorkspaceLocationService;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;

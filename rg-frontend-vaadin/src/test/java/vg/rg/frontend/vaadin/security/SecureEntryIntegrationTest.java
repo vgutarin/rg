@@ -1,8 +1,8 @@
 package vg.rg.frontend.vaadin.security;
 
-import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasText;
+import com.vaadin.flow.component.UI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,15 +12,16 @@ import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import vg.rg.frontend.vaadin.service.ApplicationSecurityContextService;
 import vg.rg.frontend.vaadin.service.LocalizationService;
-import vg.rg.frontend.vaadin.telegram.TelegramAuthView;
-import vg.rg.frontend.vaadin.view.LandingView;
-import vg.rg.frontend.vaadin.view.NoAccessView;
-import vg.rg.security.AuthorizationApplicationService;
-import vg.rg.security.model.AuthenticatedUserPrincipal;
+import vg.rg.frontend.vaadin.view.auth.NoAccessView;
+import vg.rg.frontend.vaadin.view.auth.TelegramAuthView;
+import vg.rg.frontend.vaadin.view.home.LandingView;
+import vg.rg.model.security.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticationFlow;
+import vg.rg.model.security.AuthorizationOutcome;
+import vg.rg.service.security.AuthorizationApplicationService;
 import vg.unique.id.model.UniqueId;
-import vg.rg.security.model.AuthenticationFlow;
-import vg.rg.security.model.AuthorizationOutcome;
 
 import java.util.Set;
 
@@ -36,7 +37,8 @@ import static org.mockito.Mockito.when;
 class SecureEntryIntegrationTest {
 
     @Autowired AuthorizationApplicationService authorizationService;
-    @Autowired ApplicationSecurityContextService securityContextService;
+    @Autowired
+    ApplicationSecurityContextService securityContextService;
     @Autowired LocalizationService localization;
 
     @AfterEach

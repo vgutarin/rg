@@ -13,15 +13,15 @@ registered simply does not exist as a bean, and `@Import` does not work either: 
 an ordinary bean whose constructor Spring then tries to autowire, failing with *"No qualifying bean of
 type 'String'"*. Use `@EnableConfigurationProperties`, in tests too.
 
-| Holder | Prefix | Module |
+| Holder | Package | Prefix | Module |
 |---|---|---|
-| `GeoProperties` | `rg.geo` | rg-logic |
-| `WorkspaceProperties` | `rg.workspace` | rg-logic |
-| `EncryptionProperties` | `rg.encryption` | rg-logic |
-| `SecureAuthorizationLimitsProperties` | `rg.secure-service` | rg-logic |
-| `IdentityAuthorizationLimitsProperties` | `rg.secure-service.identity` | rg-logic |
-| `MapsClientProperties` | `google.maps` | rg-frontend-vaadin |
-| `DevSecureServiceProperties` | `rg.dev-secure-service` | rg-logic |
+| `GeoProperties` | `vg.rg.config` | `rg.geo` | rg-logic |
+| `WorkspaceProperties` | `vg.rg.config` | `rg.workspace` | rg-logic |
+| `EncryptionProperties` | `vg.rg.config` | `rg.encryption` | rg-logic |
+| `SecureAuthorizationLimitsProperties` | `vg.rg.config.security` | `rg.secure-service` | rg-logic |
+| `IdentityAuthorizationLimitsProperties` | `vg.rg.config.security` | `rg.secure-service.identity` | rg-logic |
+| `MapsClientProperties` | `vg.rg.frontend.vaadin.config` | `google.maps` | rg-frontend-vaadin |
+| `DevSecureServiceProperties` | `vg.rg.config.security` | `rg.dev-secure-service` | rg-logic |
 
 `spring-boot-configuration-processor` runs in both modules, so these keys land in
 `spring-configuration-metadata.json` and an IDE completes them in `application.properties`. **The

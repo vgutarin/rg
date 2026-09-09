@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import vg.rg.security.AuthorityChecker;
+import vg.rg.service.security.AuthorityChecker;
 import vg.unique.id.model.UniqueId;
 
 import java.util.Optional;

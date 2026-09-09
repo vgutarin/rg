@@ -28,7 +28,7 @@ class FrontendSecurityArchitectureTest {
                     .toList();
 
             assertThat(containingInitData).containsExactly(
-                    "rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/telegram/TelegramAuthView.java");
+                    "rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/auth/TelegramAuthView.java");
         }
     }
 
@@ -67,7 +67,7 @@ class FrontendSecurityArchitectureTest {
     @Test
     void productionUi_dependsOnSharedContractsNotFacadeAdaptersOrIdentityTypes() throws IOException {
         assertThat(textUnder(FRONTEND.resolve("java"))).doesNotContain(
-                "vg.rg.security.dev", "vg.rg.security.identity", "vg.identity",
+                "vg.rg.security", "vg.identity",
                 "IdentitySecureAuthorizationFacade", "DevSecureAuthorizationFacade");
     }
 

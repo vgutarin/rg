@@ -252,7 +252,7 @@ were:
 
 ```text
 ./gradlew :rg-frontend-vaadin:test --tests 'vg.rg.frontend.vaadin.service.LocaleSessionIntegrationTest' --tests 'vg.rg.frontend.vaadin.service.LocalizationBundleTest'
-./gradlew :rg-frontend-vaadin:test --tests 'vg.rg.frontend.vaadin.LocaleRefreshIntegrationTest' --tests 'vg.rg.frontend.vaadin.MainViewTest' --tests 'vg.rg.frontend.vaadin.service.LocalizationServiceTest' --tests 'vg.rg.frontend.vaadin.security.ApplicationSecurityContextServiceTest'
+./gradlew :rg-frontend-vaadin:test --tests 'vg.rg.frontend.vaadin.view.LocaleRefreshIntegrationTest' --tests 'vg.rg.frontend.vaadin.view.MainViewTest' --tests 'vg.rg.frontend.vaadin.service.LocalizationServiceTest' --tests 'vg.rg.frontend.vaadin.service.ApplicationSecurityContextServiceTest'
 ```
 
 Both commands completed successfully. The second command also proves locale changes do not replace
