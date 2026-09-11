@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The active-workspace pointer. The behaviour that matters here is that a <em>stale</em> pointer never
@@ -34,10 +35,10 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class WorkspaceSelectionServiceImplTest {
 
-    private static final UniqueId USER = new UniqueId(4101L);
-    private static final UniqueId OTHER_USER = new UniqueId(4102L);
-    private static final UniqueId SELECTED = new UniqueId(5101L);
-    private static final UniqueId DEFAULT = new UniqueId(5102L);
+    private static final UniqueId USER = nextUniqueId();
+    private static final UniqueId OTHER_USER = nextUniqueId();
+    private static final UniqueId SELECTED = nextUniqueId();
+    private static final UniqueId DEFAULT = nextUniqueId();
 
     @Mock
     private WorkspaceSelectionRepository selectionRepository;

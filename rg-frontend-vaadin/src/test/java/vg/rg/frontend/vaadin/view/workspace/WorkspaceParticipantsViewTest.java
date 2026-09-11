@@ -529,17 +529,37 @@ class WorkspaceParticipantsViewTest {
     }
 
     @Test
-    void withoutTheCreatePermission_theAddTabOffersNoForm() {
+    void withoutTheCreatePermission_rendersBrowseDirectlyWithoutTabCaptions() {
         deniedLocalPermissions.add(LocalPermissions.WorkspaceParticipant.CREATE);
         var view = entered();
 
-        assertThat(paragraphs(view)).contains("participants.add.no-permission");
+        assertThat(descendants(view).stream().filter(TabSheet.class::isInstance)).isEmpty();
+        assertThat(paragraphs(view)).doesNotContain("participants.add.no-permission");
         assertThat(buttonTexts(view)).doesNotContain("participants.register");
         // The browse filter is still a text field, so assert on the form's own fields by label.
         assertThat(descendants(view).stream()
                 .filter(TextField.class::isInstance).map(TextField.class::cast)
                 .map(TextField::getLabel))
                 .doesNotContain("participant.field.label", "participant.field.phone");
+    }
+
+    @Test
+    void registration_switchesToBrowseFiltersBySavedLabelAndShowsItsRow() {
+        var created = withoutPhone("New participant");
+        var view = entered();
+        when(participantService.register(eq(WORKSPACE), any())).thenReturn(created);
+        when(participantService.browse(eq(WORKSPACE), eq("New participant"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(created)));
+
+        setValues(view, "New participant", null);
+        click(registerButton(view));
+
+        var tabs = descendants(view).stream()
+                .filter(TabSheet.class::isInstance).map(TabSheet.class::cast)
+                .findFirst().orElseThrow();
+        assertThat(tabs.getSelectedIndex()).isZero();
+        assertThat(view.renderedLabels()).containsExactly("New participant");
+        verify(participantService).browse(eq(WORKSPACE), eq("New participant"), any(Pageable.class));
     }
 
     @Test
@@ -625,6 +645,14 @@ class WorkspaceParticipantsViewTest {
                     var to = Math.min((int) requested.getOffset() + requested.getPageSize(), all.size());
                     return new PageImpl<>(all.subList(0, to), requested, all.size());
                 });
+        lenient().when(participantService.register(eq(WORKSPACE), any())).thenAnswer(invocation -> {
+            var descriptor = invocation.getArgument(1, ParticipantDescriptor.class);
+            return WorkspaceParticipantModel.builder()
+                    .uniqueId(PARTICIPANT)
+                    .label(descriptor.label())
+                    .phoneRecorded(descriptor.phone() != null && !descriptor.phone().isBlank())
+                    .build();
+        });
 
         var view = new WorkspaceParticipantsView(
                 localization, authorityChecker, participantService, selectionService);

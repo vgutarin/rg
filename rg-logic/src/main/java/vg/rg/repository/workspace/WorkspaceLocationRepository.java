@@ -24,6 +24,8 @@ public interface WorkspaceLocationRepository extends UniqueIdJpaRepository<Works
     Page<WorkspaceLocationEntity> findByWorkspaceUniqueIdAndNameContainingIgnoreCase(
             UniqueId workspaceUniqueId, String name, Pageable pageable);
 
+    boolean existsByUniqueIdAndWorkspaceUniqueId(Long uniqueId, UniqueId workspaceUniqueId);
+
     /**
      * Bounding-box prefilter over the indexed workspace/latitude columns, scoped to one workspace.
      * Callers refine the candidates with an exact great-circle distance, which keeps the query portable.

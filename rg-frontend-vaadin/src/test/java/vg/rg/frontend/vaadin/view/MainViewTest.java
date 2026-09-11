@@ -104,7 +104,7 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Test User", Set.of(Permissions.Request.SUBMIT), true,
+                new UniqueId(1234L), "Test User", Set.of(Permissions.Workspace.OWNER), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
@@ -118,13 +118,13 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), "Test User",
-                Set.of(Permissions.Request.SUBMIT), true,
+                Set.of(Permissions.Workspace.OWNER), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
-        assertThat(view.navigationLabels()).containsExactly("nav.home", "nav.dates");
+        assertThat(view.navigationLabels()).containsExactly("nav.home");
     }
 
     @Test
@@ -134,14 +134,13 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), "Test User",
-                Set.of(Permissions.Reports.READ, Permissions.Request.SUBMIT), true,
+                Set.of(Permissions.Workspace.OWNER), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
-        assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Reports.READ, Permissions.Request.SUBMIT);
+        assertThat(view.visiblePermissions()).containsExactly(Permissions.Workspace.OWNER);
     }
 
     @Test
@@ -150,7 +149,7 @@ class MainViewTest {
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Test User", Set.of(Permissions.Reports.READ), true,
+                new UniqueId(1234L), "Test User", Set.of(Permissions.Workspace.OWNER), true,
                 AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
 
@@ -284,16 +283,16 @@ class MainViewTest {
     void constructor_nullSubject_keepsUngatedNavigationAndSuppressesEffectivePermissions() {
         configureLocalization();
         var principal = new AuthenticatedUserPrincipal(
-                null, "Sensitive Name", Set.of(Permissions.Request.SUBMIT, Permissions.Reports.READ),
+                null, "Sensitive Name", Set.of(Permissions.Workspace.OWNER),
                 false, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
-        // Home and examples are always present; a null subject exposes no effective permissions
+        // Home is always present; a null subject exposes no effective permissions
         // and no permission-gated navigation.
-        assertThat(view.navigationLabels()).containsExactly("nav.home", "nav.dates");
+        assertThat(view.navigationLabels()).containsExactly("nav.home");
         assertThat(view.visiblePermissions()).isEmpty();
         assertThat(view.getElement().getText()).doesNotContain("Sensitive Name");
     }
@@ -306,21 +305,19 @@ class MainViewTest {
         when(localization.i18n(anyString())).thenAnswer(invocation -> switch (invocation.<String>getArgument(0)) {
             case "nav.home" -> "Головна";
             case "nav.dates" -> "Дати й час";
-            case "nav.reports" -> "Звіти";
             default -> invocation.getArgument(0);
         });
         var principal = new AuthenticatedUserPrincipal(
                 new UniqueId(1234L), null,
-                Set.of(Permissions.Request.SUBMIT, Permissions.Reports.READ, "unknown:view"),
+                Set.of(Permissions.Experiment.PARTICIPANT, "unknown:view"),
                 true, AuthenticationFlow.TELEGRAM);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
                 .thenReturn(Optional.of(principal));
 
         var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
 
-        assertThat(view.navigationLabels()).containsExactly("Головна", "Дати й час", "Звіти");
-        assertThat(view.visiblePermissions()).containsExactlyInAnyOrder(
-                Permissions.Request.SUBMIT, Permissions.Reports.READ);
+        assertThat(view.navigationLabels()).containsExactly("Головна", "Дати й час");
+        assertThat(view.visiblePermissions()).containsExactly(Permissions.Experiment.PARTICIPANT);
     }
 
     private void configureLocalization() {

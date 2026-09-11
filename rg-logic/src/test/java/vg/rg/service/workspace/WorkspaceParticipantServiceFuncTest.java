@@ -8,13 +8,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.exception.workspace.DuplicateParticipantPhoneException;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.model.workspace.WorkspaceParticipantModel;
@@ -23,10 +19,10 @@ import vg.rg.repository.workspace.WorkspaceRepository;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * DB-backed coverage of {@link WorkspaceParticipantService} against MySQL, end to end through the real
@@ -44,8 +40,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class WorkspaceParticipantServiceFuncTest extends BaseFuncTest {
 
-    private static final UniqueId OWNER = new UniqueId(4301L);
-    private static final UniqueId STRANGER = new UniqueId(4302L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
     private static final String PHONE = "+380501112233";
 
     @Autowired
@@ -74,7 +70,6 @@ class WorkspaceParticipantServiceFuncTest extends BaseFuncTest {
     void cleanUp() {
         participantRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     // ------------------------------------------------------------------ registering and listing
@@ -471,12 +466,4 @@ class WorkspaceParticipantServiceFuncTest extends BaseFuncTest {
                 .isInstanceOf(AccessDeniedException.class);
     }
 
-    private static void authenticate(UniqueId user) {
-        var principal = new AuthenticatedUserPrincipal(
-                user, "Test User",
-                Set.of(Permissions.Workspace.OWNER),
-                true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

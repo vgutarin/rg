@@ -2,7 +2,6 @@ package vg.rg.frontend.vaadin.component.datetime;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.customfield.CustomField;
-import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
@@ -19,7 +18,6 @@ import java.util.function.Supplier;
  * A bindable display with transactional dialog editing. Factories preserve value types:
  * LocalDate, LocalDateTime, or TemporalRange of either. Null means no value.
  */
-@JsModule("./ts/datetime/temporal-time-picker.ts")
 public class TemporalEditor<V> extends CustomField<V> implements LocaleChangeObserver {
     private final LocalizationService localization;
     private final String labelKey;

@@ -31,12 +31,13 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static vg.test.TestHelper.nextUniqueId;
 
 class WorkspaceServiceMethodSecurityTest {
 
-    private static final UniqueId OWNER = new UniqueId(3001L);
-    private static final UniqueId STRANGER = new UniqueId(3002L);
-    private static final UniqueId WORKSPACE = new UniqueId(5001L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
+    private static final UniqueId WORKSPACE = nextUniqueId();
 
     @AfterEach
     void clearContext() {

@@ -6,14 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.model.geo.LocationModel;
 import vg.rg.model.geo.ProximityQuery;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
@@ -22,10 +17,10 @@ import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The zero-leakage guarantee, against MySQL: across every read path, a workspace returns only its own
@@ -38,8 +33,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class WorkspaceIsolationFuncTest extends BaseFuncTest {
 
 
-    private static final UniqueId OWNER = new UniqueId(3201L);
-    private static final UniqueId STRANGER = new UniqueId(3202L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
     private static final double LAT = 50.0;
     private static final double LNG = 30.0;
 
@@ -75,7 +70,6 @@ class WorkspaceIsolationFuncTest extends BaseFuncTest {
         selectionRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -191,11 +185,4 @@ class WorkspaceIsolationFuncTest extends BaseFuncTest {
                 .build();
     }
 
-    private static void authenticate(UniqueId user) {
-        var principal = new AuthenticatedUserPrincipal(
-                user, "Test User", Set.of(Permissions.Workspace.OWNER), true,
-                AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

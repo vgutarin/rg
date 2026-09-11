@@ -6,12 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.model.geo.LocationModel;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
@@ -20,11 +16,11 @@ import vg.rg.repository.workspace.WorkspaceSelectionRepository;
 import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * Revoking the workspace permission withdraws <em>access</em>, not data.
@@ -37,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class WorkspacePermissionRevocationFuncTest extends BaseFuncTest {
 
 
-    private static final UniqueId USER = new UniqueId(3501L);
+    private static final UniqueId USER = nextUniqueId();
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -73,7 +69,6 @@ class WorkspacePermissionRevocationFuncTest extends BaseFuncTest {
         selectionRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -152,18 +147,12 @@ class WorkspacePermissionRevocationFuncTest extends BaseFuncTest {
     }
 
     private static void granted() {
-        authenticate(Set.of(Permissions.Workspace.OWNER));
+        authenticate(USER, Set.of(Permissions.Workspace.OWNER));
     }
 
     /** The same user, still owning the same rows, but without the gate. */
     private static void revoked() {
-        authenticate(Set.of(Permissions.Reports.READ));
+        authenticate(USER, Set.of());
     }
 
-    private static void authenticate(Set<String> permissions) {
-        var principal = new AuthenticatedUserPrincipal(
-                USER, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

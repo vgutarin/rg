@@ -50,7 +50,8 @@ its draft. Numeric entry formatting follows Vaadin's locale handling. With `show
 each date/datetime edit field also shows the localized weekday as helper text, updated when its
 value or locale changes and removed when empty. It is not part of the typed date: Vaadin's Java
 format API supports numeric day/month/year tokens only. Step and weekday option changes also
-apply to an already-open dialog without resetting drafts.
+apply to an already-open dialog without resetting drafts. Each direct date-time picker owns the grouped-time
+chooser module, so the module is loaded with the picker in optimized production bundles as well as in dialogs.
 
 Create/Edit opens a modal dialog with required date/datetime fields (start/end for ranges).
 Save validates completeness, input validity and ordering before publishing one value change.
@@ -61,8 +62,8 @@ cards gain a second column at 40rem.
 
 ## Examples
 
-`/date-time-examples` is linked as **Dates & times** in the main navigation without permission
-checks. It uses `@PermitAll`, so ordinary application sign-in still applies; no workspace permission
-is required. It demonstrates dates, datetimes, both ranges, an empty value, and a read-only value,
-with live weekday/year/seconds/step controls and the shell's language switcher. Examples are in-memory
-view state only and reset when the view is recreated.
+`/date-time-examples` is linked as **Dates & times** in both the drawer and home launcher only for callers
+holding the app-wide `experiment:participant` permission. Its `beforeEnter` guard reroutes every other
+caller to the no-access view, and `workspace:owner` alone grants no access. It demonstrates dates, datetimes, both ranges, an
+empty value, and a read-only value, with live weekday/year/seconds/step controls and the shell's language
+switcher. Examples are in-memory view state only and reset when the view is recreated.

@@ -44,22 +44,6 @@ vaadin-select {
   min-height: 44px;
 }
 
-vaadin-side-nav-item:not([current]) > vaadin-icon {
-  color: var(--aura-accent-text-color);
-}
-
-vaadin-side-nav-item[current]::part(content) {
-  --vaadin-side-nav-item-background: var(--vaadin-background-container);
-  --vaadin-side-nav-item-border-color: transparent;
-}
-
-vaadin-side-nav::part(label) {
-  color: var(--vaadin-text-color-secondary);
-  font-size: var(--aura-font-size-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 :is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button):not([theme~="primary"], [theme~="tertiary"]) {
   --aura-accent-color-dark: var(--aura-neutral);
   --aura-accent-color-light: var(--aura-neutral);
@@ -153,6 +137,62 @@ vaadin-side-nav::part(label) {
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   width: 100%;
+}
+
+/* The drawer is an Android-style launcher. Each tile remains a complete link, so the icon and its label
+   never divide one action into two tap targets. Three columns retain the existing compact tile size. */
+.navigation-tile-grid {
+  display: grid;
+  gap: var(--vaadin-gap-s);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  width: 100%;
+}
+
+.navigation-tile {
+  align-items: center;
+  background: var(--aura-surface-color-solid);
+  border: 1px solid var(--vaadin-border-color-secondary);
+  border-radius: var(--vaadin-radius-m);
+  color: var(--vaadin-text-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  justify-content: center;
+  min-height: 4.5rem;
+  min-width: 0;
+  padding: var(--vaadin-padding-s);
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.navigation-tile > vaadin-icon {
+  color: var(--aura-accent-text-color);
+  flex: none;
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.navigation-tile > span {
+  display: block;
+  font-size: var(--aura-font-size-xs);
+  line-height: var(--aura-line-height-xs);
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navigation-tile:hover,
+.navigation-tile:focus-visible {
+  background: var(--aura-accent-surface);
+  box-shadow: var(--aura-shadow-s);
+}
+
+.navigation-tile:active {
+  transform: scale(0.97);
 }
 
 .semantic-card {
@@ -614,8 +654,8 @@ vaadin-side-nav::part(label) {
 .temporal-value { font-size: 1.25rem; font-weight: 600; overflow-wrap: anywhere; padding-block: .75rem; }
 .temporal-actions { display: flex; flex-direction: column; gap: .5rem; }
 .temporal-error { color: var(--vaadin-text-color-error); }
-.temporal-picker::part(input-fields) { flex-direction: column; }
-.temporal-picker > vaadin-date-picker, .temporal-picker > vaadin-time-picker { min-width: 0; width: 100%; }
+.temporal-picker::part(input-fields) { flex-flow: row nowrap; }
+.temporal-picker > vaadin-date-picker, .temporal-picker > vaadin-time-picker { min-width: 0; width: auto; }
 /* The native picker remains the value owner; its virtualized options are rendered as hour rows. */
 .temporal-picker > vaadin-time-picker {
   --vaadin-time-picker-overlay-width: min(20rem, calc(100vw - 2rem));

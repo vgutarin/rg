@@ -14,7 +14,6 @@ import org.mockito.quality.Strictness;
 import vg.rg.frontend.vaadin.config.MapsClientProperties;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.service.MapsResolutionBridge;
-import vg.rg.frontend.vaadin.view.auth.AccessDeniedErrorView;
 import vg.rg.frontend.vaadin.view.auth.NoAccessView;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
 import vg.rg.model.security.AuthenticationFlow;
@@ -129,16 +128,15 @@ class WorkspaceAccessGateTest {
     }
 
     @Test
-    void locationsView_withOtherPermissions_reroutesToAccessDeniedRatherThanNoAccess() {
-        // A user with some capability elsewhere gets "denied", not "you have nothing" -- neither reveals
-        // whether the workspace section or its contents exist.
+    void locationsView_withUnrecognizedPermission_reroutesToNoAccess() {
+        // Unknown permissions are ignored, so an account without workspace ownership has no access.
         denyGate();
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ))));
+                .thenReturn(Optional.of(principal(Set.of("unknown:view"))));
 
         workspaceLocationsView().beforeEnter(event);
 
-        verify(event).rerouteTo(AccessDeniedErrorView.class);
+        verify(event).rerouteTo(NoAccessView.class);
         verify(selectionService, never()).activeWorkspace();
     }
 

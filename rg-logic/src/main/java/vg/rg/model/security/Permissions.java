@@ -21,16 +21,11 @@ import java.util.Set;
  */
 public final class Permissions {
 
-    public static final class Reports {
-        public static final String READ = "reports:read";
+    /** Grants access to application features intended for experiment participants. */
+    public static final class Experiment {
+        public static final String PARTICIPANT = "experiment:participant";
 
-        private Reports() { }
-    }
-
-    public static final class Request {
-        public static final String SUBMIT = "request:submit";
-
-        private Request() { }
+        private Experiment() { }
     }
 
     /**
@@ -46,8 +41,7 @@ public final class Permissions {
 
     /** Permissions the flat, resource-less authority check accepts. */
     public static final Set<String> APP_WIDE = PermissionSyntax.validateAndFreeze(List.of(
-            Reports.READ,
-            Request.SUBMIT,
+            Experiment.PARTICIPANT,
             Workspace.OWNER));
 
     /**

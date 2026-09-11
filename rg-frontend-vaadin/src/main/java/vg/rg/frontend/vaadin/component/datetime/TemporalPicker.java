@@ -66,17 +66,19 @@ interface TemporalPicker<T> {
     }
 
     static TemporalPicker<LocalDateTime> dateTime() {
-        var field = new DateTimePicker();
+        var field = new TemporalDateTimePicker();
         field.setWidthFull();
         field.addClassName("temporal-picker");
         field.setRequiredIndicatorVisible(true);
         return new TemporalPicker<>() {
             private Locale currentLocale;
             private DateDisplayOptions options;
+            private String label;
             { field.addValueChangeListener(event -> updateWeekday()); }
             private void updateWeekday() {
-                field.setHelperText(options != null && options.isShowShortDayName()
-                        && field.getValue() != null ? weekday(field.getValue(), currentLocale) : "");
+                if (label == null) return;
+                field.setLabel(options != null && options.isShowShortDayName() && field.getValue() != null
+                        ? label + " (" + weekday(field.getValue(), currentLocale) + ")" : label);
             }
             public Component component() { return field; }
             public LocalDateTime value() { return field.getValue(); }
@@ -85,8 +87,8 @@ interface TemporalPicker<T> {
             public void localize(LocalizationService l, Locale locale, String label, DateDisplayOptions options) {
                 this.currentLocale = locale;
                 this.options = options;
+                this.label = label;
                 updateWeekday();
-                field.setLabel(label);
                 field.setLocale(locale);
                 field.setStep(options.getStep());
                 TemporalTimePicker.configure(field.getElement(), options.getStep());

@@ -18,11 +18,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import vg.rg.frontend.vaadin.component.disclosure.DisclosureList;
 import vg.rg.frontend.vaadin.config.MapsClientProperties;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.service.MapsResolutionBridge;
-import vg.rg.frontend.vaadin.view.auth.AccessDeniedErrorView;
 import vg.rg.frontend.vaadin.view.auth.NoAccessView;
 import vg.rg.model.geo.LocationModel;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
@@ -82,14 +83,14 @@ class WorkspaceLocationsViewTest {
     }
 
     @Test
-    void beforeEnter_missingWorkspacePermission_withOtherPermissions_reroutesToAccessDenied() {
+    void beforeEnter_missingWorkspacePermission_withUnrecognizedPermission_reroutesToNoAccess() {
         when(authorityChecker.hasAuthority(Permissions.Workspace.OWNER)).thenReturn(false);
         when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class))
-                .thenReturn(Optional.of(principal(Set.of(Permissions.Reports.READ))));
+                .thenReturn(Optional.of(principal(Set.of("unknown:view"))));
 
         view().beforeEnter(event);
 
-        verify(event).rerouteTo(AccessDeniedErrorView.class);
+        verify(event).rerouteTo(NoAccessView.class);
     }
 
     @Test
@@ -105,6 +106,7 @@ class WorkspaceLocationsViewTest {
 
     @Test
     void beforeEnter_rendersTwoTabs() {
+        when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.Location.CREATE)).thenReturn(true);
         var view = entered();
 
         var tabs = descendants(view).stream()
@@ -120,7 +122,7 @@ class WorkspaceLocationsViewTest {
         // The single difference from the global screen: the workspace is passed to every read.
         var view = entered(model("Depot"));
 
-        verify(locationService).browse(eq(WORKSPACE), any());
+        verify(locationService).browse(eq(WORKSPACE), eq(PageRequest.of(0, 20, locationNameOrder())));
         assertThat(names(view)).contains("Depot");
     }
 
@@ -284,27 +286,58 @@ class WorkspaceLocationsViewTest {
     }
 
     @Test
-    void addTab_whenCreateIsDenied_explainsInsteadOfOfferingTheButton() {
+    void withoutCreatePermission_rendersBrowseDirectlyWithoutTabCaptions() {
         lenient().when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.Location.CREATE))
                 .thenReturn(false);
         var view = entered();
 
+        assertThat(descendants(view).stream().filter(TabSheet.class::isInstance)).isEmpty();
         assertThat(descendants(view).stream()
                 .filter(Paragraph.class::isInstance).map(Paragraph.class::cast)
                 .map(Paragraph::getText))
-                .contains("locations.add.no-permission");
+                .doesNotContain("locations.add.no-permission");
     }
 
     @Test
-    void addTab_whenCreateIsAllowed_offersTheAddButton() {
+    void withCreatePermission_rendersAddTabWithoutASeparateAddButton() {
         lenient().when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.Location.CREATE))
                 .thenReturn(true);
         var view = entered();
 
+        assertThat(descendants(view).stream().filter(TabSheet.class::isInstance)).hasSize(1);
         assertThat(descendants(view).stream()
                 .filter(Button.class::isInstance).map(Button.class::cast)
                 .map(Button::getText))
-                .contains("locations.add");
+                .doesNotContain("locations.add");
+    }
+
+    @Test
+    void savingNewLocation_switchesToBrowseFiltersBySavedNameAndShowsItsRow() {
+        when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.Location.CREATE)).thenReturn(true);
+        var created = model("New depot");
+        when(locationService.create(eq(WORKSPACE), any())).thenReturn(created);
+        when(locationService.searchByName(eq(WORKSPACE), eq("New depot"), anyInt()))
+                .thenReturn(List.of(created));
+        var view = entered();
+        view.onMapsUnavailable();
+
+        descendants(view).stream()
+                .filter(TextField.class::isInstance).map(TextField.class::cast)
+                .filter(field -> "location.field.name".equals(field.getLabel()))
+                .findFirst().orElseThrow()
+                .setValue("New depot");
+        var save = descendants(view).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "location.save".equals(button.getText()))
+                .findFirst().orElseThrow();
+        click(save);
+
+        var tabs = descendants(view).stream()
+                .filter(TabSheet.class::isInstance).map(TabSheet.class::cast)
+                .findFirst().orElseThrow();
+        assertThat(tabs.getSelectedIndex()).isZero();
+        assertThat(names(tabContents(tabs).getFirst())).containsExactly("New depot");
+        verify(locationService).searchByName(WORKSPACE, "New depot", 0);
     }
 
     // ---------------------------------------------------------------------------------- fixtures
@@ -373,6 +406,10 @@ class WorkspaceLocationsViewTest {
                 .longitude(BigDecimal.valueOf(30.0))
                 .googlePlaceId("ChIJ-place-id")
                 .build();
+    }
+
+    private static Sort locationNameOrder() {
+        return Sort.by(Sort.Order.asc("name").ignoreCase(), Sort.Order.asc("uniqueId"));
     }
 
     private AuthenticatedUserPrincipal principal(Set<String> permissions) {

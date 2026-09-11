@@ -49,7 +49,7 @@ class SecureEntryIntegrationTest {
 
     @Test
     void secureEntry_establishedPrincipal_reachesPermittedContent() {
-        var principal = principal(new UniqueId(1234L), "Session Name", Set.of("reports:read"));
+        var principal = principal(new UniqueId(1234L), "Session Name", Set.of("workspace:owner"));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
         var view = view();
@@ -60,14 +60,14 @@ class SecureEntryIntegrationTest {
 
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                     .extracting(Object::toString)
-                    .containsExactly("reports:read");
+                    .containsExactly("workspace:owner");
             verify(ui).navigate(LandingView.class);
         }
     }
 
     @Test
     void secureEntry_nullSubject_reachesNoAccessWithoutRenderingIdentity() {
-        var principal = principal(null, "Sensitive Session Name", Set.of("reports:read"));
+        var principal = principal(null, "Sensitive Session Name", Set.of("workspace:owner"));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
         var view = view();
@@ -78,7 +78,7 @@ class SecureEntryIntegrationTest {
 
             assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isSameAs(principal);
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities()).isEmpty();
-            assertThat(renderedText(view)).doesNotContain("Sensitive Session Name", "reports:read", "auth_date");
+            assertThat(renderedText(view)).doesNotContain("Sensitive Session Name", "workspace:owner", "auth_date");
             verify(ui).navigate(NoAccessView.class);
             verify(ui, never()).navigate(LandingView.class);
         }

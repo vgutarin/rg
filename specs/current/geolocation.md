@@ -23,8 +23,9 @@ without a workspace is unrepresentable, and a location cannot move between works
 
 Consequently:
 
-- Every read takes a workspace, so an unscoped query cannot be written — the repository has no overload
-  that omits it.
+- Every collection query takes a workspace, and an individual location read takes that location's
+  identifier, which is resolved back to its workspace for authorization. No location operation is
+  unscoped.
 - The navigation entry is gated on the *active workspace*, not on a permission the principal holds, so
   what the drawer offers and what the service will allow are the same question asked once each.
 - The proximity suggestion never looks outside the active workspace, and neither does name search.
@@ -34,8 +35,9 @@ Consequently:
 
 ## Capabilities
 
-- **Add flow**: "Add location" → the **Google Maps picker** (a modal with a search box, an interactive
-  map with a fixed centre pin, and a "Use this location" button). The user chooses a point three ways:
+- **Add flow**: users who may create locations open the **Google Maps picker** by selecting the **Add**
+  tab caption. The picker is a modal with a search box, an interactive map with a fixed centre pin, and a
+  "Use this location" button. The user chooses a point three ways:
   (1) **search** an address/place (Places API New autocomplete) → coordinates **+ Place ID**;
   (2) **tap a labelled place (POI)** the map shows — metro, stadium, restaurant, etc. → coordinates
   **+ Place ID**; (3) **tap an empty spot or drag** the map under the pin → **coordinates only** (no
@@ -50,8 +52,16 @@ Consequently:
 - **Proximity suggestion**: given coordinates, suggest locations **in the active workspace** within a
   configurable radius (default **±500 m**), nearest-first. Advisory only — the user may always create a
   new location, even within the radius (no dedup/uniqueness gate).
-- **Name search**: case-insensitive filter **within one workspace**; blank query returns all (bounded);
-  clear returns to the full list; empty result shows a no-results state.
+- **Name search and browse order**: a case-insensitive filter **within one workspace**; blank query
+  returns the first **20** locations, ordered case-insensitively by name and then identifier; clear
+  returns to that full-list page; empty result shows a no-results state. Filtered results use the same
+  order.
+- **Reusable picker**: `LocationPicker` is a native, filterable single-select dropdown. Blank input loads
+  the same first twenty workspace-scoped alphabetical locations; typing uses workspace-scoped name search,
+  and choosing a name sets the selected `LocationModel`. It can restore a persisted location identifier
+  for event editing; custom text never becomes a location value.
+- **Post-save return**: saving a new location switches to the Browse tab, filters it by the saved name,
+  and smoothly scrolls the newly created row into view.
 - **Display**: browsable list of the workspace's locations and a detail view with name, description, and —
   **when present** — coordinates, the **Google Place ID**, and an "open in Google Maps" action (derived on
   demand from coordinates, refined by the Place ID). A location saved without coordinates simply omits
@@ -86,7 +96,8 @@ Governed by the workspace layer, not by app-wide location capabilities. The app-
 its locations**, so an owner holding none of them is still allowed.
 
 Each service method guards with one resource-addressed check, passing the identifier of the thing being
-acted on — the location's own id for `update`/`delete`, the workspace for `create` and for reads:
+acted on — the location's own id for `read`/`update`/`delete`, the workspace for `create` and collection
+reads:
 
 ```java
 @PreAuthorize("@authorityChecker.hasAuthority(#locationId, 'location:update')")
@@ -127,6 +138,9 @@ localized "reload and retry" message.
   centering); results return via the view's `@ClientCallable` methods (`onCoordinatesAcquired`,
   `onMapsUnavailable`). Server→client element wiring passes the view element explicitly as `$0` (so
   `$0.$server.*` resolves).
+  `LocationPicker` is the reusable workspace-scoped search-and-select field for forms that reference a
+  saved location.
+  Users without `location:create` see only the Browse content, without a `TabSheet` or Add caption.
 - **Google Maps configuration** (all browser-side, non-secret, referrer-scoped):
   - `google.maps.browser-api-key` — the browser API key (required for the Maps picker; when blank the
     picker fails fast and the user adds a location without coordinates).

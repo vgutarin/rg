@@ -18,14 +18,15 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static vg.test.TestHelper.nextUniqueId;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class LocationScopeProviderTest {
 
-    private static final UniqueId WORKSPACE = new UniqueId(5001L);
-    private static final UniqueId OWNER = new UniqueId(3001L);
-    private static final UniqueId LOCATION = new UniqueId(6001L);
+    private static final UniqueId WORKSPACE = nextUniqueId();
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId LOCATION = nextUniqueId();
 
     @Mock
     private WorkspaceLocationRepository locationRepository;

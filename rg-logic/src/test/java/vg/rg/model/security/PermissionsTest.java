@@ -13,8 +13,7 @@ class PermissionsTest {
     @Test
     void appWide_exposesStableCatalog() {
         assertThat(Permissions.APP_WIDE).containsExactly(
-                Permissions.Reports.READ,
-                Permissions.Request.SUBMIT,
+                Permissions.Experiment.PARTICIPANT,
                 Permissions.Workspace.OWNER);
     }
 
@@ -35,6 +34,12 @@ class PermissionsTest {
     void workspaceOwner_isAppWideAndWellFormed() {
         assertThat(Permissions.hasValidFormat(Permissions.Workspace.OWNER)).isTrue();
         assertThat(Permissions.isRecognized(Permissions.Workspace.OWNER)).isTrue();
+    }
+
+    @Test
+    void experimentParticipant_isAppWideAndWellFormed() {
+        assertThat(Permissions.hasValidFormat(Permissions.Experiment.PARTICIPANT)).isTrue();
+        assertThat(Permissions.isRecognized(Permissions.Experiment.PARTICIPANT)).isTrue();
     }
 
     @Test
@@ -110,9 +115,10 @@ class PermissionsTest {
     void recognized_mixedPermissionSet_returnsRecognizedValuesInCatalogOrder() {
         assertThat(
                 Permissions.recognized(
-                        Set.of("unknown:view", Permissions.Request.SUBMIT)
+                        Set.of("unknown:view", Permissions.Experiment.PARTICIPANT,
+                                Permissions.Workspace.OWNER)
                 )
-        ).containsExactly(Permissions.Request.SUBMIT);
+        ).containsExactly(Permissions.Experiment.PARTICIPANT, Permissions.Workspace.OWNER);
     }
 
     @Test

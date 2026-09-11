@@ -4,18 +4,18 @@ Current-state specification of the workspace layer as implemented. Full requirem
 rationale live in [../003-workspace-layer/spec.md](../003-workspace-layer/spec.md); design in
 [../003-workspace-layer/plan.md](../003-workspace-layer/plan.md).
 
-See also [geolocation.md](./geolocation.md) and
-[workspace-participants.md](./workspace-participants.md) — a location and a participant are both a
-workspace's content, scoped by the active workspace, though each screen is reached from a top-level
-navigation entry.
+See also [home.md](./home.md), [geolocation.md](./geolocation.md),
+[workspace-participants.md](./workspace-participants.md), and [workspace-events.md](./workspace-events.md)
+— locations, participants, and events are workspace content scoped by the active workspace, though each
+screen is reached from a top-level navigation entry.
 
 ## Purpose
 
 A **workspace** is a private container a single user works inside. Everything a workspace holds derives
 its access from the workspace: **owning it grants complete authority over its contents, at any depth.**
 
-Locations and **participants** are the contained types today. The layer exists so that further types
-(groups, events) inherit that authority by construction rather than by each one re-deriving access rules.
+Locations, **participants**, and **events** are the contained types today. The layer exists so that further
+types inherit that authority by construction rather than by each one re-deriving access rules.
 Adding participants is the evidence that it works: one scope provider, one content contributor, one
 permission group, and **no change to any access rule** — see
 [workspace-participants.md](./workspace-participants.md).
@@ -47,9 +47,8 @@ permission group, and **no change to any access rule** — see
   refused — an affordance that leads only to a refusal is a dead end.
 - **Switch** the active workspace from the selector. One action replaces the visible content entirely;
   nothing carries over.
-- **Work inside** the active workspace: the locations screen at `/workspaces/locations` behaves exactly as
-  the retired global screen did, restricted to one workspace, and the participants screen at
-  `/workspaces/participants` lists the people registered in it.
+- **Work inside** the active workspace: locations, participants, and events are managed at
+  `/workspaces/locations`, `/workspaces/participants`, and `/workspaces/events` respectively.
 
 Concurrent edits use optimistic concurrency (JPA `@Version`). A stale save is rejected with the localized
 "reload and retry" guidance, and the dialog keeps the typed text so the user retries rather than retypes.
@@ -65,6 +64,7 @@ Two permission declarations, deliberately disjoint.
 - **`LocalPermissions`** — capabilities that only mean something *inside* a workspace
   (`location:read|list|create|update|delete`,
   `workspace-participant:read|list|create|update|delete|reveal-contact`,
+  `workspace-event:read|list|create|update|delete`,
   `workspace:create|read|update|delete`). These are never
   tested against what a principal *holds*, so they never become Spring authorities and are dropped from
   the sanitised permission set. The flat, resource-less check **rejects every one of them**.
@@ -111,16 +111,17 @@ resource id, or the reverse) **denies at runtime** rather than failing to compil
 the way in from the drawer is withheld, pending further work on the section itself. Restoring it is one
 `addNav` call plus its label.
 
-**Locations and participants sit at the top level**, because the workspace is the *scope* they live in
-rather than a place the user must navigate through. Each entry appears only when the matching scoped
-check — `hasAuthority(activeWorkspaceId, "location:list")` or
-`hasAuthority(activeWorkspaceId, "workspace-participant:list")` — holds — a question about the workspace being worked in,
-not about a capability the principal carries around. The app-wide gate is checked first, and not as a
-shortcut: resolving the active workspace is itself guarded by it, so asking a non-holder would raise an
-access denial and take the navigation shell down with it. The entries open the workspace-scoped routes
-`/workspaces/locations` and `/workspaces/participants`; the retired global route stays gone. The two are
-gated **independently**, and the active workspace is resolved **once** per render — resolving it
-provisions a default, so it must not happen once per entry.
+**Workspace-content entries sit at the top level** because the workspace is the *scope* they live in
+rather than a place the user must navigate through. Each entry appears only when the matching scoped check —
+`hasAuthority(activeWorkspaceId, "location:list")`,
+`hasAuthority(activeWorkspaceId, "workspace-participant:list")`, or
+`hasAuthority(activeWorkspaceId, "workspace-event:list")` — holds — a question about the workspace being
+worked in, not about a capability the principal carries around. The app-wide gate is checked first, and
+not as a shortcut: resolving the active workspace is itself guarded by it, so asking a non-holder would
+raise an access denial and take the navigation shell down with it. The entries open the workspace-scoped
+routes `/workspaces/locations`, `/workspaces/participants`, and `/workspaces/events`; the retired global
+route stays gone. The three are gated **independently**, and the active workspace is resolved **once** per
+render — resolving it provisions a default, so it must not happen once per entry.
 
 One consequence worth naming: resolving the active workspace is what provisions a default, and the
 navigation gate resolves it — so a permission holder's default workspace is created on their first page
@@ -149,6 +150,9 @@ English second; a system-named workspace's label follows the viewer's locale.
 - **`rg_workspace_participant`** — the people registered in a workspace, with the same mandatory,
   never-updated `workspace_unique_id`. Their label and phone number live in one **encrypted** column;
   see [workspace-participants.md](./workspace-participants.md).
+- **`rg_workspace_event`** — plaintext titled events with mandatory, never-updated
+  `workspace_unique_id`, publication state, version, and audit columns; see
+  [workspace-events.md](./workspace-events.md).
 - **`rg_workspace_selection`** — the active workspace per user, keyed by user, with a foreign key to
   `rg_workspace`. That key is why a removal must repoint the selection **before** deleting the workspace
   row.

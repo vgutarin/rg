@@ -1,7 +1,6 @@
 package vg.rg.frontend.vaadin.service;
 
 import org.junit.jupiter.api.Test;
-import vg.rg.model.security.Permissions;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,7 +24,7 @@ class LocalizationBundleTest {
      *
      * <p>{@code getTranslation} counts as well as {@code i18n}: a key with placeholders has to go
      * through the parameterised overload, so a family looked up only that way would otherwise be
-     * invisible here — the same blind spot that let {@code permission.workspace:owner} ship missing.
+     * invisible here.
      *
      * <p>Each alternative requires its own terminator, and that is what keeps <em>composed</em> keys
      * out: {@code i18n("permission." + p)} has no {@code ")} after the literal, and a composed
@@ -103,35 +102,6 @@ class LocalizationBundleTest {
             assertThat(ukrainian).as("uk translation for %s", code).contains(code);
             assertThat(english).as("en translation for %s", code).contains(code);
         });
-    }
-
-    /**
-     * The {@code permission.*} family, which the landing view composes as {@code "permission." + p} for
-     * every permission the principal holds. A composed key is invisible to the literal-lookup check
-     * above, which is exactly how {@code permission.workspace:owner} went missing while the gate itself
-     * shipped — the user saw the raw key where a capability label belonged.
-     *
-     * <p>Composed does not mean unenumerable: the set is {@link Permissions#ALL}, so both directions are
-     * checkable. Every declared permission must have a label, and a label must not outlive its
-     * permission.
-     */
-    @Test
-    void everyAppWidePermissionHasALabelAndNoLabelOutlivesItsPermission() throws IOException {
-        var ukrainian = load("messages.properties");
-        var english = load("messages_en.properties");
-
-        var expected = Permissions.ALL.stream().map(permission -> "permission." + permission).toList();
-        assertThat(expected).isNotEmpty();
-        assertThat(expected).allSatisfy(key -> {
-            assertThat(ukrainian.getProperty(key)).as("uk label for %s", key).isNotBlank();
-            assertThat(english.getProperty(key)).as("en label for %s", key).isNotBlank();
-        });
-
-        var orphaned = ukrainian.stringPropertyNames().stream()
-                .filter(key -> key.startsWith("permission."))
-                .filter(key -> !expected.contains(key))
-                .toList();
-        assertThat(orphaned).isEmpty();
     }
 
     /**

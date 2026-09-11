@@ -1,0 +1,97 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 005-workspace-event-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: rg_workspace_event
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace_event
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workspace_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_at
+                  type: DATETIME(8)
+              - column:
+                  name: location_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: TINYINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_participant_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_published
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_event_workspace
+            baseTableName: rg_workspace_event
+            baseColumnNames: workspace_unique_id
+            referencedTableName: rg_workspace
+            referencedColumnNames: unique_id
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_event_location
+            baseTableName: rg_workspace_event
+            baseColumnNames: location_unique_id
+            referencedTableName: rg_workspace_location
+            referencedColumnNames: unique_id
+        - createIndex:
+            indexName: ix_rg_workspace_event_ws_title
+            tableName: rg_workspace_event
+            columns:
+              - column:
+                  name: workspace_unique_id
+              - column:
+                  name: title

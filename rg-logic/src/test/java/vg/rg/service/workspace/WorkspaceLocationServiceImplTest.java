@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.config.GeoProperties;
 import vg.rg.entity.workspace.WorkspaceLocationEntity;
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static vg.test.TestHelper.nextUniqueId;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -38,9 +40,9 @@ class WorkspaceLocationServiceImplTest {
     // values actually reach the service rather than being hard-coded in it.
     private static final int MATCH_RADIUS_METERS = 400;
     private static final int MAX_NAME_SEARCH_RESULTS = 7;
-    private static final UniqueId WORKSPACE = new UniqueId(5001L);
-    private static final UniqueId OTHER_WORKSPACE = new UniqueId(5002L);
-    private static final UniqueId LOCATION = new UniqueId(6001L);
+    private static final UniqueId WORKSPACE = nextUniqueId();
+    private static final UniqueId OTHER_WORKSPACE = nextUniqueId();
+    private static final UniqueId LOCATION = nextUniqueId();
 
     @Mock
     private UniqueIdService uniqueIdService;
@@ -189,6 +191,16 @@ class WorkspaceLocationServiceImplTest {
     // --------------------------------------------------------------------------------------- reads
 
     @Test
+    void read_returnsTheRequestedLocation() {
+        var stored = WorkspaceLocationEntity.builder().uniqueId(LOCATION.getLongValue()).name("Depot").build();
+        when(repository.findById(LOCATION)).thenReturn(Optional.of(stored));
+
+        var location = service.read(LOCATION);
+
+        assertThat(location.getName()).isEqualTo("Depot");
+    }
+
+    @Test
     void searchByName_isScopedToTheWorkspaceAndBounded() {
         when(repository.findByWorkspaceUniqueIdAndNameContainingIgnoreCase(any(), any(), any()))
                 .thenReturn(org.springframework.data.domain.Page.empty());
@@ -196,7 +208,7 @@ class WorkspaceLocationServiceImplTest {
         service.searchByName(WORKSPACE, "  depot  ", 5);
 
         verify(repository).findByWorkspaceUniqueIdAndNameContainingIgnoreCase(
-                eq(WORKSPACE), eq("depot"), eq(PageRequest.of(0, 5)));
+                eq(WORKSPACE), eq("depot"), eq(PageRequest.of(0, 5, locationNameOrder())));
     }
 
     @Test
@@ -207,7 +219,7 @@ class WorkspaceLocationServiceImplTest {
         service.searchByName(WORKSPACE, null, 0);
 
         verify(repository).findByWorkspaceUniqueIdAndNameContainingIgnoreCase(
-                eq(WORKSPACE), eq(""), eq(PageRequest.of(0, MAX_NAME_SEARCH_RESULTS)));
+                eq(WORKSPACE), eq(""), eq(PageRequest.of(0, MAX_NAME_SEARCH_RESULTS, locationNameOrder())));
     }
 
     @Test
@@ -263,5 +275,9 @@ class WorkspaceLocationServiceImplTest {
                 .latitude(BigDecimal.valueOf(latitude))
                 .longitude(BigDecimal.valueOf(longitude))
                 .build();
+    }
+
+    private static Sort locationNameOrder() {
+        return Sort.by(Sort.Order.asc("name").ignoreCase(), Sort.Order.asc("uniqueId"));
     }
 }

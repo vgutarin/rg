@@ -51,7 +51,7 @@ const CONFIGURATION_ATTEMPTS = 10;
 declare global {
   interface Window {
     rgConfigureTemporalTimePicker(
-      dateTimePicker: DateTimePickerElement, stepSeconds: number, readOnlyInput: boolean): void;
+      dateTimePicker: DateTimePickerElement, stepSeconds: number, dropdownAvailable: boolean): void;
   }
 }
 
@@ -150,10 +150,10 @@ export function configureKeyboardBehavior(timePicker: TimePickerElement, dropdow
 }
 
 function configureTimePicker(
-  timePicker: TimePickerElement, stepSeconds: number, readOnlyInput: boolean, attempt = 0): void {
+  timePicker: TimePickerElement, stepSeconds: number, dropdownAvailable: boolean, attempt = 0): void {
   if (!timePicker._scroller) {
     if (attempt < CONFIGURATION_ATTEMPTS) {
-      requestAnimationFrame(() => configureTimePicker(timePicker, stepSeconds, readOnlyInput, attempt + 1));
+      requestAnimationFrame(() => configureTimePicker(timePicker, stepSeconds, dropdownAvailable, attempt + 1));
     }
     return;
   }
@@ -195,22 +195,23 @@ function configureTimePicker(
     ? (root, _owner, model) => renderHourRow(root, timePicker, model.item)
     : undefined;
   timePicker._scroller.renderer = timePicker.renderer;
-  configureKeyboardBehavior(timePicker, readOnlyInput);
+  configureKeyboardBehavior(timePicker, dropdownAvailable);
   timePicker._updateScroller(timePicker.opened, timePicker._dropdownItems ?? [], timePicker._focusedIndex, timePicker._theme);
 }
 
 function configureDateTimePicker(
-  dateTimePicker: DateTimePickerElement, stepSeconds: number, readOnlyInput: boolean, attempt = 0): void {
+  dateTimePicker: DateTimePickerElement, stepSeconds: number, dropdownAvailable: boolean, attempt = 0): void {
   const timePicker = dateTimePicker.__timePicker;
   if (!timePicker) {
     if (attempt < CONFIGURATION_ATTEMPTS) {
-      requestAnimationFrame(() => configureDateTimePicker(dateTimePicker, stepSeconds, readOnlyInput, attempt + 1));
+      requestAnimationFrame(() => configureDateTimePicker(dateTimePicker, stepSeconds, dropdownAvailable, attempt + 1));
     }
     return;
   }
-  configureTimePicker(timePicker, stepSeconds, readOnlyInput);
+  configureTimePicker(timePicker, stepSeconds, dropdownAvailable);
 }
 
-window.rgConfigureTemporalTimePicker = (dateTimePicker, stepSeconds, readOnlyInput) => {
-  configureDateTimePicker(dateTimePicker, stepSeconds, readOnlyInput);
+window.rgConfigureTemporalTimePicker = (dateTimePicker, stepSeconds, dropdownAvailable) => {
+  configureDateTimePicker(dateTimePicker, stepSeconds, dropdownAvailable);
 };
+window.dispatchEvent(new Event('rg-temporal-time-picker-ready'));

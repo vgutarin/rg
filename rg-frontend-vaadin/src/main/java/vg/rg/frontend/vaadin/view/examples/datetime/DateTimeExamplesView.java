@@ -6,19 +6,24 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
-import vg.rg.frontend.vaadin.view.MainView;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
 import vg.rg.frontend.vaadin.component.datetime.TemporalEditor;
 import vg.rg.frontend.vaadin.component.datetime.TemporalRange;
 import vg.rg.frontend.vaadin.service.LocalizationService;
+import vg.rg.frontend.vaadin.view.MainView;
+import vg.rg.frontend.vaadin.view.auth.NoAccessView;
+import vg.rg.model.security.Permissions;
+import vg.rg.service.security.AuthorityChecker;
 
 import java.time.Duration;
-import com.vaadin.flow.component.select.Select;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,8 +31,9 @@ import java.util.List;
 @Route(value = "date-time-examples", layout = MainView.class)
 @PageTitle("dates.examples.title")
 @PermitAll
-public class DateTimeExamplesView extends VerticalLayout implements LocaleChangeObserver {
+public class DateTimeExamplesView extends VerticalLayout implements BeforeEnterObserver, LocaleChangeObserver {
     private final LocalizationService localization;
+    private final AuthorityChecker authorityChecker;
     private final H1 title = new H1();
     private final Paragraph description = new Paragraph();
     private final Checkbox weekday = new Checkbox();
@@ -36,8 +42,9 @@ public class DateTimeExamplesView extends VerticalLayout implements LocaleChange
     private final Select<Duration> step = new Select<>();
     private final List<TemporalEditor<?>> examples;
 
-    public DateTimeExamplesView(LocalizationService localization) {
+    public DateTimeExamplesView(LocalizationService localization, AuthorityChecker authorityChecker) {
         this.localization = localization;
+        this.authorityChecker = authorityChecker;
         addClassNames("secure-view", "date-time-examples");
         var date = TemporalEditor.date(localization, "dates.date");
         date.setValue(LocalDate.of(2026, 9, 9));
@@ -76,6 +83,13 @@ public class DateTimeExamplesView extends VerticalLayout implements LocaleChange
         add(title, description, settings, cards);
         updateOptions();
         renderTranslations();
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        if (!authorityChecker.hasAuthority(Permissions.Experiment.PARTICIPANT)) {
+            event.rerouteTo(NoAccessView.class);
+        }
     }
 
     @Override public void localeChange(LocaleChangeEvent event) { renderTranslations(); }

@@ -7,6 +7,8 @@ import com.vaadin.flow.server.VaadinSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
+import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
+import vg.rg.frontend.vaadin.component.datetime.TemporalPickers;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -42,10 +44,8 @@ public class LocalizationService implements I18NProvider {
         this.messageSource = messageSource;
     }
 
-    public DateTimePicker newDateTimePicker(String label) {
-        var dateTimePicker = new DateTimePicker(i18n(label));
-        dateTimePicker.setLocale(currentLocale());
-        return dateTimePicker;
+    public DateTimePicker newDateTimePicker(String label, DateDisplayOptions options) {
+        return TemporalPickers.newDateTimePicker(this, label, options);
     }
 
     public void setValue(DateTimePicker dateTimePicker, Instant value) {

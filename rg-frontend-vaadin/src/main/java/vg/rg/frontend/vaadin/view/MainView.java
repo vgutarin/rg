@@ -5,16 +5,16 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.Scroller;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
-import com.vaadin.flow.component.sidenav.SideNav;
-import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
 import com.vaadin.flow.router.AfterNavigationEvent;
@@ -22,15 +22,14 @@ import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.PermitAll;
+import org.springframework.beans.factory.annotation.Autowired;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.view.auth.TelegramAuthView;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
 import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.service.security.AuthorityChecker;
 import vg.rg.service.workspace.WorkspaceSelectionService;
-import vg.unique.id.model.UniqueId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +42,7 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
     private final transient AuthenticationContext authenticationContext;
     private final LocalizationService localization;
-    private final AuthorityChecker authorityChecker;
-    private final transient WorkspaceSelectionService selectionService;
+    private final transient ContentNavigationProvider navigationProvider;
     private final boolean authenticated;
     private final boolean telegramFlow;
     private final Set<String> permissions;
@@ -53,6 +51,7 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
     private final DrawerToggle drawerToggle = new DrawerToggle();
     private final Select<Locale> localePicker = new Select<>();
     private final Button sessionAction = new Button();
+    private final Div navigationPanel = new Div();
     private final List<NavBinding> navigation = new ArrayList<>();
 
     /**
@@ -63,16 +62,17 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
      */
     private String currentTitleKey;
 
-    private record NavBinding(SideNavItem item, String key) { }
+    private record NavBinding(Anchor tile, Span label, String key) { }
 
-    public MainView(LocalizationService localization,
-                    AuthenticationContext authenticationContext,
-                    AuthorityChecker authorityChecker,
-                    WorkspaceSelectionService selectionService) {
+    @Autowired
+    public MainView(
+            LocalizationService localization,
+            AuthenticationContext authenticationContext,
+            ContentNavigationProvider navigationProvider
+    ) {
         this.localization = localization;
         this.authenticationContext = authenticationContext;
-        this.authorityChecker = authorityChecker;
-        this.selectionService = selectionService;
+        this.navigationProvider = navigationProvider;
         var principal = authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class);
         this.authenticated = principal.isPresent();
         this.telegramFlow = principal
@@ -95,6 +95,14 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         renderTranslations();
     }
 
+    MainView(LocalizationService localization,
+             AuthenticationContext authenticationContext,
+             AuthorityChecker authorityChecker,
+             WorkspaceSelectionService selectionService) {
+        this(localization, authenticationContext,
+                new ContentNavigationProvider(authorityChecker, selectionService));
+    }
+
     @Override
     public void afterNavigation(AfterNavigationEvent event) {
         currentTitleKey = titleKeyOf(event);
@@ -109,12 +117,16 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
     }
 
     List<String> navigationLabels() {
-        return navigation.stream().map(binding -> binding.item().getLabel()).toList();
+        return navigation.stream().map(binding -> binding.label().getText()).toList();
     }
 
     /** Where each entry actually goes — a label can move without the route moving with it. */
     List<String> navigationPaths() {
-        return navigation.stream().map(binding -> binding.item().getPath()).toList();
+        return navigation.stream().map(binding -> binding.tile().getHref()).toList();
+    }
+
+    List<Anchor> navigationTiles() {
+        return navigation.stream().map(NavBinding::tile).toList();
     }
 
     Set<String> visiblePermissions() {
@@ -161,27 +173,17 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
 
     private Component drawer() {
         appTitle.addClassName("app-title");
-        var nav = new SideNav();
-        nav.setLabel(localization.i18n("nav.label"));
-
-        addNav(nav, "nav.home", "/", VaadinIcon.HOME.create());
-        addNav(nav, "nav.dates", "/date-time-examples", VaadinIcon.CALENDAR.create());
-
-        if (permissions.contains(Permissions.Reports.READ)) {
-            addNav(nav, "nav.reports", "/reports", VaadinIcon.CHART.create());
-        }
-        // Locations and participants sit at the top level even though both live inside a workspace: the
-        // workspace is the scope, not a place the user has to navigate through.
-        //
-        // Resolved once and passed in, because resolving the active workspace provisions a default on
-        // first entry -- a side effect that should happen once per page load, not once per nav entry.
-        addWorkspaceScopedNav(nav, activeWorkspaceId());
+        navigationProvider.visibleEntries(permissions).forEach(entry ->
+                addNavigationTile(entry.messageKey(), entry.path(), entry.icon().create()));
 
         // The workspace section's own entry is deliberately not rendered yet. Its routes, layout and gate
         // all still work -- only the way in from the drawer is withheld, so restoring it means adding one
-        // addNav call back here, together with a `nav.workspaces` label.
+        // navigation tile here, together with a `nav.workspaces` label.
 
-        var scroller = new Scroller(nav);
+        navigationPanel.addClassName("navigation-tile-grid");
+        navigationPanel.getElement().setAttribute("role", "navigation");
+        navigationPanel.getElement().setAttribute("aria-label", localization.i18n("nav.label"));
+        var scroller = new Scroller(navigationPanel);
         scroller.setSizeFull();
         var drawer = new VerticalLayout(appTitle, scroller);
         drawer.addClassName("drawer-content");
@@ -192,49 +194,14 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
         return drawer;
     }
 
-    /**
-     * The workspace-scoped entries, each shown only when the caller may actually list that type in the
-     * workspace they are working in — a question about the workspace, not about a capability the
-     * principal carries around.
-     *
-     * <p>The app-wide gate is checked before this is reached, and not as a shortcut: resolving the active
-     * workspace is itself guarded by it, so asking a non-holder would raise an access denial and take the
-     * whole navigation shell down with it. A null workspace means the caller does not hold it.
-     */
-    private void addWorkspaceScopedNav(SideNav nav, UniqueId workspaceId) {
-        if (workspaceId == null) {
-            return;
-        }
-        if (authorityChecker.hasAuthority(workspaceId, LocalPermissions.Location.LIST)) {
-            addNav(nav, "nav.locations", "/workspaces/locations", VaadinIcon.MAP_MARKER.create());
-        }
-        if (authorityChecker.hasAuthority(
-                workspaceId, LocalPermissions.WorkspaceParticipant.LIST)) {
-            addNav(nav, "nav.participants", "/workspaces/participants", VaadinIcon.USERS.create());
-        }
-    }
-
-    /**
-     * The workspace the caller is working in, or null when they hold no workspace permission.
-     *
-     * <p>Note this provisions the caller's default workspace on their first page load rather than on
-     * their first visit to a workspace screen — resolving the active workspace is what creates one. That
-     * is the same guarantee stated earlier, reached earlier; a user without the permission still gets
-     * nothing.
-     */
-    private UniqueId activeWorkspaceId() {
-        if (!permissions.contains(Permissions.Workspace.OWNER)) {
-            return null;
-        }
-        var active = selectionService.activeWorkspace();
-        return active == null ? null : active.getUniqueId();
-    }
-
-    private void addNav(SideNav nav, String key, String path, Component icon) {
-        var item = new SideNavItem(localization.i18n(key), path, icon);
-        item.addClassName("navigation-item");
-        nav.addItem(item);
-        navigation.add(new NavBinding(item, key));
+    private void addNavigationTile(String key, String path, Component icon) {
+        var label = new Span(localization.i18n(key));
+        var tile = new Anchor(path);
+        tile.addClassNames("navigation-tile", "aura-surface");
+        tile.add(icon, label);
+        tile.getElement().setAttribute("aria-label", label.getText());
+        navigationPanel.add(tile);
+        navigation.add(new NavBinding(tile, label, key));
     }
 
     private void configureLocalePicker() {
@@ -267,10 +234,15 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
     private void renderTranslations() {
         appTitle.setText(localization.i18n("project.name"));
         drawerToggle.getElement().setAttribute("aria-label", localization.i18n("aria.open-navigation"));
+        navigationPanel.getElement().setAttribute("aria-label", localization.i18n("nav.label"));
         localePicker.getElement().setAttribute("aria-label", localization.i18n("locale.label"));
         localePicker.setItemLabelGenerator(this::localeLabel);
         sessionAction.setText(localization.i18n(authenticated ? "action.logout" : "Login"));
-        navigation.forEach(binding -> binding.item().setLabel(localization.i18n(binding.key())));
+        navigation.forEach(binding -> {
+            var label = localization.i18n(binding.key());
+            binding.label().setText(label);
+            binding.tile().getElement().setAttribute("aria-label", label);
+        });
     }
 
     /**

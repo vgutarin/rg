@@ -204,9 +204,11 @@ the same arrangement the locations entry uses, and for the same reason: the work
 place to navigate through. The two entries are **independently** gated, and the active workspace is
 resolved **once** per render, because resolving it provisions a default as a side effect.
 
-**The screen is deliberately the same shape as the locations screen**: two tabs (browse with a filter,
-add), a single-open accordion of rows, and management actions revealed inside the expanded panel rather
-than sitting in the row.
+**The screen is deliberately the same shape as the locations screen**: a user with
+`workspace-participant:create` sees Browse and Add tabs; otherwise Browse is rendered directly without
+tab captions. The Browse list has a filter, a single-open accordion of rows, and management actions
+revealed inside the expanded panel rather than sitting in the row. After successful registration, the
+screen selects Browse, filters by the saved label, and smoothly scrolls the new row into view.
 
 Paging is an explicit **"Load more"** with a "showing X of Y" line, not infinite scroll and not a
 `Grid`. Stating the total is the point: an alphabetical list that silently stops part-way looks like a

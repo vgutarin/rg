@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * Method-security coverage for {@link WorkspaceLocationService}: which callers the guards admit, and —
@@ -43,9 +44,9 @@ import static org.mockito.ArgumentMatchers.any;
  */
 class WorkspaceLocationServiceMethodSecurityTest {
 
-    private static final UniqueId OWNER = new UniqueId(3001L);
-    private static final UniqueId STRANGER = new UniqueId(3002L);
-    private static final UniqueId WORKSPACE = new UniqueId(5001L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
+    private static final UniqueId WORKSPACE = nextUniqueId();
     private static final ProximityQuery QUERY =
             new ProximityQuery(BigDecimal.valueOf(50.0), BigDecimal.valueOf(30.0), null);
 
@@ -57,6 +58,8 @@ class WorkspaceLocationServiceMethodSecurityTest {
     @Test
     void reads_missingAuthentication_areDenied() {
         withService(service -> {
+            assertThatThrownBy(() -> service.read(nextUniqueId()))
+                    .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.browse(WORKSPACE, PageRequest.of(0, 10)))
                     .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.findNearby(WORKSPACE, QUERY))
@@ -72,12 +75,14 @@ class WorkspaceLocationServiceMethodSecurityTest {
         withService(service -> {
             authenticate(OWNER, LocalPermissions.Location.ALL);
 
+            assertThatThrownBy(() -> service.read(nextUniqueId()))
+                    .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.browse(WORKSPACE, PageRequest.of(0, 10)))
                     .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() ->
                     service.create(WORKSPACE, LocationModel.builder().name("Depot").build()))
                     .isInstanceOf(AccessDeniedException.class);
-            assertThatThrownBy(() -> service.delete(new UniqueId(9L)))
+            assertThatThrownBy(() -> service.delete(nextUniqueId()))
                     .isInstanceOf(AccessDeniedException.class);
         });
     }
@@ -87,6 +92,8 @@ class WorkspaceLocationServiceMethodSecurityTest {
         withService(service -> {
             authenticate(STRANGER, Set.of(Permissions.Workspace.OWNER));
 
+            assertThatThrownBy(() -> service.read(nextUniqueId()))
+                    .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() -> service.browse(WORKSPACE, PageRequest.of(0, 10)))
                     .isInstanceOf(AccessDeniedException.class);
             assertThatThrownBy(() ->
@@ -104,6 +111,7 @@ class WorkspaceLocationServiceMethodSecurityTest {
         withService(service -> {
             authenticate(OWNER, Set.of(Permissions.Workspace.OWNER));
 
+            assertThatCode(() -> service.read(nextUniqueId())).doesNotThrowAnyException();
             assertThatCode(() -> service.browse(WORKSPACE, PageRequest.of(0, 10)))
                     .doesNotThrowAnyException();
             assertThatCode(() -> service.searchByName(WORKSPACE, "x", 5)).doesNotThrowAnyException();
@@ -131,7 +139,12 @@ class WorkspaceLocationServiceMethodSecurityTest {
         var resolver = new RecordingResolver();
         withService(resolver, service -> {
             authenticate(OWNER, Set.of(Permissions.Workspace.OWNER));
-            var locationId = new UniqueId(6001L);
+            var locationId = nextUniqueId();
+
+            assertThatCode(() -> service.read(locationId)).doesNotThrowAnyException();
+
+            assertThat(resolver.lastResourceId).isEqualTo(locationId);
+            assertThat(resolver.lastPermission).isEqualTo(LocalPermissions.Location.READ);
 
             assertThatCode(() -> service.delete(locationId)).doesNotThrowAnyException();
 

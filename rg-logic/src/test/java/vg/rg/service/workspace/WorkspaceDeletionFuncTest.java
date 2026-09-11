@@ -6,15 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.exception.workspace.WorkspaceLimitReachedException;
 import vg.rg.exception.workspace.WorkspaceNotRemovableException;
 import vg.rg.model.geo.LocationModel;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
@@ -22,12 +17,11 @@ import vg.rg.repository.workspace.WorkspaceSelectionRepository;
 import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * Workspace removal and rename against MySQL.
@@ -39,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class WorkspaceDeletionFuncTest extends BaseFuncTest {
 
 
-    private static final UniqueId OWNER = new UniqueId(3601L);
+    private static final UniqueId OWNER = nextUniqueId();
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -59,7 +53,7 @@ class WorkspaceDeletionFuncTest extends BaseFuncTest {
 
     @BeforeEach
     void setUp() {
-        authenticate();
+        authenticate(OWNER);
         doomed = workspaceService.create(WorkspaceModel.builder().name("Doomed").build()).getUniqueId();
         survivor = workspaceService.create(WorkspaceModel.builder().name("Survivor").build())
                 .getUniqueId();
@@ -73,7 +67,6 @@ class WorkspaceDeletionFuncTest extends BaseFuncTest {
         selectionRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -216,11 +209,4 @@ class WorkspaceDeletionFuncTest extends BaseFuncTest {
                 .build();
     }
 
-    private static void authenticate() {
-        var principal = new AuthenticatedUserPrincipal(
-                OWNER, "Test User", Set.of(Permissions.Workspace.OWNER), true,
-                AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

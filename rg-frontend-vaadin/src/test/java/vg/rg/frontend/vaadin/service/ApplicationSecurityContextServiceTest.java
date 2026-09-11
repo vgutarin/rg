@@ -50,7 +50,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_validPrincipal_installsAuthenticatedPrincipal() {
-        var principal = principal(Set.of("reports:read"));
+        var principal = principal(Set.of("workspace:owner"));
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
@@ -61,7 +61,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_validPrincipal_preservesIdentityFields() {
-        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("reports:read")));
+        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("workspace:owner")));
 
         var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         assertThat(principal).extracting("userUniqueId", "name", "consentGiven", "authenticationFlow")
@@ -71,15 +71,16 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_unknownAuthority_installsOnlyRecognizedAuthority() {
         new ApplicationSecurityContextService(events).authenticate(
-                principal(Set.of("reports:read", "unknown:read")));
+                principal(Set.of("experiment:participant", "unknown:read")));
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(authentication.getAuthorities()).extracting(Object::toString).containsExactly("reports:read");
+        assertThat(authentication.getAuthorities()).extracting(Object::toString)
+                .containsExactly("experiment:participant");
     }
 
     @Test
     void authenticate_validPrincipal_publishesAuthenticationSuccess() {
-        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("reports:read")));
+        new ApplicationSecurityContextService(events).authenticate(principal(Set.of("workspace:owner")));
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         var captor = ArgumentCaptor.forClass(Authentication.class);
@@ -89,7 +90,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_currentVaadinSession_persistsSecurityContext() {
-        var principal = principal(Set.of("reports:read"));
+        var principal = principal(Set.of("workspace:owner"));
         when(vaadinSession.getSession()).thenReturn(wrappedSession);
         try (var currentSession = mockStatic(VaadinSession.class)) {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
@@ -104,14 +105,14 @@ class ApplicationSecurityContextServiceTest {
                     .isSameAs(principal);
             assertThat(context.getValue().getAuthentication().getAuthorities())
                     .extracting(Object::toString)
-                    .containsExactly("reports:read");
+                    .containsExactly("workspace:owner");
         }
     }
 
     @Test
     void authenticate_principal_serializationPreservesEveryIdentityField() throws Exception {
         var original = new AuthenticatedUserPrincipal(
-                null, "Session Name", Set.of("reports:read"), false, AuthenticationFlow.TELEGRAM);
+                null, "Session Name", Set.of("workspace:owner"), false, AuthenticationFlow.TELEGRAM);
         var bytes = new ByteArrayOutputStream();
         try (var output = new ObjectOutputStream(bytes)) {
             output.writeObject(original);
@@ -128,7 +129,7 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_nullSubject_installsPrincipalWithZeroAuthorities() {
         var principal = new AuthenticatedUserPrincipal(
-                null, "Session Name", Set.of("reports:read"), false, AuthenticationFlow.TELEGRAM);
+                null, "Session Name", Set.of("workspace:owner"), false, AuthenticationFlow.TELEGRAM);
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
@@ -140,14 +141,14 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void authenticate_falseConsentWithSubject_retainsRecognizedAuthorities() {
         var principal = new AuthenticatedUserPrincipal(
-                new UniqueId(1234L), "Session Name", Set.of("reports:read", "unknown:read"), false,
+                new UniqueId(1234L), "Session Name", Set.of("workspace:owner", "unknown:read"), false,
                 AuthenticationFlow.TELEGRAM);
 
         new ApplicationSecurityContextService(events).authenticate(principal);
 
         assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                 .extracting(Object::toString)
-                .containsExactly("reports:read");
+                .containsExactly("workspace:owner");
     }
 
     @Test
@@ -163,7 +164,7 @@ class ApplicationSecurityContextServiceTest {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
 
             assertThatThrownBy(() -> new ApplicationSecurityContextService(events)
-                    .authenticate(principal(Set.of("reports:read"))))
+                    .authenticate(principal(Set.of("workspace:owner"))))
                     .isInstanceOf(IllegalStateException.class);
 
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
@@ -175,7 +176,7 @@ class ApplicationSecurityContextServiceTest {
     @Test
     void clear_removesThreadAndSessionIdentity() {
         SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal(Set.of("reports:read")), null, Set.of()));
+                UsernamePasswordAuthenticationToken.authenticated(principal(Set.of("workspace:owner")), null, Set.of()));
         when(vaadinSession.getSession()).thenReturn(wrappedSession);
         try (var currentSession = mockStatic(VaadinSession.class)) {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
@@ -190,7 +191,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void authenticate_successfulReplacement_keepsOldPermissionsUntilNewContextIsPersisted() {
-        var oldPrincipal = principal(Set.of(Permissions.Reports.READ));
+        var oldPrincipal = principal(Set.of(Permissions.Workspace.OWNER));
         var oldAuthentication = UsernamePasswordAuthenticationToken.authenticated(
                 oldPrincipal, null, Set.of());
         SecurityContextHolder.getContext().setAuthentication(oldAuthentication);
@@ -201,7 +202,7 @@ class ApplicationSecurityContextServiceTest {
         }).when(wrappedSession).setAttribute(
                 eq(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY),
                 org.mockito.ArgumentMatchers.any(SecurityContext.class));
-        var replacement = principal(Set.of(Permissions.Reports.READ));
+        var replacement = principal(Set.of(Permissions.Workspace.OWNER));
         try (var currentSession = mockStatic(VaadinSession.class)) {
             currentSession.when(VaadinSession::getCurrent).thenReturn(vaadinSession);
 
@@ -210,7 +211,7 @@ class ApplicationSecurityContextServiceTest {
             var installed = SecurityContextHolder.getContext().getAuthentication();
             assertThat(installed.getPrincipal()).isSameAs(replacement);
             assertThat(installed.getAuthorities()).extracting(Object::toString)
-                    .containsExactly(Permissions.Reports.READ);
+                    .containsExactly(Permissions.Workspace.OWNER);
             verify(wrappedSession, never()).removeAttribute(
                     HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
         }
@@ -218,7 +219,7 @@ class ApplicationSecurityContextServiceTest {
 
     @Test
     void persistedAuthentication_reloadAndLocaleIndependentStateRetainsSamePrincipal() {
-        var principal = principal(Set.of(Permissions.Reports.READ));
+        var principal = principal(Set.of(Permissions.Workspace.OWNER));
         when(vaadinSession.getSession()).thenReturn(wrappedSession);
         var persisted = ArgumentCaptor.forClass(SecurityContext.class);
         try (var currentSession = mockStatic(VaadinSession.class)) {
@@ -234,7 +235,7 @@ class ApplicationSecurityContextServiceTest {
                     .isSameAs(principal);
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
                     .extracting(Object::toString)
-                    .containsExactly(Permissions.Reports.READ);
+                    .containsExactly(Permissions.Workspace.OWNER);
         }
     }
 

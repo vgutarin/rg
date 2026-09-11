@@ -30,7 +30,7 @@ class IdentitySecureAuthorizationFacadeContractTest extends SecureAuthorizationF
                 return Optional.empty();
             }
             return Optional.of(new IdentityApplicationUserPrincipal(
-                    new UniqueId(91L), null, Set.of(Permissions.Reports.READ), false));
+                    new UniqueId(91L), null, Set.of(Permissions.Workspace.OWNER), false));
         });
         var limits = new IdentityAuthorizationLimitsProperties(null, null);
         facade = new IdentitySecureAuthorizationFacade(

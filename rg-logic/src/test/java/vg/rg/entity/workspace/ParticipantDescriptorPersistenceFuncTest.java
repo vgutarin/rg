@@ -6,13 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import vg.rg.BaseFuncTest;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
 import vg.rg.repository.workspace.WorkspaceParticipantRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
@@ -20,10 +15,9 @@ import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The test that proves field encryption actually works through Hibernate, which nothing could do until
@@ -42,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ParticipantDescriptorPersistenceFuncTest extends BaseFuncTest {
 
-    private static final UniqueId OWNER = new UniqueId(4201L);
+    private static final UniqueId OWNER = nextUniqueId();
 
     @Autowired
     private WorkspaceRepository workspaceRepository;
@@ -64,7 +58,7 @@ class ParticipantDescriptorPersistenceFuncTest extends BaseFuncTest {
     @BeforeEach
     void setUp() {
         // Auditing fills author from the current principal, and the column is NOT NULL.
-        authenticate();
+        authenticate(OWNER);
         var workspace = workspaceRepository.saveWithNewUniqueId(
                 WorkspaceEntity.builder().ownerUniqueId(OWNER).build(), uniqueIdService);
         workspaceId = new UniqueId(workspace.getUniqueId());
@@ -74,7 +68,6 @@ class ParticipantDescriptorPersistenceFuncTest extends BaseFuncTest {
     void cleanUp() {
         participantRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -140,12 +133,4 @@ class ParticipantDescriptorPersistenceFuncTest extends BaseFuncTest {
                 .doesNotContain("descriptor");
     }
 
-    private static void authenticate() {
-        var principal = new AuthenticatedUserPrincipal(
-                OWNER, "Test User",
-                Set.of(Permissions.Workspace.OWNER),
-                true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

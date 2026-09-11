@@ -69,6 +69,9 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 
 ## TODO
 
+- remove(cleanup) dialogs for timepickers
+- consider to create component to show `Label: (Sat) [date] [time]` as 1 line
+- make sure timezone is applied correctly
 - upgrade to java 25
 - analyze tests to possible refactor. I.e. - authentication helpers can be centralized etc
 - make sure EnableMethodSecurity is enabled on logic model level

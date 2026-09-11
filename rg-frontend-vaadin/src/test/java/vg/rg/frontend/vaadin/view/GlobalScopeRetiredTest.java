@@ -96,7 +96,7 @@ class GlobalScopeRetiredTest {
     void reachingALocationStillRequiresAWorkspace() {
         // The structural consequence of the retirement: a user with no workspace permission has no
         // workspace to scope a location query to, so there is no path to a location at all.
-        var view = mainViewFor(Set.of(Permissions.Reports.READ, Permissions.Request.SUBMIT));
+        var view = mainViewFor(Set.of("unknown:view"));
 
         assertThat(view.navigationLabels()).doesNotContain("nav.locations");
     }

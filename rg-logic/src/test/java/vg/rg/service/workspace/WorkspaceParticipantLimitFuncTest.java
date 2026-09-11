@@ -5,25 +5,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import vg.rg.BaseFuncTest;
 import vg.rg.exception.workspace.ParticipantLimitReachedException;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.repository.workspace.WorkspaceParticipantRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
 import vg.unique.id.model.UniqueId;
 
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The roster bound, on its own context with the limit lowered to something a test can reach.
@@ -41,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestPropertySource(properties = "rg.workspace.participants-max-per-workspace=2")
 class WorkspaceParticipantLimitFuncTest extends BaseFuncTest {
 
-    private static final UniqueId OWNER = new UniqueId(4401L);
+    private static final UniqueId OWNER = nextUniqueId();
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -60,7 +54,7 @@ class WorkspaceParticipantLimitFuncTest extends BaseFuncTest {
 
     @BeforeEach
     void setUp() {
-        authenticate();
+        authenticate(OWNER);
         workspaceA = workspaceService.create(WorkspaceModel.builder().name("Alpha").build()).getUniqueId();
         workspaceB = workspaceService.create(WorkspaceModel.builder().name("Beta").build()).getUniqueId();
     }
@@ -69,7 +63,6 @@ class WorkspaceParticipantLimitFuncTest extends BaseFuncTest {
     void cleanUp() {
         participantRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -110,12 +103,4 @@ class WorkspaceParticipantLimitFuncTest extends BaseFuncTest {
                 .getUniqueId()).isNotNull();
     }
 
-    private static void authenticate() {
-        var principal = new AuthenticatedUserPrincipal(
-                OWNER, "Test User",
-                Set.of(Permissions.Workspace.OWNER),
-                true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

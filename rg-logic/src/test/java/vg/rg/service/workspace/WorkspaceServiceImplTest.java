@@ -32,12 +32,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static vg.test.TestHelper.nextUniqueId;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class WorkspaceServiceImplTest {
 
-    private static final UniqueId OWNER = new UniqueId(4001L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId DEFAULT_WORKSPACE = nextUniqueId();
+    private static final UniqueId TARGET_WORKSPACE = nextUniqueId();
+    private static final UniqueId OTHER_WORKSPACE = nextUniqueId();
     // Deliberately not the production defaults (20/128/1024): only non-default bounds prove the
     // configured values actually reach the service rather than being hard-coded in it.
     private static final int MAX_PER_USER = 3;
@@ -215,7 +219,7 @@ class WorkspaceServiceImplTest {
 
     @Test
     void find_unknownWorkspace_isEmpty() {
-        var id = new UniqueId(999L);
+        var id = nextUniqueId();
         when(repository.findById(id)).thenReturn(Optional.empty());
 
         assertThat(service.find(id)).isEmpty();
@@ -232,12 +236,12 @@ class WorkspaceServiceImplTest {
 
     @Test
     void update_storesTheNewNameAndDescription() {
-        var stored = named(77L, "Before");
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.of(stored));
+        var stored = named(TARGET_WORKSPACE, "Before");
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.of(stored));
         when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         var updated = service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("  After  ").description(" Notes ").version(0).build());
+                .uniqueId(TARGET_WORKSPACE).name("  After  ").description(" Notes ").version(0).build());
 
         assertThat(updated.getName()).isEqualTo("After");
         assertThat(updated.getDescription()).isEqualTo("Notes");
@@ -248,11 +252,11 @@ class WorkspaceServiceImplTest {
         // The one-way transition: a system-created workspace stores no name until the user gives it one.
         var stored = defaultEntity();
         assertThat(stored.isSystemNamed()).isTrue();
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.of(stored));
+        when(repository.findById(DEFAULT_WORKSPACE)).thenReturn(Optional.of(stored));
         when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         var updated = service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("Named at last").version(0).build());
+                .uniqueId(DEFAULT_WORKSPACE).name("Named at last").version(0).build());
 
         assertThat(updated.getName()).isEqualTo("Named at last");
         assertThat(updated.isSystemNamed()).isFalse();
@@ -261,11 +265,11 @@ class WorkspaceServiceImplTest {
     @Test
     void update_cannotTransferOwnershipOrChangeTheDefaultMarker() {
         var stored = defaultEntity();
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.of(stored));
+        when(repository.findById(DEFAULT_WORKSPACE)).thenReturn(Optional.of(stored));
         when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("Renamed").version(0).build());
+                .uniqueId(DEFAULT_WORKSPACE).name("Renamed").version(0).build());
 
         verify(repository).save(org.mockito.ArgumentMatchers.argThat(entity ->
                 OWNER.equals(entity.getOwnerUniqueId()) && OWNER.equals(entity.getDefaultForOwner())));
@@ -274,29 +278,29 @@ class WorkspaceServiceImplTest {
     @Test
     void update_blankName_isRejected() {
         assertThatThrownBy(() -> service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("  ").build()))
+                .uniqueId(DEFAULT_WORKSPACE).name("  ").build()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(WorkspaceServiceImpl.WORKSPACE_NAME_REQUIRED);
     }
 
     @Test
     void update_staleVersion_isRejected() {
-        var stored = named(77L, "Before");
+        var stored = named(TARGET_WORKSPACE, "Before");
         stored.setVersion(3);
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.of(stored));
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("After").version(1).build()))
+                .uniqueId(TARGET_WORKSPACE).name("After").version(1).build()))
                 .isInstanceOf(ObjectOptimisticLockingFailureException.class);
         verify(repository, never()).save(any());
     }
 
     @Test
     void update_unknownWorkspace_isRejected() {
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.empty());
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(WorkspaceModel.builder()
-                .uniqueId(new UniqueId(77L)).name("After").build()))
+                .uniqueId(TARGET_WORKSPACE).name("After").build()))
                 .isInstanceOf(EntityNotFoundException.class);
     }
 
@@ -304,9 +308,9 @@ class WorkspaceServiceImplTest {
 
     @Test
     void delete_defaultWorkspace_isRefused() {
-        when(repository.findById(new UniqueId(77L))).thenReturn(Optional.of(defaultEntity()));
+        when(repository.findById(DEFAULT_WORKSPACE)).thenReturn(Optional.of(defaultEntity()));
 
-        assertThatThrownBy(() -> service.delete(new UniqueId(77L)))
+        assertThatThrownBy(() -> service.delete(DEFAULT_WORKSPACE))
                 .isInstanceOf(WorkspaceNotRemovableException.class)
                 .hasMessage(WorkspaceNotRemovableException.MESSAGE_KEY);
         verify(repository, never()).delete(any());
@@ -315,14 +319,14 @@ class WorkspaceServiceImplTest {
 
     @Test
     void delete_runsEveryContributorThenRemovesTheWorkspace() {
-        var target = named(78L, "Doomed");
-        when(repository.findById(new UniqueId(78L))).thenReturn(Optional.of(target));
+        var target = named(TARGET_WORKSPACE, "Doomed");
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.of(target));
         when(selectionRepository.findById(OWNER.getLongValue())).thenReturn(Optional.empty());
 
-        service.delete(new UniqueId(78L));
+        service.delete(TARGET_WORKSPACE);
 
         var order = org.mockito.Mockito.inOrder(contributor, repository);
-        order.verify(contributor).deleteAllInWorkspace(new UniqueId(78L));
+        order.verify(contributor).deleteAllInWorkspace(TARGET_WORKSPACE);
         order.verify(repository).delete(target);
     }
 
@@ -330,49 +334,49 @@ class WorkspaceServiceImplTest {
     void delete_repointsTheSelectionBeforeRemovingTheWorkspace() {
         // The database enforces this order: rg_workspace_selection has a foreign key to rg_workspace, so
         // deleting a selected workspace without repointing first fails outright.
-        var target = named(78L, "Doomed");
-        when(repository.findById(new UniqueId(78L))).thenReturn(Optional.of(target));
+        var target = named(TARGET_WORKSPACE, "Doomed");
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.of(target));
         when(selectionRepository.findById(OWNER.getLongValue()))
                 .thenReturn(Optional.of(WorkspaceSelectionEntity.builder()
                         .userUniqueId(OWNER.getLongValue())
-                        .workspaceUniqueId(new UniqueId(78L))
+                        .workspaceUniqueId(TARGET_WORKSPACE)
                         .build()));
         when(repository.findByDefaultForOwner(OWNER)).thenReturn(Optional.of(defaultEntity()));
 
-        service.delete(new UniqueId(78L));
+        service.delete(TARGET_WORKSPACE);
 
         var order = org.mockito.Mockito.inOrder(selectionRepository, repository);
         order.verify(selectionRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(row ->
-                new UniqueId(77L).equals(row.getWorkspaceUniqueId())));
+                DEFAULT_WORKSPACE.equals(row.getWorkspaceUniqueId())));
         order.verify(repository).delete(target);
     }
 
     @Test
     void delete_selectionPointingElsewhere_isLeftAlone() {
-        var target = named(78L, "Doomed");
-        when(repository.findById(new UniqueId(78L))).thenReturn(Optional.of(target));
+        var target = named(TARGET_WORKSPACE, "Doomed");
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.of(target));
         when(selectionRepository.findById(OWNER.getLongValue()))
                 .thenReturn(Optional.of(WorkspaceSelectionEntity.builder()
                         .userUniqueId(OWNER.getLongValue())
-                        .workspaceUniqueId(new UniqueId(99L))
+                        .workspaceUniqueId(OTHER_WORKSPACE)
                         .build()));
 
-        service.delete(new UniqueId(78L));
+        service.delete(TARGET_WORKSPACE);
 
         verify(selectionRepository, never()).saveAndFlush(any());
     }
 
     @Test
     void delete_unknownWorkspace_isRejected() {
-        when(repository.findById(new UniqueId(78L))).thenReturn(Optional.empty());
+        when(repository.findById(TARGET_WORKSPACE)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.delete(new UniqueId(78L)))
+        assertThatThrownBy(() -> service.delete(TARGET_WORKSPACE))
                 .isInstanceOf(EntityNotFoundException.class);
     }
 
-    private static WorkspaceEntity named(long id, String name) {
+    private static WorkspaceEntity named(UniqueId id, String name) {
         return WorkspaceEntity.builder()
-                .uniqueId(id)
+                .uniqueId(id.getLongValue())
                 .ownerUniqueId(OWNER)
                 .name(name)
                 .build();
@@ -380,7 +384,7 @@ class WorkspaceServiceImplTest {
 
     private static WorkspaceEntity defaultEntity() {
         return WorkspaceEntity.builder()
-                .uniqueId(77L)
+                .uniqueId(DEFAULT_WORKSPACE.getLongValue())
                 .ownerUniqueId(OWNER)
                 .defaultForOwner(OWNER)
                 .build();

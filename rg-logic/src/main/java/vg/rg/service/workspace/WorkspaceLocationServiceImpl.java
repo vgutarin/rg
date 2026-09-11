@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Service
 class WorkspaceLocationServiceImpl implements WorkspaceLocationService {
+
+    private static final Sort LOCATION_NAME_ORDER = Sort.by(
+            Sort.Order.asc("name").ignoreCase(), Sort.Order.asc("uniqueId"));
 
     private final UniqueIdService uniqueIdService;
     private final WorkspaceLocationRepository repository;
@@ -91,6 +95,14 @@ class WorkspaceLocationServiceImpl implements WorkspaceLocationService {
     }
 
     @Override
+    @PreAuthorize("@authorityChecker.hasAuthority(#locationId, '"
+            + LocalPermissions.Location.READ + "')")
+    public LocationModel read(UniqueId locationId) {
+        Objects.requireNonNull(locationId, "locationId");
+        return mapper.toModel(repository.findById(locationId).orElseThrow(EntityNotFoundException::new));
+    }
+
+    @Override
     @PreAuthorize("@authorityChecker.hasAuthority(#workspaceId, '"
             + LocalPermissions.Location.LIST + "')")
     public Page<LocationModel> browse(UniqueId workspaceId, Pageable pageable) {
@@ -108,7 +120,7 @@ class WorkspaceLocationServiceImpl implements WorkspaceLocationService {
         var effectiveLimit = limit > 0 ? Math.min(limit, cap) : cap;
         return repository
                 .findByWorkspaceUniqueIdAndNameContainingIgnoreCase(
-                        workspaceId, normalized, PageRequest.of(0, effectiveLimit))
+                        workspaceId, normalized, PageRequest.of(0, effectiveLimit, LOCATION_NAME_ORDER))
                 .stream()
                 .map(mapper::toModel)
                 .toList();

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The dispatch rules of {@link WorkspaceScopeResolverImpl}, and the property the whole design turns on:
@@ -25,9 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class WorkspaceScopeResolverTest {
 
-    private static final UniqueId WORKSPACE = new UniqueId(900L);
-    private static final UniqueId OWNER = new UniqueId(7001L);
-    private static final UniqueId STRANGER = new UniqueId(8002L);
+    private static final UniqueId WORKSPACE = nextUniqueId();
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
 
     // ------------------------------------------------------------- depth-independence at constant cost
 
@@ -149,7 +150,7 @@ class WorkspaceScopeResolverTest {
         var resolver = new WorkspaceScopeResolverImpl(List.of(provider));
 
         assertThat(resolver.resolve(WORKSPACE, Permissions.Workspace.OWNER)).isEmpty();
-        assertThat(resolver.resolve(WORKSPACE, Permissions.Reports.READ)).isEmpty();
+        assertThat(resolver.resolve(WORKSPACE, "unknown:view")).isEmpty();
         assertThat(resolver.resolve(WORKSPACE, "locationn:update")).isEmpty();
         assertThat(resolver.resolve(WORKSPACE, null)).isEmpty();
         assertThat(provider.lookupCount()).isZero();

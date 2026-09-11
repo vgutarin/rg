@@ -29,6 +29,8 @@ public interface WorkspaceLocationService {
 
     void delete(UniqueId locationId);
 
+    LocationModel read(UniqueId locationId);
+
     Page<LocationModel> browse(UniqueId workspaceId, Pageable pageable);
 
     List<LocationModel> searchByName(UniqueId workspaceId, String query, int limit);

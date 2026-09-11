@@ -6,24 +6,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.entity.workspace.WorkspaceSelectionEntity;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
 import vg.rg.repository.workspace.WorkspaceSelectionRepository;
 import vg.unique.id.model.UniqueId;
 
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The active-workspace selection against MySQL: that it survives the end of a session, that it is per
@@ -35,9 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class WorkspaceSelectionFuncTest extends BaseFuncTest {
 
-
-    private static final UniqueId USER = new UniqueId(3301L);
-    private static final UniqueId OTHER_USER = new UniqueId(3302L);
+    private static final UniqueId USER = nextUniqueId();
+    private static final UniqueId OTHER_USER = nextUniqueId();
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -60,7 +54,6 @@ class WorkspaceSelectionFuncTest extends BaseFuncTest {
         selectionRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -162,11 +155,4 @@ class WorkspaceSelectionFuncTest extends BaseFuncTest {
                 .isEqualTo(recovered.getUniqueId());
     }
 
-    private static void authenticate(UniqueId user) {
-        var principal = new AuthenticatedUserPrincipal(
-                user, "Test User", Set.of(Permissions.Workspace.OWNER), true,
-                AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

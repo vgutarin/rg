@@ -10,8 +10,15 @@ final class TemporalTimePicker {
     }
 
     static void configure(Element dateTimePicker, Duration step) {
-        var hasDropdown = step.compareTo(Duration.ofMinutes(15)) >= 0;
-        dateTimePicker.executeJs("window.rgConfigureTemporalTimePicker(this, $0, $1)",
-                step.toSeconds(), hasDropdown);
+        var dropdownAvailable = step.compareTo(Duration.ofMinutes(15)) >= 0;
+        dateTimePicker.executeJs("""
+                const dateTimePicker = this;
+                const configure = () => window.rgConfigureTemporalTimePicker(dateTimePicker, $0, $1);
+                if (typeof window.rgConfigureTemporalTimePicker === 'function') {
+                    configure();
+                } else {
+                    window.addEventListener('rg-temporal-time-picker-ready', configure, { once: true });
+                }
+                """, step.toSeconds(), dropdownAvailable);
     }
 }

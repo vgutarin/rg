@@ -1,6 +1,7 @@
 package vg.rg.frontend.vaadin.view;
 
 import com.vaadin.flow.spring.security.AuthenticationContext;
+import com.vaadin.flow.component.html.Span;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -42,7 +43,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class WorkspaceNavigationTest {
+class WorkspaceDrawerNavigationTest {
 
     private static final UniqueId WORKSPACE = new UniqueId(5001L);
 
@@ -52,10 +53,18 @@ class WorkspaceNavigationTest {
     @Mock WorkspaceSelectionService selectionService;
 
     @Test
-    void dateTimeExamplesNeedNoPermissionsOrWorkspace() {
-        var view = mainViewFor(Set.of(), false);
+    void experimentParticipantSeesDateTimeExamplesWithoutWorkspaceProvisioning() {
+        var view = mainViewFor(Set.of(Permissions.Experiment.PARTICIPANT), false);
         assertThat(view.navigationLabels()).contains("nav.dates");
-        assertThat(view.navigationPaths()).contains("date-time-examples");
+        assertThat(view.navigationPaths()).contains("/date-time-examples");
+        verify(selectionService, never()).activeWorkspace();
+    }
+
+    @Test
+    void withoutExperimentParticipant_dateTimeExamplesAreHiddenWithoutWorkspaceProvisioning() {
+        var view = mainViewFor(Set.of(), false);
+
+        assertThat(view.navigationLabels()).doesNotContain("nav.dates");
         verify(selectionService, never()).activeWorkspace();
     }
 
@@ -77,7 +86,7 @@ class WorkspaceNavigationTest {
 
     @Test
     void withoutTheWorkspacePermission_thereIsNoLocationsEntryAndNothingIsProvisioned() {
-        var view = mainViewFor(Set.of(Permissions.Request.SUBMIT), true);
+        var view = mainViewFor(Set.of("unknown:view"), true);
 
         assertThat(view.navigationLabels()).doesNotContain("nav.locations");
         // Resolving the active workspace is what creates a default, so a user with no workspace
@@ -100,8 +109,37 @@ class WorkspaceNavigationTest {
         var view = mainViewFor(Set.of(Permissions.Workspace.OWNER), true, true);
 
         assertThat(view.navigationLabels()).contains("nav.participants");
-        // SideNavItem normalizes away the leading slash, so the stored path has none.
-        assertThat(view.navigationPaths()).contains("workspaces/participants");
+        assertThat(view.navigationPaths()).contains("/workspaces/participants");
+    }
+
+    @Test
+    void permittedInTheActiveWorkspace_seesTheTopLevelEventsEntry() {
+        when(localization.getProvidedLocales())
+                .thenReturn(List.of(LocalizationService.DEFAULT_LOCALE, Locale.ENGLISH));
+        when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
+        when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+        var principal = new AuthenticatedUserPrincipal(new UniqueId(1234L), "Test User",
+                Set.of(Permissions.Workspace.OWNER), true, AuthenticationFlow.TELEGRAM);
+        when(authenticationContext.getAuthenticatedUser(AuthenticatedUserPrincipal.class)).thenReturn(Optional.of(principal));
+        when(selectionService.activeWorkspace())
+                .thenReturn(WorkspaceModel.builder().uniqueId(WORKSPACE).defaultWorkspace(true).build());
+        when(authorityChecker.hasAuthority(WORKSPACE, LocalPermissions.WorkspaceEvent.LIST)).thenReturn(true);
+
+        var view = new MainView(localization, authenticationContext, authorityChecker, selectionService);
+
+        assertThat(view.navigationLabels()).contains("nav.events");
+        assertThat(view.navigationPaths()).contains("/workspaces/events");
+    }
+
+    @Test
+    void drawerRendersEveryDestinationAsACompleteNavigationTile() {
+        var view = mainViewFor(Set.of(Permissions.Experiment.PARTICIPANT), false);
+
+        assertThat(view.navigationTiles()).allSatisfy(tile -> {
+            assertThat(tile.getClassNames()).contains("navigation-tile", "aura-surface");
+            assertThat(tile.getElement().getAttribute("aria-label")).isNotBlank();
+            assertThat(tile.getChildren().filter(Span.class::isInstance)).hasSize(1);
+        });
     }
 
     /**
@@ -124,7 +162,7 @@ class WorkspaceNavigationTest {
 
     @Test
     void withoutTheWorkspacePermission_thereIsNoParticipantsEntryEither() {
-        var view = mainViewFor(Set.of(Permissions.Request.SUBMIT), true, true);
+        var view = mainViewFor(Set.of("unknown:view"), true, true);
 
         assertThat(view.navigationLabels()).doesNotContain("nav.participants");
         verify(selectionService, never()).activeWorkspace();

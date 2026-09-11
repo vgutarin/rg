@@ -6,22 +6,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
-import vg.rg.model.security.Permissions;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
 import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * Verifies that changelog {@code 002-workspace-init.yaml} applies and that the constraints the design
@@ -29,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class WorkspaceSchemaFuncTest extends BaseFuncTest {
 
-    private static final UniqueId OWNER = new UniqueId(6001L);
+    private static final UniqueId OWNER = nextUniqueId();
 
     @Autowired
     private WorkspaceRepository workspaceRepository;
@@ -44,20 +39,14 @@ class WorkspaceSchemaFuncTest extends BaseFuncTest {
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void authenticate() {
-        var principal = new AuthenticatedUserPrincipal(
-                OWNER, "Test Owner",
-                Set.of(Permissions.Workspace.OWNER),
-                true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
+    void setUp() {
+        authenticate(OWNER);
     }
 
     @AfterEach
     void cleanUp() {
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -85,7 +74,7 @@ class WorkspaceSchemaFuncTest extends BaseFuncTest {
 
     @Test
     void differentOwners_mayEachHaveADefault() {
-        var otherOwner = new UniqueId(6002L);
+        var otherOwner = nextUniqueId();
         workspaceRepository.saveWithNewUniqueId(defaultWorkspace(OWNER), uniqueIdService);
         workspaceRepository.saveWithNewUniqueId(defaultWorkspace(otherOwner), uniqueIdService);
         workspaceRepository.flush();

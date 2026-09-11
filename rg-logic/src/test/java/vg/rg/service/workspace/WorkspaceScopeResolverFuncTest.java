@@ -4,13 +4,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.entity.workspace.WorkspaceEntity;
 import vg.rg.entity.workspace.WorkspaceLocationEntity;
-import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
@@ -19,10 +15,9 @@ import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * DB-backed coverage of {@link WorkspaceScopeResolver} against MySQL: the real production join from a
@@ -34,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class WorkspaceScopeResolverFuncTest extends BaseFuncTest {
 
-    private static final UniqueId OWNER = new UniqueId(7001L);
+    private static final UniqueId OWNER = nextUniqueId();
 
     @Autowired
     private WorkspaceScopeResolver resolver;
@@ -53,12 +48,7 @@ class WorkspaceScopeResolverFuncTest extends BaseFuncTest {
     @BeforeEach
     void setUp() {
         // Authenticate so JPA auditing has an auditor for the @CreatedBy columns.
-        var principal = new AuthenticatedUserPrincipal(
-                OWNER, "Test Owner",
-                Set.of(Permissions.Workspace.OWNER),
-                true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
+        authenticate(OWNER);
 
         var workspace = workspaceRepository.saveWithNewUniqueId(
                 WorkspaceEntity.builder().ownerUniqueId(OWNER).build(), uniqueIdService);
@@ -69,7 +59,6 @@ class WorkspaceScopeResolverFuncTest extends BaseFuncTest {
     void cleanUp() {
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     // ---------------------------------------------------------------- the production resolution paths
@@ -107,7 +96,7 @@ class WorkspaceScopeResolverFuncTest extends BaseFuncTest {
 
     @Test
     void locationOfAnotherOwnersWorkspace_resolvesToThatOtherOwner() {
-        var stranger = new UniqueId(7002L);
+        var stranger = nextUniqueId();
         var otherWorkspace = workspaceRepository.saveWithNewUniqueId(
                 WorkspaceEntity.builder().ownerUniqueId(stranger).build(), uniqueIdService);
         var foreignLocationId = saveLocationIn(new UniqueId(otherWorkspace.getUniqueId()));
@@ -152,7 +141,7 @@ class WorkspaceScopeResolverFuncTest extends BaseFuncTest {
     @Test
     void appWidePermission_isDenied() {
         assertThat(resolver.resolve(workspaceId, Permissions.Workspace.OWNER)).isEmpty();
-        assertThat(resolver.resolve(workspaceId, Permissions.Reports.READ)).isEmpty();
+        assertThat(resolver.resolve(workspaceId, "unknown:view")).isEmpty();
     }
 
     @Test

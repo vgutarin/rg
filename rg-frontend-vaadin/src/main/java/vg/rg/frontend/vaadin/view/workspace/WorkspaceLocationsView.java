@@ -26,6 +26,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.PermitAll;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.dialog.Prompt;
 import vg.rg.frontend.vaadin.component.disclosure.DisclosureList;
@@ -52,14 +53,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Locations inside the active workspace, split into two tabs (mobile-first):
+ * Locations inside the active workspace. Users who may add locations receive two tabs (mobile-first):
  * <ul>
  *   <li><b>View</b> — name search over the workspace's locations; initial state lists the first
- *       {@value #VIEW_PAGE_SIZE}. Selecting an entry opens its detail (edit / delete).</li>
- *   <li><b>Add</b> — the "Add location" button (Google Maps picker). After coordinates are picked, an
- *       inline add form appears (name pre-filled from the picked place) with the list of already
- *       registered locations within the proximity radius (±500 m) below it. Saving hides the form and
- *       the new location appears on top of the nearby list; cancelling just hides the form.</li>
+ *       {@value #VIEW_PAGE_SIZE} alphabetically. Selecting an entry opens its detail (edit / delete).</li>
+ *   <li><b>Add</b> — selecting its caption opens the Google Maps picker. After coordinates are picked,
+ *       an inline add form appears (name pre-filled from the picked place) with the list of already
+ *       registered locations within the proximity radius (±500 m) below it. Saving switches to View,
+ *       filters by the saved name, and scrolls to the new row; cancelling just hides the form.</li>
  * </ul>
  *
  * <p>Behaviourally identical to the global locations screen — same tabs, same cards, same inline
@@ -89,7 +90,11 @@ public class WorkspaceLocationsView extends VerticalLayout
     private final transient MapsClientProperties mapsClientProperties;
 
     /** Initial number of locations listed on the View tab before any name filter. */
-    private static final int VIEW_PAGE_SIZE = 10;
+    private static final int VIEW_PAGE_SIZE = 20;
+
+    /** Stable, user-facing order for both the unfiltered list and name-search results. */
+    private static final Sort LOCATION_NAME_ORDER = Sort.by(
+            Sort.Order.asc("name").ignoreCase(), Sort.Order.asc("uniqueId"));
 
     private final Div content = new Div();
     private final DisclosureList viewList = new DisclosureList();
@@ -97,6 +102,12 @@ public class WorkspaceLocationsView extends VerticalLayout
     private final DisclosureList suggestionList = new DisclosureList();
     private final Div addForm = new Div();
     private final TextField viewSearch = new TextField();
+
+    /** Present only when the active user may create locations. */
+    private TabSheet tabs;
+
+    /** Prevents setting the saved-name filter from rendering once before its row can be targeted. */
+    private boolean suppressViewSearchListener;
 
     /** Preserved across re-renders (e.g. language switch) so the selected tab stays selected. */
     private int selectedTabIndex;
@@ -126,7 +137,11 @@ public class WorkspaceLocationsView extends VerticalLayout
         viewSearch.setClearButtonVisible(true);
         viewSearch.setWidthFull();
         viewSearch.setValueChangeMode(ValueChangeMode.LAZY);
-        viewSearch.addValueChangeListener(event -> renderViewList(event.getValue()));
+        viewSearch.addValueChangeListener(event -> {
+            if (!suppressViewSearchListener) {
+                renderViewList(event.getValue());
+            }
+        });
 
         // The accordion shape and its styles come from DisclosureList, shared with the participants
         // screen so the two cannot drift apart.
@@ -167,14 +182,24 @@ public class WorkspaceLocationsView extends VerticalLayout
 
         content.add(new H1(localization.i18n("locations.title")));
 
-        var tabs = new TabSheet();
-        tabs.setWidthFull();
-        tabs.add(localization.i18n("locations.tab.view"), viewTab());
-        tabs.add(localization.i18n("locations.tab.add"), addTab());
-        tabs.setSelectedIndex(Math.min(selectedTabIndex, 1));
-        // Remember the selection so a language switch (which re-renders) keeps the same tab.
-        tabs.addSelectedChangeListener(event -> selectedTabIndex = tabs.getSelectedIndex());
-        content.add(tabs);
+        if (canCreate()) {
+            tabs = new TabSheet();
+            tabs.setWidthFull();
+            tabs.add(localization.i18n("locations.tab.view"), viewTab());
+            var add = tabs.add(localization.i18n("locations.tab.add"), addTab());
+            // A DOM listener fires on every caption click, including a re-click of the selected Add tab.
+            // A selection listener would miss that repeat click and would also run on server-side restores.
+            add.getElement().addEventListener("click", event -> startCoordinateAcquisition());
+            tabs.setSelectedIndex(Math.min(selectedTabIndex, 1));
+            // Remember the selection so a language switch (which re-renders) keeps the same tab.
+            tabs.addSelectedChangeListener(event -> selectedTabIndex = tabs.getSelectedIndex());
+            content.add(tabs);
+        } else {
+            // There is no unavailable Add flow to explain: Browse is the whole screen in this state.
+            tabs = null;
+            selectedTabIndex = 0;
+            content.add(viewTab());
+        }
 
         renderViewList(viewSearch.getValue());
     }
@@ -192,36 +217,40 @@ public class WorkspaceLocationsView extends VerticalLayout
     }
 
     private void renderViewList(String query) {
+        renderViewList(query, null);
+    }
+
+    /** Renders the requested results and optionally reveals the just-created location. */
+    private void renderViewList(String query, UniqueId scrollTarget) {
         viewList.reset();
         var trimmed = query == null ? "" : query.trim();
         List<LocationModel> results = trimmed.isBlank()
-                ? locationService.browse(workspaceId, PageRequest.of(0, VIEW_PAGE_SIZE)).getContent()
+                ? locationService.browse(workspaceId,
+                        PageRequest.of(0, VIEW_PAGE_SIZE, LOCATION_NAME_ORDER)).getContent()
                 : locationService.searchByName(workspaceId, trimmed, 0);
         if (results.isEmpty()) {
             viewList.add(new Paragraph(localization.i18n(
                     trimmed.isBlank() ? "locations.empty" : "locations.search.no-results")));
             return;
         }
-        results.forEach(model -> addItem(viewList, model, null));
+        results.forEach(model -> {
+            var detail = addItem(viewList, model, null);
+            if (scrollTarget != null && scrollTarget.equals(model.getUniqueId())) {
+                detail.getElement().executeJs(
+                        "this.closest('.disclosure-item').scrollIntoView({behavior:'smooth',block:'center'})");
+            }
+        });
     }
 
     // --- Add tab ------------------------------------------------------------------------------------
 
-    /** "Add location" (Google Maps picker), the inline add form, and the advisory nearby list below. */
+    /** Inline add form and advisory nearby list below the Add tab's Maps-picker trigger. */
     private Component addTab() {
         var layout = new VerticalLayout();
         layout.setPadding(false);
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        if (canCreate()) {
-            var addLocation = new Button(localization.i18n("locations.add"),
-                    event -> startCoordinateAcquisition());
-            addLocation.setWidthFull();
-            layout.add(addLocation, new Paragraph(localization.i18n("locations.add.hint")));
-        } else {
-            layout.add(new Paragraph(localization.i18n("locations.add.no-permission")));
-        }
         layout.add(addForm, suggestions);
         return layout;
     }
@@ -339,10 +368,9 @@ public class WorkspaceLocationsView extends VerticalLayout
                 .build();
         try {
             // The workspace comes from the operation, never from the model.
-            locationService.create(workspaceId, model);
+            var created = locationService.create(workspaceId, model);
             hideAddForm();
-            // Re-render the nearby list (the new location, at ~0 m, sorts to the top) and the View tab.
-            afterCreate();
+            afterCreate(created);
             Notification.show(localization.i18n("location.created"));
         } catch (RuntimeException exception) {
             Notification.show(localization.i18n(exception));
@@ -381,11 +409,13 @@ public class WorkspaceLocationsView extends VerticalLayout
      * Appends one location to the given accordion. The header shape, the chevron and the single-open
      * behaviour all come from {@link DisclosureList}; this method only decides what goes in the panel.
      */
-    private void addItem(DisclosureList list, LocationModel model, String meta) {
+    private Div addItem(DisclosureList list, LocationModel model, String meta) {
         // The location's identifier is the entry's key: it is what keeps an expanded row expanded across
         // the re-render that follows an edit, so the user sees their change in the panel they were
         // already reading rather than having to find and reopen the row.
-        fillDetailPanel(list.addItem(model.getUniqueId(), model.getName(), meta), model);
+        var detail = list.addItem(model.getUniqueId(), model.getName(), meta);
+        fillDetailPanel(detail, model);
+        return detail;
     }
 
     /**
@@ -486,16 +516,26 @@ public class WorkspaceLocationsView extends VerticalLayout
         renderViewList(viewSearch.getValue());
     }
 
-    private void afterCreate() {
-        // Refresh the nearby suggestions (when coordinates were acquired) and the View-tab list so the
-        // newly created location appears — at ~0 m it sorts to the top of the nearby list.
+    private void afterCreate(LocationModel created) {
+        // Refresh the nearby list (when coordinates were acquired). The View tab then filters by the
+        // saved name, which makes the newly created location immediately findable in its alphabetical list.
         if (acquiredLatitude != null && acquiredLongitude != null) {
             renderSuggestions(locationService.findNearby(workspaceId,
                     new ProximityQuery(acquiredLatitude, acquiredLongitude, null)));
         } else {
             suggestions.removeAll();
         }
-        renderViewList(viewSearch.getValue());
+        selectedTabIndex = 0;
+        if (tabs != null) {
+            tabs.setSelectedIndex(0);
+        }
+        suppressViewSearchListener = true;
+        try {
+            viewSearch.setValue(created.getName());
+        } finally {
+            suppressViewSearchListener = false;
+        }
+        renderViewList(created.getName(), created.getUniqueId());
     }
 
     private static String mapsUrl(LocationModel model) {

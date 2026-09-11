@@ -18,9 +18,7 @@ class SecureAuthorizationContractArchitectureTest {
 
     @Test
     void nonAdapterBusinessServices_dependOnFacadeContractNotAdapterImplementations() throws IOException {
-        var businessSource = textUnder(LOGIC_MAIN.resolve("vg/rg/service/workspace"))
-                + Files.readString(LOGIC_MAIN.resolve("vg/rg/service/ProtectedActionService.java"))
-                + Files.readString(LOGIC_MAIN.resolve("vg/rg/service/ProtectedActionServiceImpl.java"));
+        var businessSource = textUnder(LOGIC_MAIN.resolve("vg/rg/service/workspace"));
 
         assertThat(businessSource).doesNotContain(
                 "vg.rg.service.security.IdentitySecureAuthorizationFacade",

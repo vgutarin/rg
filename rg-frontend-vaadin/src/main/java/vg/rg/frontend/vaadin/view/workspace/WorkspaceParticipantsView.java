@@ -82,6 +82,12 @@ public class WorkspaceParticipantsView extends VerticalLayout
     /** Holds the count line and the Load-more button, below the list. */
     private final Div browseFooter = new Div();
 
+    /** Present only while the active user may create participants. */
+    private TabSheet tabs;
+
+    /** Avoids rendering once before a successful registration can target its new row. */
+    private boolean suppressBrowseSearchListener;
+
     /**
      * How many pages the browse tab has loaded. Pages accumulate rather than replace, so "Load more"
      * appends; anything that changes the result set — a filter edit, a write — resets this to one.
@@ -107,9 +113,11 @@ public class WorkspaceParticipantsView extends VerticalLayout
         browseSearch.setWidthFull();
         browseSearch.setValueChangeMode(ValueChangeMode.LAZY);
         browseSearch.addValueChangeListener(event -> {
-            // A new filter is a new result set, so accumulated pages no longer mean anything.
-            loadedPages = 1;
-            renderBrowseList(event.getValue());
+            if (!suppressBrowseSearchListener) {
+                // A new filter is a new result set, so accumulated pages no longer mean anything.
+                loadedPages = 1;
+                renderBrowseList(event.getValue());
+            }
         });
 
         addClassName("secure-view");
@@ -148,13 +156,19 @@ public class WorkspaceParticipantsView extends VerticalLayout
         content.addClassNames("semantic-card", "aura-surface");
         content.add(new H1(localization.i18n("page.workspace-participants.title")));
 
-        var tabs = new TabSheet();
-        tabs.setWidthFull();
-        tabs.add(localization.i18n("participants.tab.browse"), browseTab());
-        tabs.add(localization.i18n("participants.tab.add"), addTab());
-        tabs.setSelectedIndex(Math.min(selectedTabIndex, 1));
-        tabs.addSelectedChangeListener(event -> selectedTabIndex = tabs.getSelectedIndex());
-        content.add(tabs);
+        if (canCreate()) {
+            tabs = new TabSheet();
+            tabs.setWidthFull();
+            tabs.add(localization.i18n("participants.tab.browse"), browseTab());
+            tabs.add(localization.i18n("participants.tab.add"), addTab());
+            tabs.setSelectedIndex(Math.min(selectedTabIndex, 1));
+            tabs.addSelectedChangeListener(event -> selectedTabIndex = tabs.getSelectedIndex());
+            content.add(tabs);
+        } else {
+            tabs = null;
+            selectedTabIndex = 0;
+            content.add(browseTab());
+        }
 
         renderBrowseList(browseSearch.getValue());
     }
@@ -181,6 +195,11 @@ public class WorkspaceParticipantsView extends VerticalLayout
      * the last of them, and it keeps the rendered list a single consistent snapshot.
      */
     private void renderBrowseList(String query) {
+        renderBrowseList(query, null);
+    }
+
+    /** Renders the requested roster and optionally reveals the participant that was just registered. */
+    private void renderBrowseList(String query, UniqueId scrollTarget) {
         browseList.reset();
         browseFooter.removeAll();
         var trimmed = query == null ? "" : query.trim();
@@ -193,7 +212,13 @@ public class WorkspaceParticipantsView extends VerticalLayout
                     trimmed.isBlank() ? "participants.empty" : "participants.search.no-results")));
             return;
         }
-        shown.forEach(this::addItem);
+        shown.forEach(participant -> {
+            var body = addItem(participant);
+            if (scrollTarget != null && scrollTarget.equals(participant.getUniqueId())) {
+                body.getElement().executeJs(
+                        "this.closest('.disclosure-item').scrollIntoView({behavior:'smooth',block:'center'})");
+            }
+        });
         renderBrowseFooter(shown.size(), page.getTotalElements());
     }
 
@@ -227,11 +252,11 @@ public class WorkspaceParticipantsView extends VerticalLayout
      * across the re-render that follows an edit — so the user sees their change in the panel they were
      * already reading, including when the new label moves the row elsewhere in the alphabet.
      */
-    private void addItem(WorkspaceParticipantModel participant) {
-        fillDetailPanel(
-                browseList.addItem(participant.getUniqueId(), participant.getLabel(), null,
-                        phoneMarker(participant)),
-                participant);
+    private Div addItem(WorkspaceParticipantModel participant) {
+        var body = browseList.addItem(participant.getUniqueId(), participant.getLabel(), null,
+                phoneMarker(participant));
+        fillDetailPanel(body, participant);
+        return body;
     }
 
     /**
@@ -298,12 +323,6 @@ public class WorkspaceParticipantsView extends VerticalLayout
         layout.setSpacing(false);
         layout.setWidthFull();
 
-        if (!authorityChecker.hasAuthority(
-                workspaceId, LocalPermissions.WorkspaceParticipant.CREATE)) {
-            layout.add(new Paragraph(localization.i18n("participants.add.no-permission")));
-            return layout;
-        }
-
         var label = labelField();
         var phone = phoneField();
         var save = new Button(localization.i18n("participants.register"), event -> {
@@ -323,8 +342,9 @@ public class WorkspaceParticipantsView extends VerticalLayout
     }
 
     private boolean register(String label, String phone) {
+        WorkspaceParticipantModel created;
         try {
-            participantService.register(workspaceId, ParticipantDescriptor.of(label, phone));
+            created = participantService.register(workspaceId, ParticipantDescriptor.of(label, phone));
         } catch (ParticipantLimitReachedException limitReached) {
             Notification.show(localization.i18n(ParticipantLimitReachedException.MESSAGE_KEY));
             return false;
@@ -340,7 +360,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
             return false;
         }
         Notification.show(localization.i18n("participants.registered"));
-        afterChange();
+        afterCreate(created);
         return true;
     }
 
@@ -514,6 +534,30 @@ public class WorkspaceParticipantsView extends VerticalLayout
         }
     }
 
+    /** Returns from successful registration to the matching Browse result and reveals its row. */
+    private void afterCreate(WorkspaceParticipantModel created) {
+        loadedPages = 1;
+        selectedTabIndex = 0;
+        if (tabs != null) {
+            tabs.setSelectedIndex(0);
+        }
+        suppressBrowseSearchListener = true;
+        try {
+            browseSearch.setValue(created.getLabel());
+        } finally {
+            suppressBrowseSearchListener = false;
+        }
+        try {
+            renderBrowseList(created.getLabel(), created.getUniqueId());
+        } catch (RuntimeException refreshFailed) {
+            log.debug("Participant roster refresh failed after successful registration", refreshFailed);
+        }
+    }
+
+    private boolean canCreate() {
+        return authorityChecker.hasAuthority(workspaceId, LocalPermissions.WorkspaceParticipant.CREATE);
+    }
+
     /**
      * The labels as currently rendered, for tests. There is deliberately no phone number to expose.
      *
@@ -530,9 +574,5 @@ public class WorkspaceParticipantsView extends VerticalLayout
     private static java.util.stream.Stream<Component> descendantsOf(Component component) {
         return component.getChildren().flatMap(child ->
                 java.util.stream.Stream.concat(java.util.stream.Stream.of(child), descendantsOf(child)));
-    }
-
-    UniqueId activeWorkspaceId() {
-        return workspaceId;
     }
 }

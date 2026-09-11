@@ -12,8 +12,6 @@ import vg.identity.service.IdentityApplicationApi;
 import vg.rg.config.security.DevSecureServiceProperties;
 import vg.rg.config.security.IdentityAuthorizationLimitsProperties;
 import vg.rg.config.security.SecureAuthorizationLimitsProperties;
-import vg.rg.service.ProtectedActionService;
-import vg.rg.service.ProtectedActionServiceImpl;
 import vg.rg.service.workspace.WorkspaceScopeResolver;
 
 import java.time.Clock;
@@ -98,7 +96,6 @@ class SecureServiceComponentWiringTest {
         assertThat(context).hasSingleBean(SecureAuthorizationLimitsProperties.class);
         assertThat(context).hasSingleBean(TelegramAuthorizationRequestValidator.class);
         assertThat(context).hasSingleBean(AuthorityChecker.class);
-        assertThat(context).hasSingleBean(ProtectedActionService.class);
     }
 
     @Configuration(proxyBeanMethods = false)
@@ -113,8 +110,7 @@ class SecureServiceComponentWiringTest {
             IdentityAuthorizationResponseValidator.class,
             TelegramAuthorizationRequestValidator.class,
             AuthorizationApplicationService.class,
-            AuthorityChecker.class,
-            ProtectedActionServiceImpl.class
+            AuthorityChecker.class
     })
     static class SecureComponents {
     }

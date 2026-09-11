@@ -22,13 +22,14 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static vg.test.TestHelper.nextUniqueId;
 
 @ExtendWith(MockitoExtension.class)
 class AuthorityCheckerTest {
 
-    private static final UniqueId USER = new UniqueId(1001L);
-    private static final UniqueId OTHER_USER = new UniqueId(2002L);
-    private static final UniqueId RESOURCE = new UniqueId(3003L);
+    private static final UniqueId USER = nextUniqueId();
+    private static final UniqueId OTHER_USER = nextUniqueId();
+    private static final UniqueId RESOURCE = nextUniqueId();
 
     @Mock
     private WorkspaceScopeResolver workspaceScopeResolver;
@@ -51,16 +52,16 @@ class AuthorityCheckerTest {
 
     @Test
     void hasAuthority_grantedPermission_returnsTrue() {
-        authenticate(USER, Set.of(Permissions.Reports.READ, Permissions.Request.SUBMIT));
+        authenticate(USER, Set.of(Permissions.Workspace.OWNER));
 
-        assertThat(checker().hasAuthority(Permissions.Reports.READ)).isTrue();
+        assertThat(checker().hasAuthority(Permissions.Workspace.OWNER)).isTrue();
     }
 
     @Test
     void hasAuthority_missingPermission_returnsFalse() {
-        authenticate(USER, Set.of(Permissions.Request.SUBMIT));
+        authenticate(USER, Set.of("unknown:view"));
 
-        assertThat(checker().hasAuthority(Permissions.Reports.READ)).isFalse();
+        assertThat(checker().hasAuthority(Permissions.Workspace.OWNER)).isFalse();
     }
 
     @Test
@@ -71,8 +72,15 @@ class AuthorityCheckerTest {
     }
 
     @Test
+    void hasAuthority_experimentParticipant_returnsTrue() {
+        authenticate(USER, Set.of(Permissions.Experiment.PARTICIPANT));
+
+        assertThat(checker().hasAuthority(Permissions.Experiment.PARTICIPANT)).isTrue();
+    }
+
+    @Test
     void hasAuthority_missingAuthentication_returnsFalse() {
-        assertThat(checker().hasAuthority(Permissions.Reports.READ)).isFalse();
+        assertThat(checker().hasAuthority(Permissions.Workspace.OWNER)).isFalse();
     }
 
     @Test
@@ -117,7 +125,7 @@ class AuthorityCheckerTest {
         authenticate(USER, Set.of(Permissions.Workspace.OWNER));
 
         assertThat(checker().hasAuthority(RESOURCE, Permissions.Workspace.OWNER)).isFalse();
-        assertThat(checker().hasAuthority(RESOURCE, Permissions.Reports.READ)).isFalse();
+        assertThat(checker().hasAuthority(RESOURCE, Permissions.Experiment.PARTICIPANT)).isFalse();
     }
 
     @Test
@@ -193,7 +201,7 @@ class AuthorityCheckerTest {
     void hasAuthorityOnResource_permissionIsPassedToTheResolverAsTheTypeHint() {
         authenticate(USER, Set.of(Permissions.Workspace.OWNER));
         lenient().when(workspaceScopeResolver.resolve(RESOURCE, LocalPermissions.Location.UPDATE))
-                .thenReturn(Optional.of(new WorkspaceScope(new UniqueId(9L), USER)));
+                .thenReturn(Optional.of(new WorkspaceScope(nextUniqueId(), USER)));
         // A different permission is a different type, so it must not resolve through the same stub.
         lenient().when(workspaceScopeResolver.resolve(RESOURCE, LocalPermissions.Workspace.UPDATE))
                 .thenReturn(Optional.empty());
@@ -206,7 +214,7 @@ class AuthorityCheckerTest {
 
     @Test
     void currentUserUniqueId_authenticated_returnsAbstractIdentity() {
-        authenticate(USER, Set.of(Permissions.Reports.READ));
+        authenticate(USER, Set.of(Permissions.Workspace.OWNER));
 
         assertThat(checker().currentUserUniqueId()).contains(USER);
     }
@@ -218,14 +226,14 @@ class AuthorityCheckerTest {
 
     @Test
     void currentAuthenticationFlow_authenticated_returnsFlow() {
-        authenticate(USER, Set.of(Permissions.Reports.READ));
+        authenticate(USER, Set.of(Permissions.Workspace.OWNER));
 
         assertThat(checker().currentAuthenticationFlow()).contains(AuthenticationFlow.TELEGRAM);
     }
 
     private void resolvesTo(UniqueId owner) {
         lenient().when(workspaceScopeResolver.resolve(any(), any()))
-                .thenReturn(Optional.of(new WorkspaceScope(new UniqueId(9009L), owner)));
+                .thenReturn(Optional.of(new WorkspaceScope(nextUniqueId(), owner)));
     }
 
     private void authenticate(UniqueId user, Set<String> permissions) {

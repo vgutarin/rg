@@ -7,13 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.BaseFuncTest;
 import vg.rg.model.geo.LocationModel;
 import vg.rg.model.geo.ProximityQuery;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
-import vg.rg.model.security.AuthenticationFlow;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
@@ -23,12 +21,12 @@ import vg.rg.repository.workspace.WorkspaceSelectionRepository;
 import vg.unique.id.model.UniqueId;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static vg.test.TestHelper.nextUniqueId;
 
 /**
  * The two halves of the access rule, end to end against MySQL.
@@ -46,8 +44,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class WorkspaceOwnershipAuthorityFuncTest extends BaseFuncTest {
 
 
-    private static final UniqueId OWNER = new UniqueId(3401L);
-    private static final UniqueId STRANGER = new UniqueId(3402L);
+    private static final UniqueId OWNER = nextUniqueId();
+    private static final UniqueId STRANGER = nextUniqueId();
 
     @Autowired
     private WorkspaceService workspaceService;
@@ -84,7 +82,6 @@ class WorkspaceOwnershipAuthorityFuncTest extends BaseFuncTest {
         selectionRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
-        SecurityContextHolder.clearContext();
     }
 
     // ------------------------------------------------------- ownership is sufficient (SC-006)
@@ -211,10 +208,4 @@ class WorkspaceOwnershipAuthorityFuncTest extends BaseFuncTest {
         return ((AuthenticatedUserPrincipal) authentication.getPrincipal()).permissions();
     }
 
-    private static void authenticate(UniqueId user, Set<String> permissions) {
-        var principal = new AuthenticatedUserPrincipal(
-                user, "Test User", permissions, true, AuthenticationFlow.TELEGRAM);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
-    }
 }

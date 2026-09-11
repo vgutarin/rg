@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-globalThis.window = {};
+globalThis.window = new EventTarget();
 globalThis.requestAnimationFrame = (callback) => callback();
+
+let readyEvents = 0;
+window.addEventListener('rg-temporal-time-picker-ready', () => { readyEvents++; });
 
 const { configureKeyboardBehavior, groupByHour, scrollToSelectedHour, selectTimeOption } =
   await import('../../../../main/frontend/ts/datetime/temporal-time-picker.ts');
+
+test('registers the global configurator and announces readiness', () => {
+  assert.equal(typeof window.rgConfigureTemporalTimePicker, 'function');
+  assert.equal(readyEvents, 1);
+});
 
 test('groups localized 15-minute choices into one row per hour', () => {
   const options = [

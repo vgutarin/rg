@@ -135,7 +135,8 @@ class TemporalEditorTest {
     }
 
     @Test void examplesExposeAllFourTypesAndFormattingControls() {
-        var view = new vg.rg.frontend.vaadin.view.examples.datetime.DateTimeExamplesView(localization);
+        var view = new vg.rg.frontend.vaadin.view.examples.datetime.DateTimeExamplesView(
+                localization, org.mockito.Mockito.mock(vg.rg.service.security.AuthorityChecker.class));
         ui.add(view);
         var editors = find(view, TemporalEditor.class).toList();
         assertThat(editors).hasSize(6);
@@ -160,15 +161,15 @@ class TemporalEditorTest {
         editor.setDisplayOptions(DateDisplayOptions.builder().showShortDayName(true)
                 .step(Duration.ofSeconds(1)).build());
         assertThat(fields).allSatisfy(field -> assertThat(field.getStep()).isEqualTo(Duration.ofSeconds(1)));
-        assertThat(fields.getFirst().getHelperText()).isEqualTo("Wed");
-        assertThat(fields.getLast().getHelperText()).isEqualTo("Thu");
+        assertThat(fields.getFirst().getLabel()).isEqualTo("Start (Wed)");
+        assertThat(fields.getLast().getLabel()).isEqualTo("End (Thu)");
         assertThat(fields.getFirst().getValue()).isEqualTo(draft);
         fields.getFirst().setValue(draft.plusDays(2));
-        assertThat(fields.getFirst().getHelperText()).isEqualTo("Fri");
+        assertThat(fields.getFirst().getLabel()).isEqualTo("Start (Fri)");
         dialog.localeChange(new LocaleChangeEvent(ui, LocalizationService.DEFAULT_LOCALE));
-        assertThat(fields.getFirst().getHelperText()).isEqualTo("пт");
+        assertThat(fields.getFirst().getLabel()).isEqualTo("Початок (пт)");
         editor.setDisplayOptions(DateDisplayOptions.builder().build());
-        assertThat(fields.getFirst().getHelperText()).isEmpty();
+        assertThat(fields.getFirst().getLabel()).isEqualTo("Початок");
         assertThat(editor.getValue()).isNull();
     }
 

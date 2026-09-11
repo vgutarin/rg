@@ -94,6 +94,24 @@ public final class LocalPermissions {
         private WorkspaceParticipant() { }
     }
 
+    /** Capabilities over an event contained in a workspace. */
+    public static final class WorkspaceEvent {
+        public static final String READ = "workspace-event:read";
+        public static final String LIST = "workspace-event:list";
+        public static final String CREATE = "workspace-event:create";
+        public static final String UPDATE = "workspace-event:update";
+        public static final String DELETE = "workspace-event:delete";
+
+        public static final Set<String> ALL = PermissionSyntax.validateAndFreeze(List.of(
+                READ, LIST, CREATE, UPDATE, DELETE));
+
+        public static boolean contains(String permission) {
+            return permission != null && ALL.contains(permission);
+        }
+
+        private WorkspaceEvent() { }
+    }
+
     /**
      * Capabilities over a workspace itself. Distinct from {@link Permissions.Workspace#OWNER}, which is
      * app-wide and gates the layer: these address one particular workspace, which is what lets a single
@@ -122,7 +140,7 @@ public final class LocalPermissions {
 
     /** Every declared local permission. */
     public static final Set<String> ALL =
-            concat(Location.ALL, concat(WorkspaceParticipant.ALL, Workspace.ALL));
+            concat(Location.ALL, concat(WorkspaceParticipant.ALL, concat(WorkspaceEvent.ALL, Workspace.ALL)));
 
     /**
      * Whether the permission is a declared local one. The resource-scoped authority check accepts only
@@ -145,7 +163,9 @@ public final class LocalPermissions {
         return Location.CREATE.equals(permission)
                 || Location.LIST.equals(permission)
                 || WorkspaceParticipant.CREATE.equals(permission)
-                || WorkspaceParticipant.LIST.equals(permission);
+                || WorkspaceParticipant.LIST.equals(permission)
+                || WorkspaceEvent.CREATE.equals(permission)
+                || WorkspaceEvent.LIST.equals(permission);
     }
 
     private static Set<String> concat(Set<String> first, Set<String> second) {
