@@ -12,7 +12,6 @@ import vg.rg.entity.workspace.WorkspaceEventEntity;
 import vg.rg.mapper.workspace.WorkspaceEventMapper;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.workspace.WorkspaceEventModel;
-import vg.rg.model.workspace.WorkspaceEventType;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.unique.id.model.UniqueId;

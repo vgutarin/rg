@@ -3,7 +3,6 @@ package vg.rg.frontend.vaadin.view.auth;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.ClientCallable;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.dependency.JavaScript;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
@@ -21,13 +20,10 @@ import vg.rg.model.security.TelegramInitDataRequest;
 import vg.rg.service.security.AuthorizationApplicationService;
 
 @Slf4j
-@JavaScript(TelegramAuthView.TELEGRAM_JS)
 @PageTitle("page.login.title")
 @Route("login")
 @AnonymousAllowed
 public class TelegramAuthView extends VerticalLayout implements LocaleChangeObserver {
-
-    public static final String TELEGRAM_JS = "https://telegram.org/js/telegram-web-app.js?63";
 
     private final AuthorizationApplicationService authorizationService;
     private final ApplicationSecurityContextService securityContextService;

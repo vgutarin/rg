@@ -5,6 +5,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -37,6 +38,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
+@JsModule("./ts/telegram-navigation.ts")
 @PermitAll
 public class MainView extends AppLayout implements AfterNavigationObserver, LocaleChangeObserver {
 
@@ -107,6 +109,9 @@ public class MainView extends AppLayout implements AfterNavigationObserver, Loca
     public void afterNavigation(AfterNavigationEvent event) {
         currentTitleKey = titleKeyOf(event);
         updateCurrentTitle();
+        if (telegramFlow) {
+            getElement().executeJs("window.rgStartTelegramNavigation($0)", event.getLocation().getPath());
+        }
         getElement().executeJs("if (this.hasAttribute('overlay')) this.drawerOpened = false");
     }
 

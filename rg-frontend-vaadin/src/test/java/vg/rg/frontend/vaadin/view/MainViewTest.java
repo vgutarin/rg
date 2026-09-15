@@ -1,6 +1,7 @@
 package vg.rg.frontend.vaadin.view;
 
 import com.vaadin.flow.spring.security.AuthenticationContext;
+import com.vaadin.flow.component.dependency.JsModule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -30,6 +31,13 @@ class MainViewTest {
     @Mock AuthenticationContext authenticationContext;
     @Mock AuthorityChecker authorityChecker;
     @Mock WorkspaceSelectionService selectionService;
+
+    @Test
+    void javaScript_defaultShell_loadsNativeNavigationBridge() {
+        assertThat(MainView.class.getAnnotationsByType(JsModule.class))
+                .extracting(JsModule::value)
+                .contains("./ts/telegram-navigation.ts");
+    }
 
     /**
      * The header shows the <strong>leaf</strong> view's title, not the enclosing layout's.
@@ -95,6 +103,8 @@ class MainViewTest {
         var event = org.mockito.Mockito.mock(com.vaadin.flow.router.AfterNavigationEvent.class);
         org.mockito.Mockito.when(event.getActiveChain())
                 .thenReturn(List.of((com.vaadin.flow.component.HasElement[]) chain));
+        org.mockito.Mockito.when(event.getLocation())
+                .thenReturn(new com.vaadin.flow.router.Location(""));
         return event;
     }
 

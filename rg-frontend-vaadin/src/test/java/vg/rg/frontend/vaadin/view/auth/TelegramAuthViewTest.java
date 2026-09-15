@@ -3,7 +3,6 @@ package vg.rg.frontend.vaadin.view.auth;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.HasText;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.dependency.JavaScript;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,13 +30,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TelegramAuthViewTest {
-
-    @Test
-    void javaScript_defaultView_loadsOfficialTelegramSdk() {
-        assertThat(TelegramAuthView.class.getAnnotationsByType(JavaScript.class))
-                .extracting(JavaScript::value)
-                .containsExactly("https://telegram.org/js/telegram-web-app.js?63");
-    }
 
     @Mock AuthorizationApplicationService authorizationService;
     @Mock ApplicationSecurityContextService securityContextService;

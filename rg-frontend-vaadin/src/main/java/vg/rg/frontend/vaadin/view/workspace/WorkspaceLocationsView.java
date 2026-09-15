@@ -4,7 +4,6 @@ import com.vaadin.flow.component.ClientCallable;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dependency.JavaScript;
 import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -35,7 +34,6 @@ import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.service.MapsResolutionBridge;
 import vg.rg.frontend.vaadin.view.auth.AccessDeniedErrorView;
 import vg.rg.frontend.vaadin.view.auth.NoAccessView;
-import vg.rg.frontend.vaadin.view.auth.TelegramAuthView;
 import vg.rg.model.geo.LocationModel;
 import vg.rg.model.geo.ProximityMatch;
 import vg.rg.model.geo.ProximityQuery;
@@ -75,7 +73,6 @@ import java.util.List;
  */
 @PageTitle("page.workspace-locations.title")
 @Route(value = "workspaces/locations", layout = WorkspaceLayout.class)
-@JavaScript(TelegramAuthView.TELEGRAM_JS)
 @JsModule("./ts/maps/google-maps-connector.ts")
 @PermitAll
 public class WorkspaceLocationsView extends VerticalLayout
