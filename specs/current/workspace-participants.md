@@ -228,9 +228,15 @@ once that is closed, not before. That is not a resemblance maintained by discipl
 same `DisclosureList` component and therefore literally the same DOM and the same CSS, so neither screen
 can be restyled without the other following. See [Shared presentation](#shared-presentation).
 
-The revealed number appears in a **dialog**, not a notification: a notification auto-dismisses on a
-timer, cannot be closed deliberately, and is the component most likely to be reused somewhere that logs
-its text. Nothing on this path is logged, and the plaintext exists only for as long as the dialog does.
+The expanded panel places equally prominent primary **Show phone** and **Call** actions side by side.
+Call retrieves the number only from its click handler, then navigates the browser to its `tel:` URI; the
+roster still never receives any digits. The revealed number appears in a **dialog**, not a notification:
+a notification auto-dismisses on a timer, cannot be closed deliberately, and is the component most
+likely to be reused somewhere that logs its text. Nothing on this path is logged, and the plaintext
+exists only for as long as the dialog does. The dialog places an accessible Copy-number icon beside the
+number; it writes to the browser clipboard without echoing the plaintext into a notification. A successful
+copy briefly pulses the number in the accent color; it does not animate when the user prefers reduced
+motion.
 
 Mobile-first throughout: one column, a 44 px minimum row height, long labels wrapped rather than
 clipped, wider layouts reached only through `min-width` queries. All text internationalized, Ukrainian
@@ -259,7 +265,9 @@ they are conventions for panel *content* that callers apply, declared centrally 
 guess a spelling. A class used inside one view stays a literal there — the rule is not that every class
 becomes a constant, but that a name crossing a file boundary has exactly one definition.
 
-Only two rules remain screen-specific: `.location-detail__maps` and `.participant-revealed-phone`.
+Only five rules remain screen-specific: `.location-detail__maps`, `.participant-contact-actions`,
+`.participant-revealed-contact`, `.participant-revealed-phone`, and
+`.participant-revealed-phone--copied`.
 
 Sharing one component rather than one convention is what makes the two screens genuinely identical:
 duplicated DOM or duplicated CSS would let a fix to one silently miss the other.
@@ -337,7 +345,8 @@ workspace, and the roster is sorted and filtered in memory, because the database
   - Schema: `rg-logic/src/main/resources/db/liquibase/004-workspace-participant.yaml`.
 - **`rg-frontend-vaadin`**: `WorkspaceParticipantsView`, `DisclosureList` (shared with
   `WorkspaceLocationsView`), the participants navigation entry in `MainView`, and the `disclosure-*`
-  rules in `META-INF/resources/styles.css` plus the one `participant-revealed-phone` rule.
+  rules in `META-INF/resources/styles.css` plus the four participant-specific contact-action and
+  revealed-phone rules.
 
 `WorkspaceParticipantMapper` is **hand-written**, unlike the MapStruct mappers beside it. That mapping is
 where it is decided what leaves the business layer about a natural person, and it has to read as such:

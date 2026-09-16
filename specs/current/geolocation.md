@@ -68,8 +68,8 @@ Consequently:
   the coordinates line and the maps link. The action opens via `Telegram.WebApp.openLink` inside a Mini
   App (a plain `target=_blank` anchor does not open in the Telegram webview), falling back to
   `window.open` in a normal browser.
-- **Edit / remove**: update an existing location (optimistic concurrency) or delete it (with a
-  confirmation step).
+- **Edit / remove**: outlined actions update an existing location (optimistic concurrency) or delete it
+  (with a confirmation step).
 
 ## Data
 

@@ -35,8 +35,8 @@ location. Updates carry the read version and reject stale writes.
 
 `WorkspaceEventsView` is `/workspaces/events` within `WorkspaceLayout`. A user with
 `workspace-event:create` sees Browse and Add tabs; otherwise Browse is rendered directly without tab
-captions. It follows the shared mobile-first disclosure-list shape: title filter, expanded-row actions,
-edit dialog, and confirmed removal. After successful creation, Browse is selected, filtered by the saved
+captions. It follows the shared mobile-first disclosure-list shape: title filter, expanded-row outlined
+management actions, edit dialog, and confirmed removal. After successful creation, Browse is selected, filtered by the saved
 title, and smoothly scrolled to the new row. The add and edit forms use a responsive `FormLayout` with
 title, required start time, optional end time, a required workspace-scoped `LocationPicker`, required event type,
 required maximum participant count, and publication fields. The date-time fields are direct localized

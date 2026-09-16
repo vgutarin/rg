@@ -133,8 +133,10 @@ when it is not the default** — the default is the implicit place to be, so nam
 had not already assumed.
 
 Mobile-first throughout: one column, full-width actions, long names wrapped rather than clipped, and wider
-layouts reached only through `min-width` queries. All text is internationalized, Ukrainian default with
-English second; a system-named workspace's label follows the viewer's locale.
+layouts reached only through `min-width` queries. Management actions such as Rename and Remove have
+visible borders, including the destructive action's error color, so they remain recognizable as buttons.
+All text is internationalized, Ukrainian default with English second; a system-named workspace's label
+follows the viewer's locale.
 
 ## Data
 

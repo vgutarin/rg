@@ -279,7 +279,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
     }
 
     /**
-     * The expanded panel: a primary reveal action when there is a number to reveal, then edit and
+     * The expanded panel: reveal and call actions when there is a number to reveal, then edit and
      * remove. Management actions live in here rather than in the row, so they are shown on intent —
      * the arrangement the locations screen uses.
      */
@@ -289,9 +289,13 @@ public class WorkspaceParticipantsView extends VerticalLayout
                         LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT)) {
             var reveal = new Button(localization.i18n("participants.reveal"), VaadinIcon.EYE.create(),
                     event -> revealContact(participant));
-            reveal.addThemeVariants(ButtonVariant.PRIMARY);
-            reveal.setWidthFull();
-            body.add(reveal);
+            reveal.addThemeVariants(ButtonVariant.TERTIARY);
+            var call = new Button(localization.i18n("participants.call"), VaadinIcon.PHONE.create(),
+                    event -> callContact(participant));
+            call.addThemeVariants(ButtonVariant.TERTIARY);
+            var contactActions = new Div(reveal, call);
+            contactActions.addClassName("participant-contact-actions");
+            body.add(contactActions);
         }
 
         var actions = new Div();
@@ -382,7 +386,14 @@ public class WorkspaceParticipantsView extends VerticalLayout
             var revealed = participantService.revealContact(participant.getUniqueId());
             var number = new Span(revealed.phone());
             number.addClassName("participant-revealed-phone");
-            dialog.add(number);
+            var copy = new Button(VaadinIcon.COPY.create(),
+                    event -> copyToClipboard(number, revealed.phone()));
+            var copyLabel = localization.i18n("participants.copy");
+            copy.setAriaLabel(copyLabel);
+            copy.getElement().setAttribute("title", copyLabel);
+            var revealedContact = new Div(number, copy);
+            revealedContact.addClassName("participant-revealed-contact");
+            dialog.add(revealedContact);
         } catch (RuntimeException failure) {
             // Never the exception's own text: it may have come from a layer that saw the value.
             dialog.add(new Paragraph(localization.i18n(failure)));
@@ -390,6 +401,39 @@ public class WorkspaceParticipantsView extends VerticalLayout
         dialog.getFooter().add(close);
         dialog.open();
         return new Prompt(dialog, close, close);
+    }
+
+    private void callContact(WorkspaceParticipantModel participant) {
+        try {
+            var revealed = participantService.revealContact(participant.getUniqueId());
+            getElement().executeJs("window.location.href = 'tel:' + $0", revealed.phone());
+        } catch (RuntimeException failure) {
+            Notification.show(localization.i18n(failure));
+        }
+    }
+
+    private void copyToClipboard(Span number, String phone) {
+        number.getElement().executeJs("""
+                var phoneNumber = this;
+                var animate = function() {
+                    phoneNumber.classList.remove('participant-revealed-phone--copied');
+                    void phoneNumber.offsetWidth;
+                    phoneNumber.classList.add('participant-revealed-phone--copied');
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText($0).then(animate, function() {});
+                } else {
+                    var field = document.createElement('textarea');
+                    field.value = $0;
+                    document.body.appendChild(field);
+                    field.select();
+                    var copied = document.execCommand('copy');
+                    field.remove();
+                    if (copied) {
+                        animate();
+                    }
+                }
+                """, phone);
     }
 
     /**

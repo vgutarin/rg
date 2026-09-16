@@ -251,7 +251,6 @@ vaadin-select {
   transition: background-color 0.15s ease;
 }
 
-.disclosure-row:hover,
 .disclosure-row:focus-visible {
   background: var(--aura-accent-surface);
 }
@@ -327,6 +326,7 @@ vaadin-select {
 }
 
 .disclosure-row__actions > vaadin-button {
+  border: 1px solid currentColor;
   flex: 1;
 }
 
@@ -581,6 +581,7 @@ vaadin-select {
 }
 
 .workspace-row-actions > vaadin-button {
+  border: 1px solid currentColor;
   min-height: 44px;
   width: 100%;
 }
@@ -630,10 +631,28 @@ vaadin-select {
   text-align: center;
 }
 
+.participant-contact-actions {
+  display: grid;
+  gap: var(--vaadin-gap-s);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.participant-contact-actions > vaadin-button {
+  width: 100%;
+}
+
 /* The revealed phone number: the one place a number is on screen, so it is set apart deliberately
    rather than blending into the row it came from. Everything else about the participants screen comes
    from the shared .disclosure-* vocabulary above. */
+.participant-revealed-contact {
+  align-items: center;
+  display: flex;
+  gap: var(--vaadin-gap-s);
+}
+
 .participant-revealed-phone {
+  display: inline-block;
+  flex: 1;
   font-size: 1.15em;
   font-weight: 600;
   /* Digits are easier to read back aloud when they do not shift width. */
@@ -641,9 +660,24 @@ vaadin-select {
   overflow-wrap: anywhere;
 }
 
+.participant-revealed-phone--copied {
+  animation: participant-phone-copied 0.32s ease-out;
+}
+
+@keyframes participant-phone-copied {
+  50% {
+    color: var(--aura-accent-text-color);
+    transform: scale(1.04);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .authorization-status-card {
     transition: none;
+  }
+
+  .participant-revealed-phone--copied {
+    animation: none;
   }
 }
 

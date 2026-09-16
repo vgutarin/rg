@@ -290,6 +290,35 @@ class WorkspaceParticipantsViewTest {
     }
 
     @Test
+    void revealAndCall_shareTheContactActionsRow_andCallFetchesOnlyOnClick() {
+        var view = entered(withPhone("Ivan"));
+        when(participantService.revealContact(PARTICIPANT))
+                .thenReturn(ParticipantDescriptor.of("Ivan", PHONE));
+
+        var actions = descendants(onlyItem(view)).stream()
+                .filter(Div.class::isInstance).map(Div.class::cast)
+                .filter(div -> div.hasClassName("participant-contact-actions"))
+                .findFirst().orElseThrow();
+        var call = descendants(actions).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "participants.call".equals(button.getText()))
+                .findFirst().orElseThrow();
+        var reveal = descendants(actions).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "participants.reveal".equals(button.getText()))
+                .findFirst().orElseThrow();
+
+        assertThat(buttonTexts(actions)).containsExactly("participants.reveal", "participants.call");
+        assertThat(call.getElement().getAttribute("theme"))
+                .isEqualTo(reveal.getElement().getAttribute("theme"));
+        verify(participantService, never()).revealContact(any());
+
+        click(call);
+
+        verify(participantService).revealContact(PARTICIPANT);
+    }
+
+    @Test
     void reveal_makesItsOwnCallAndShowsThePlaintextInADialog() {
         var view = entered(withPhone("Ivan"));
         when(participantService.revealContact(PARTICIPANT))
@@ -299,6 +328,23 @@ class WorkspaceParticipantsViewTest {
 
         verify(participantService).revealContact(PARTICIPANT);
         assertThat(texts(prompt.dialog(), Span.class)).contains(PHONE);
+    }
+
+    @Test
+    void revealDialog_offersAnAccessibleCopyIcon() {
+        var view = entered(withPhone("Ivan"));
+        when(participantService.revealContact(PARTICIPANT))
+                .thenReturn(ParticipantDescriptor.of("Ivan", PHONE));
+
+        var prompt = view.revealContact(withPhone("Ivan"));
+        var copy = descendants(prompt.dialog()).stream()
+                .filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "participants.copy".equals(
+                        button.getElement().getAttribute("aria-label")))
+                .findFirst().orElseThrow();
+
+        assertThat(copy.getIcon()).isNotNull();
+        click(copy);
     }
 
     /** Rendering the roster must not fetch anybody's number; only the reveal action does. */
