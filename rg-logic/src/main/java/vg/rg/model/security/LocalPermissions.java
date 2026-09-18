@@ -101,15 +101,50 @@ public final class LocalPermissions {
         public static final String CREATE = "workspace-event:create";
         public static final String UPDATE = "workspace-event:update";
         public static final String DELETE = "workspace-event:delete";
+        /**
+         * Register or unregister the workspace's participants against one event, and read or reorder
+         * that event's roster. Addressed by the event's own identifier. Not CRUD on the event itself —
+         * managing who is registered is a distinct act from editing the event, so it names its own
+         * boundary, like {@link WorkspaceParticipant#REVEAL_CONTACT}. Formal today: owning the
+         * workspace already grants it.
+         */
+        public static final String MANAGE_PARTICIPANTS = "workspace-event:manage-participants";
 
         public static final Set<String> ALL = PermissionSyntax.validateAndFreeze(List.of(
-                READ, LIST, CREATE, UPDATE, DELETE));
+                READ, LIST, CREATE, UPDATE, DELETE, MANAGE_PARTICIPANTS));
 
         public static boolean contains(String permission) {
             return permission != null && ALL.contains(permission);
         }
 
         private WorkspaceEvent() { }
+    }
+
+    /**
+     * Capabilities over one participant's registration to an event, addressed by the registration's own
+     * identifier.
+     *
+     * <p>Distinct from {@link WorkspaceEvent#MANAGE_PARTICIPANTS} — which is addressed by the event —
+     * because unregistering and reordering act on a single registration whose identifier is all the call
+     * site has. A separate resource type is what lets the scope check resolve that identifier to its
+     * workspace through the registration rather than the event. Formal today, like every local
+     * permission: owning the workspace already grants it.
+     */
+    public static final class WorkspaceEventRegistration {
+        /** Remove one registration, addressed by its own identifier. */
+        public static final String DELETE = "workspace-event-registration:delete";
+        /** Move one registration within its event's ordered roster, addressed by its own identifier. */
+        public static final String REORDER = "workspace-event-registration:reorder";
+
+        public static final Set<String> ALL = PermissionSyntax.validateAndFreeze(List.of(
+                DELETE, REORDER));
+
+        /** Whether this permission addresses a registration. See {@link Location#contains(String)}. */
+        public static boolean contains(String permission) {
+            return permission != null && ALL.contains(permission);
+        }
+
+        private WorkspaceEventRegistration() { }
     }
 
     /**
@@ -139,8 +174,9 @@ public final class LocalPermissions {
     }
 
     /** Every declared local permission. */
-    public static final Set<String> ALL =
-            concat(Location.ALL, concat(WorkspaceParticipant.ALL, concat(WorkspaceEvent.ALL, Workspace.ALL)));
+    public static final Set<String> ALL = concat(Location.ALL,
+            concat(WorkspaceParticipant.ALL,
+                    concat(WorkspaceEvent.ALL, concat(WorkspaceEventRegistration.ALL, Workspace.ALL))));
 
     /**
      * Whether the permission is a declared local one. The resource-scoped authority check accepts only

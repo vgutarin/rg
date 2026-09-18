@@ -26,6 +26,7 @@ import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.PermitAll;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.dialog.Prompt;
 import vg.rg.frontend.vaadin.component.disclosure.DisclosureList;
@@ -324,8 +325,10 @@ public class WorkspaceLocationsView extends VerticalLayout
 
         var save = new Button(localization.i18n("location.save"),
                 event -> saveNewLocation(name, description));
+        save.addThemeName(RGButtonTheme.BORDERED);
         save.setWidthFull();
         var cancel = new Button(localization.i18n("location.cancel"), event -> hideAddForm());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
         cancel.setWidthFull();
         // Stacked full-width on mobile; side-by-side on wider screens (see .form-actions CSS).
         var actions = new Div(save, cancel);
@@ -459,6 +462,7 @@ public class WorkspaceLocationsView extends VerticalLayout
                                     + "else{window.open(url,'_blank');}",
                             mapsUrl(model)));
             openInMaps.addThemeVariants(ButtonVariant.PRIMARY);
+            openInMaps.addThemeName(RGButtonTheme.BORDERED);
             openInMaps.addClassName("location-detail__maps");
             inner.add(openInMaps);
         }
@@ -473,12 +477,14 @@ public class WorkspaceLocationsView extends VerticalLayout
                     event -> LocationFormDialog.forEdit(localization, locationService, model,
                             this::afterChange).open());
             edit.addThemeVariants(ButtonVariant.TERTIARY);
+            edit.addThemeName(RGButtonTheme.BORDERED);
             actions.add(edit);
         }
         if (authorityChecker.hasAuthority(model.getUniqueId(), LocalPermissions.Location.DELETE)) {
             var delete = new Button(localization.i18n("location.delete"), VaadinIcon.TRASH.create(),
                     event -> confirmDelete(model));
             delete.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR);
+            delete.addThemeName(RGButtonTheme.BORDERED);
             actions.add(delete);
         }
         if (actions.getElement().getChildCount() > 0) {

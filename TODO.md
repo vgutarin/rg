@@ -69,6 +69,11 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 
 ## TODO
 
+- events
+  - add visibility scope (public vs [groups | workspaces | users]) 
+  - add user registration (belong to workspace, is registered but not belong workspace, is not registered)
+  - add CRON schedule + duration instead of start/end date
+  - some history snapshots (to distinguish already completed events vs current. Actual for reocurrance)
 - remove(cleanup) dialogs for timepickers
 - consider to create component to show `Label: (Sat) [date] [time]` as 1 line
 - make sure timezone is applied correctly
@@ -80,8 +85,9 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 - add user groups - group is subset of contacts 
 - Go over paginable methods (list locations, list workspaces, filters) and make sure we  have ORDER BY
 - UI
+  - less verbosity "Edit location" >>> "Edit", "Delete location" >>> "Delete", etc
   - when Add location tab is opened - activate Map selector. Do not show tab if no permission to add
-  - when permission is unknow - UI is blocked with "Obsolete APP" message. Need solution
+  - when permission is malformed - UI is blocked with "Obsolete APP" message. Need solution
   - Some errors happed on saving location to db level - UI became frozen.
     - we need some generic for all app approach to show/handle errors on frontend
     - any action on connection losted - should clearly say so

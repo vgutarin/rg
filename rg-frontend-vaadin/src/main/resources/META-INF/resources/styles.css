@@ -44,6 +44,17 @@ vaadin-select {
   min-height: 44px;
 }
 
+/* Centralized button affordance, opt-in. A button reads as a pressable control by carrying the same 1px
+   outline in its own text colour -- but only when tagged `rg-bordered` (RGButtonTheme.BORDERED), so the
+   border is a deliberate mark on our text action buttons rather than a global mutation of every button on
+   the page. Only the COLOUR varies by intent (accent for ordinary actions, error red for a destructive
+   one), because that comes from the button's variant through currentColor; the border weight and shape
+   are identical everywhere. Icon-only buttons are simply left untagged, so a lone glyph never gets a box
+   around it that would read as a chip. */
+vaadin-button[theme~="rg-bordered"] {
+  border: 1px outset currentColor;
+}
+
 :is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button):not([theme~="primary"], [theme~="tertiary"]) {
   --aura-accent-color-dark: var(--aura-neutral);
   --aura-accent-color-light: var(--aura-neutral);
@@ -287,6 +298,24 @@ vaadin-select {
   margin-inline-start: 0;
 }
 
+/* A textual marker (the event's registered/max count) rather than a glyph: it still rides the marker
+   slot's leading auto margin to sit right-aligned on the title line, but overrides the fixed glyph box
+   so the digits are not clipped. Tabular figures keep the ratio from shifting width as counts change. */
+.event-registered-count {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  height: auto;
+  white-space: nowrap;
+  width: auto;
+}
+
+/* The participants action sits at the very top of an event's detail panel, pushed to the trailing edge. */
+.event-participants-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .disclosure-row__icon {
   color: var(--aura-accent-color);
   flex: none;
@@ -326,7 +355,6 @@ vaadin-select {
 }
 
 .disclosure-row__actions > vaadin-button {
-  border: 1px solid currentColor;
   flex: 1;
 }
 
@@ -581,7 +609,6 @@ vaadin-select {
 }
 
 .workspace-row-actions > vaadin-button {
-  border: 1px solid currentColor;
   min-height: 44px;
   width: 100%;
 }
@@ -720,4 +747,75 @@ vaadin-select {
 @media (min-width: 40rem) {
   .temporal-examples-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .temporal-actions { flex-direction: row; flex-wrap: wrap; }
+}
+
+/* Scroll cue (ScrollCue): a scroll viewport that fades in an up chevron while there is content above and a
+   down chevron while there is content below. The wrapper is the positioning context for the chevrons; the
+   inner element is the actual scroll viewport (its own scrollTop, so a caller can keep an item at a fixed
+   screen position by shifting scroll to match a one-row move). Named for the pattern, not any domain. */
+.scroll-cue { position: relative; }
+.scroll-cue__viewport {
+  display: flex;
+  flex-direction: column;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+/* Overlaid at the edges and non-interactive; the client toggles --at-top / --at-bottom to hide each. */
+.scroll-cue__cue {
+  align-items: center;
+  color: var(--vaadin-text-color-secondary);
+  display: flex;
+  justify-content: center;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  z-index: 1;
+}
+.scroll-cue__cue--up {
+  background: linear-gradient(to bottom, var(--aura-surface-color-solid, #fff), transparent);
+  top: 0;
+}
+.scroll-cue__cue--down {
+  background: linear-gradient(to top, var(--aura-surface-color-solid, #fff), transparent);
+  bottom: 0;
+}
+.scroll-cue--at-top .scroll-cue__cue--up,
+.scroll-cue--at-bottom .scroll-cue__cue--down { display: none; }
+
+/* Event participants dialog: a full-width two-tab sheet. Both tabs share the same shape — a ScrollCue
+   list of rows — so they look and behave alike. Each row keeps the name and its compact icon actions on a
+   single line: the name grows and wraps, the actions stay pinned to the trailing edge, so a move/register
+   control sits at a stable screen position across a narrow viewport. */
+.event-participants { min-width: 0; width: 100%; }
+.event-participants__add { display: flex; flex-direction: column; }
+
+.event-participants__row {
+  align-items: center;
+  border-block-start: 1px solid var(--vaadin-border-color, rgba(0, 0, 0, 0.1));
+  display: flex;
+  gap: var(--vaadin-gap-s);
+  justify-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  /* A little more breathing room between items than the default row padding. */
+  padding-block: var(--vaadin-gap-m);
+}
+.event-participants__name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.event-participants__row-actions { display: flex; flex: 0 0 auto; gap: var(--vaadin-gap-s); }
+.event-participants__row vaadin-button { flex: 0 0 auto; min-height: 44px; }
+/* Registering a person collapses and fades their row out of the add list, then it is removed. */
+.event-participants__row {
+  transition: opacity 0.25s ease, max-height 0.25s ease,
+    padding-block 0.25s ease, border-width 0.25s ease;
+  max-height: 6rem;
+}
+.event-participants__row--leaving {
+  border-width: 0;
+  max-height: 0;
+  opacity: 0;
+  padding-block: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-participants__row { transition: none; }
 }

@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.exception.workspace.WorkspaceLimitReachedException;
 import vg.rg.exception.workspace.WorkspaceNotRemovableException;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.dialog.Prompt;
 import vg.rg.frontend.vaadin.service.LocalizationService;
@@ -135,6 +136,7 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
         var rename = new Button(localization.i18n("workspaces.rename"), VaadinIcon.EDIT.create(),
                 event -> openRenameDialog(workspace));
         rename.addThemeVariants(ButtonVariant.TERTIARY);
+        rename.addThemeName(RGButtonTheme.BORDERED);
         actions.add(rename);
 
         // The default workspace cannot be removed -- it is what guarantees the user always has one --
@@ -143,6 +145,7 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
             var remove = new Button(localization.i18n("workspaces.remove"), VaadinIcon.TRASH.create(),
                     event -> confirmRemove(workspace));
             remove.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR);
+            remove.addThemeName(RGButtonTheme.BORDERED);
             actions.add(remove);
         }
         return actions;
@@ -176,7 +179,9 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
                 dialog.close();
             }
         });
+        save.addThemeName(RGButtonTheme.BORDERED);
         var cancel = new Button(localization.i18n("workspaces.cancel"), event -> dialog.close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
         dialog.getFooter().add(cancel, save);
         dialog.add(name, description);
         dialog.open();
@@ -271,6 +276,7 @@ public class WorkspacesView extends VerticalLayout implements BeforeEnterObserve
         var save = new Button(localization.i18n("workspaces.create"), event -> {
             save(name.getValue(), description.getValue());
         });
+        save.addThemeName(RGButtonTheme.BORDERED);
         save.setWidthFull();
 
         form.add(new H2(localization.i18n("workspaces.create.title")), name, description, save);

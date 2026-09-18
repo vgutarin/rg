@@ -26,8 +26,12 @@ crossing a year boundary display both years even when the year preference is off
 
 Local datetimes have **no implicit timezone**. `DateTimes.toLocal(instant, zone)` and
 `DateTimes.toInstant(local, zone)` require an explicit zone. The latter rejects DST gaps and
-ambiguous overlaps rather than silently shifting a time or choosing an offset. The existing
-`LocalizationService` datetime methods retain their existing behavior; they are not migrated here.
+ambiguous overlaps rather than silently shifting a time or choosing an offset. The pre-existing
+`LocalizationService.formatDateTime(Instant)` (system zone, Java `FormatStyle`) retains its own
+behavior and is not migrated. Alongside it, `LocalizationService.formatEventDateTime(Instant,
+DateDisplayOptions)` is a bridge that delegates to `DateTimes.format`, reading the instant as UTC and
+using the current locale — so a caption formatted through the localization service and a temporal
+picker built with the same options share one presentation.
 
 ## Components
 

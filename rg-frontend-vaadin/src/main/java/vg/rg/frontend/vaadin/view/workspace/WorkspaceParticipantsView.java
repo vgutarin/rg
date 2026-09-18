@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.exception.workspace.DuplicateParticipantPhoneException;
 import vg.rg.exception.workspace.ParticipantLimitReachedException;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.dialog.Prompt;
 import vg.rg.frontend.vaadin.component.disclosure.DisclosureList;
@@ -240,6 +241,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
             loadedPages++;
             renderBrowseList(browseSearch.getValue());
         });
+        more.addThemeName(RGButtonTheme.BORDERED);
         more.setWidthFull();
         browseFooter.add(count, more);
     }
@@ -290,9 +292,11 @@ public class WorkspaceParticipantsView extends VerticalLayout
             var reveal = new Button(localization.i18n("participants.reveal"), VaadinIcon.EYE.create(),
                     event -> revealContact(participant));
             reveal.addThemeVariants(ButtonVariant.TERTIARY);
+            reveal.addThemeName(RGButtonTheme.BORDERED);
             var call = new Button(localization.i18n("participants.call"), VaadinIcon.PHONE.create(),
                     event -> callContact(participant));
             call.addThemeVariants(ButtonVariant.TERTIARY);
+            call.addThemeName(RGButtonTheme.BORDERED);
             var contactActions = new Div(reveal, call);
             contactActions.addClassName("participant-contact-actions");
             body.add(contactActions);
@@ -305,6 +309,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
             var edit = new Button(localization.i18n("participants.edit"), VaadinIcon.EDIT.create(),
                     event -> openEditDialog(participant));
             edit.addThemeVariants(ButtonVariant.TERTIARY);
+            edit.addThemeName(RGButtonTheme.BORDERED);
             actions.add(edit);
         }
         if (authorityChecker.hasAuthority(participant.getUniqueId(),
@@ -312,6 +317,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
             var remove = new Button(localization.i18n("participants.remove"), VaadinIcon.TRASH.create(),
                     event -> confirmRemove(participant));
             remove.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR);
+            remove.addThemeName(RGButtonTheme.BORDERED);
             actions.add(remove);
         }
         if (actions.getElement().getChildCount() > 0) {
@@ -336,6 +342,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
             }
         });
         save.addThemeVariants(ButtonVariant.PRIMARY);
+        save.addThemeName(RGButtonTheme.BORDERED);
         save.setWidthFull();
 
         var form = new Div(label, phone, save);
@@ -382,6 +389,7 @@ public class WorkspaceParticipantsView extends VerticalLayout
         dialog.setHeaderTitle(localization.i18n("participants.reveal.title"));
 
         var close = new Button(localization.i18n("participants.close"), event -> dialog.close());
+        close.addThemeName(RGButtonTheme.BORDERED);
         try {
             var revealed = participantService.revealContact(participant.getUniqueId());
             var number = new Span(revealed.phone());
@@ -468,7 +476,9 @@ public class WorkspaceParticipantsView extends VerticalLayout
                 dialog.close();
             }
         });
+        save.addThemeName(RGButtonTheme.BORDERED);
         var cancel = new Button(localization.i18n("participants.cancel"), event -> dialog.close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
         dialog.getFooter().add(cancel, save);
         dialog.add(label, phone);
         dialog.open();

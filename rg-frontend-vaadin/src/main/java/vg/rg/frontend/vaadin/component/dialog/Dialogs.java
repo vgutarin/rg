@@ -4,6 +4,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Paragraph;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,6 +47,7 @@ public final class Dialogs {
 
         var confirm = new Button(localization.i18n(confirmKey));
         confirm.addThemeVariants(ButtonVariant.PRIMARY, ButtonVariant.ERROR);
+        confirm.addThemeName(RGButtonTheme.BORDERED);
         // Disabling the button is presentation; this flag is the enforcement. A destructive action must
         // not run twice because of a double tap, a slow round trip, or a repeated request.
         var submitted = new AtomicBoolean();
@@ -63,6 +65,7 @@ public final class Dialogs {
             }
         });
         var cancel = new Button(localization.i18n(cancelKey), event -> dialog.close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
         dialog.getFooter().add(cancel, confirm);
         dialog.open();
         return new Prompt(dialog, confirm, cancel);

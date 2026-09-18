@@ -26,6 +26,9 @@ class LocalPermissionsTest {
                 LocalPermissions.WorkspaceEvent.CREATE,
                 LocalPermissions.WorkspaceEvent.UPDATE,
                 LocalPermissions.WorkspaceEvent.DELETE,
+                LocalPermissions.WorkspaceEvent.MANAGE_PARTICIPANTS,
+                LocalPermissions.WorkspaceEventRegistration.DELETE,
+                LocalPermissions.WorkspaceEventRegistration.REORDER,
                 LocalPermissions.Workspace.CREATE,
                 LocalPermissions.Workspace.READ,
                 LocalPermissions.Workspace.UPDATE,
@@ -100,6 +103,19 @@ class LocalPermissionsTest {
         assertThat(LocalPermissions.WorkspaceEvent.contains(null)).isFalse();
     }
 
+    @Test
+    void workspaceEventRegistrationContains_claimsOnlyRegistrationPermissions() {
+        assertThat(LocalPermissions.WorkspaceEventRegistration.ALL)
+                .allSatisfy(permission ->
+                        assertThat(LocalPermissions.WorkspaceEventRegistration.contains(permission)).isTrue());
+
+        assertThat(LocalPermissions.WorkspaceEventRegistration.contains(
+                LocalPermissions.WorkspaceEvent.DELETE)).isFalse();
+        assertThat(LocalPermissions.WorkspaceEvent.contains(
+                LocalPermissions.WorkspaceEventRegistration.DELETE)).isFalse();
+        assertThat(LocalPermissions.WorkspaceEventRegistration.contains(null)).isFalse();
+    }
+
     /**
      * The participant resource shares a prefix with the workspace one, which is exactly the case where
      * parsing the string instead of testing set membership would go wrong: {@code workspace-participant}
@@ -134,6 +150,11 @@ class LocalPermissionsTest {
                 .doesNotContainAnyElementsOf(LocalPermissions.Location.ALL)
                 .doesNotContainAnyElementsOf(LocalPermissions.WorkspaceParticipant.ALL)
                 .doesNotContainAnyElementsOf(LocalPermissions.Workspace.ALL);
+        assertThat(LocalPermissions.WorkspaceEventRegistration.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.Location.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.WorkspaceParticipant.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.WorkspaceEvent.ALL)
+                .doesNotContainAnyElementsOf(LocalPermissions.Workspace.ALL);
     }
 
     @Test
@@ -167,6 +188,14 @@ class LocalPermissionsTest {
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.WorkspaceEvent.READ)).isFalse();
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.WorkspaceEvent.UPDATE)).isFalse();
         assertThat(LocalPermissions.addressesContainer(LocalPermissions.WorkspaceEvent.DELETE)).isFalse();
+        // Managing an event's roster addresses the event by its own identifier, not a container.
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceEvent.MANAGE_PARTICIPANTS)).isFalse();
+        // Registration verbs address one registration by its own identifier.
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceEventRegistration.DELETE)).isFalse();
+        assertThat(LocalPermissions.addressesContainer(
+                LocalPermissions.WorkspaceEventRegistration.REORDER)).isFalse();
         // Disclosing a contact number addresses one participant, so it carries a resource identifier.
         assertThat(LocalPermissions.addressesContainer(
                 LocalPermissions.WorkspaceParticipant.REVEAL_CONTACT)).isFalse();

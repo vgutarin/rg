@@ -12,6 +12,7 @@ import vg.rg.entity.workspace.WorkspaceEventEntity;
 import vg.rg.mapper.workspace.WorkspaceEventMapper;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.workspace.WorkspaceEventModel;
+import vg.rg.repository.workspace.WorkspaceEventRegistrationRepository;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.unique.id.model.UniqueId;
@@ -36,6 +37,7 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
 
     private final UniqueIdService uniqueIdService;
     private final WorkspaceEventRepository repository;
+    private final WorkspaceEventRegistrationRepository registrationRepository;
     private final WorkspaceLocationRepository locationRepository;
     private final WorkspaceEventMapper mapper;
 
@@ -101,7 +103,11 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
     @PreAuthorize("@authorityChecker.hasAuthority(#eventId, '" + LocalPermissions.WorkspaceEvent.DELETE + "')")
     public void delete(UniqueId eventId) {
         Objects.requireNonNull(eventId, "eventId");
-        repository.delete(repository.findById(eventId).orElseThrow(EntityNotFoundException::new));
+        var entity = repository.findById(eventId).orElseThrow(EntityNotFoundException::new);
+        // The FK from a registration to its event is deliberately restricting, so the roster must go
+        // first or the delete fails with a constraint violation.
+        registrationRepository.deleteByEventUniqueId(eventId);
+        repository.delete(entity);
     }
 
     private static String titleOf(WorkspaceEventModel model) {

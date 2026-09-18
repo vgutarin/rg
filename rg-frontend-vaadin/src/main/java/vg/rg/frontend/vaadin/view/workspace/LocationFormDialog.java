@@ -8,6 +8,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import lombok.extern.slf4j.Slf4j;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.model.geo.LocationModel;
 import vg.rg.service.workspace.WorkspaceLocationService;
@@ -80,9 +81,11 @@ public class LocationFormDialog extends Dialog {
         body.setWidthFull();
         add(body);
 
-        getFooter().add(
-                new Button(localization.i18n("location.cancel"), event -> close()),
-                new Button(localization.i18n("location.save"), event -> save()));
+        var cancel = new Button(localization.i18n("location.cancel"), event -> close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
+        var save = new Button(localization.i18n("location.save"), event -> save());
+        save.addThemeName(RGButtonTheme.BORDERED);
+        getFooter().add(cancel, save);
     }
 
     /**

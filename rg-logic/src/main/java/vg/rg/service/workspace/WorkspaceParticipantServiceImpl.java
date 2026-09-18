@@ -19,6 +19,7 @@ import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
 import vg.rg.model.workspace.ParticipantPhone;
 import vg.rg.model.workspace.WorkspaceParticipantModel;
+import vg.rg.repository.workspace.WorkspaceEventRegistrationRepository;
 import vg.rg.repository.workspace.WorkspaceParticipantRepository;
 import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
@@ -40,6 +41,7 @@ class WorkspaceParticipantServiceImpl implements WorkspaceParticipantService {
 
     private final UniqueIdService uniqueIdService;
     private final WorkspaceParticipantRepository repository;
+    private final WorkspaceEventRegistrationRepository registrationRepository;
     private final WorkspaceParticipantMapper mapper;
     private final WorkspaceProperties workspaceProperties;
 
@@ -98,6 +100,9 @@ class WorkspaceParticipantServiceImpl implements WorkspaceParticipantService {
     public void delete(UniqueId participantId) {
         Objects.requireNonNull(participantId, "participantId");
         var entity = repository.findById(participantId).orElseThrow(EntityNotFoundException::new);
+        // The FK from a registration to its participant is deliberately restricting, so any event
+        // registrations for this person must go first or the delete fails with a constraint violation.
+        registrationRepository.deleteByParticipantUniqueId(participantId);
         repository.delete(entity);
     }
 

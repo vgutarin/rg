@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.component.location.LocationPicker;
@@ -31,8 +32,10 @@ import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.model.workspace.WorkspaceEventType;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.service.security.AuthorityChecker;
+import vg.rg.service.workspace.WorkspaceParticipantService;
 import vg.rg.service.workspace.WorkspaceSelectionService;
 import vg.rg.service.workspace.WorkspaceLocationService;
+import vg.rg.service.workspace.event.WorkspaceEventRegistrationService;
 import vg.rg.service.workspace.event.WorkspaceEventService;
 import vg.unique.id.model.UniqueId;
 
@@ -60,6 +63,8 @@ class WorkspaceEventsViewTest {
     @Mock LocalizationService localization;
     @Mock AuthorityChecker authorityChecker;
     @Mock WorkspaceEventService eventService;
+    @Mock WorkspaceEventRegistrationService registrationService;
+    @Mock WorkspaceParticipantService participantService;
     @Mock WorkspaceLocationService locationService;
     @Mock WorkspaceSelectionService selectionService;
     @Mock BeforeEnterEvent event;
@@ -97,7 +102,7 @@ class WorkspaceEventsViewTest {
                         .eventType(WorkspaceEventType.PADEL).maxParticipantCount(8).isPublished(true).build())));
         when(locationService.browse(any(), any())).thenReturn(new PageImpl<>(List.of()));
 
-        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, locationService, selectionService);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
         view.beforeEnter(event);
 
         var tabs = descendants(view).filter(TabSheet.class::isInstance).map(TabSheet.class::cast)
@@ -127,7 +132,7 @@ class WorkspaceEventsViewTest {
         arrange();
         when(authorityChecker.hasAuthority(any(UniqueId.class), anyString())).thenReturn(false);
 
-        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, locationService, selectionService);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
         view.beforeEnter(event);
 
         assertThat(descendants(view).filter(TabSheet.class::isInstance)).isEmpty();
@@ -143,7 +148,7 @@ class WorkspaceEventsViewTest {
                 .eventType(WorkspaceEventType.TENNIS).maxParticipantCount(10).isPublished(false).build();
         when(eventService.create(any(), any())).thenReturn(created);
 
-        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, locationService, selectionService);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
         view.beforeEnter(event);
         when(eventService.browse(any(), org.mockito.ArgumentMatchers.eq("Retrospective"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(created)));
@@ -175,7 +180,7 @@ class WorkspaceEventsViewTest {
         when(eventService.create(any(), any())).thenReturn(created);
         when(locationService.searchByName(any(), eq("Central courts"), any(Integer.class)))
                 .thenReturn(List.of(location));
-        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, locationService, selectionService);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
         view.beforeEnter(event);
 
         descendants(view).filter(TextField.class::isInstance).map(TextField.class::cast)
@@ -203,7 +208,7 @@ class WorkspaceEventsViewTest {
         arrange();
         when(eventService.create(any(), any()))
                 .thenThrow(new IllegalArgumentException("workspace.event.error.start-required"));
-        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, locationService, selectionService);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
         view.beforeEnter(event);
 
         var startAt = dateTimePickers(view).getFirst();
@@ -218,6 +223,91 @@ class WorkspaceEventsViewTest {
         assertThat(startAt.isInvalid()).isFalse();
     }
 
+    @Test
+    void caption_metaShowsTheDateAndCountRidesTheTitleLine() {
+        arrange();
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+
+        // The meta line carries only the date now; the registered/max count is a right-aligned marker.
+        assertThat(rowMetas(view)).containsExactly("Sun Sep 13 · 09:00");
+        assertThat(registeredCounts(view)).containsExactly("3/8");
+    }
+
+    @Test
+    void closingTheParticipantsDialog_refreshesTheListAndItsCounts() {
+        arrange();
+        when(registrationService.list(any())).thenReturn(List.of());
+        when(participantService.browse(any(), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+        // One browse for the initial render.
+        verify(eventService).browse(any(), any(), any(Pageable.class));
+
+        var dialog = view.openParticipants(WorkspaceEventModel.builder().uniqueId(new UniqueId(8102L))
+                .title("Planning").maxParticipantCount(8).build());
+        dialog.close();
+
+        // A second browse fires on close, re-reading the roster counts.
+        verify(eventService, org.mockito.Mockito.times(2)).browse(any(), any(), any(Pageable.class));
+    }
+
+    @Test
+    void browse_sortsByStartAtThenTitle() {
+        arrange();
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+
+        verify(eventService).browse(any(), any(), argThat(pageable -> {
+            var order = pageable.getSort().stream().map(Sort.Order::getProperty).toList();
+            return order.equals(List.of("startAt", "title", "uniqueId"));
+        }));
+    }
+
+    @Test
+    void participantsButton_isShownAndOpensTheDialog() {
+        arrange();
+        when(registrationService.list(any())).thenReturn(List.of());
+        when(participantService.browse(any(), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+
+        var manage = descendants(view).filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "events.participants".equals(button.getText())).findFirst().orElseThrow();
+        click(manage);
+
+        // The dialog reads the roster and the addable participants when it opens.
+        verify(registrationService, org.mockito.Mockito.atLeastOnce()).list(new UniqueId(8102L));
+        verify(participantService).browse(eq(new UniqueId(8101L)), any(), any(Pageable.class));
+    }
+
+    @Test
+    void participantsButton_isRightAlignedAtTheTopOfThePanel() {
+        arrange();
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+
+        var manage = descendants(view).filter(Button.class::isInstance).map(Button.class::cast)
+                .filter(button -> "events.participants".equals(button.getText())).findFirst().orElseThrow();
+        // It lives in the right-aligning action row, not the side-by-side edit/remove row.
+        var manageRow = manage.getParent().orElseThrow();
+        assertThat(manageRow.getElement().getClassList()).contains("event-participants-action");
+        // And that row is the first child of the panel body — above the detail rows.
+        var body = manageRow.getParent().orElseThrow();
+        assertThat(body.getChildren().findFirst()).contains(manageRow);
+    }
+
+    @Test
+    void withoutManagePermission_hidesTheParticipantsButton() {
+        arrange();
+        when(authorityChecker.hasAuthority(any(UniqueId.class),
+                eq(vg.rg.model.security.LocalPermissions.WorkspaceEvent.MANAGE_PARTICIPANTS))).thenReturn(false);
+        var view = new WorkspaceEventsView(localization, authorityChecker, eventService, registrationService, participantService, locationService, selectionService);
+        view.beforeEnter(event);
+
+        assertThat(buttonTexts(view)).doesNotContain("events.participants");
+    }
+
     private void arrange() {
         when(localization.i18n(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
         when(localization.getCurrentLocale()).thenReturn(LocalizationService.DEFAULT_LOCALE);
@@ -226,6 +316,7 @@ class WorkspaceEventsViewTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(localization.getTranslation(anyString(), any(), any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(localization.formatEventDateTime(any(), any(DateDisplayOptions.class))).thenReturn("Sun Sep 13 · 09:00");
         when(authorityChecker.hasAuthority(Permissions.Workspace.OWNER)).thenReturn(true);
         when(authorityChecker.hasAuthority(any(UniqueId.class), anyString())).thenReturn(true);
         when(selectionService.activeWorkspace()).thenReturn(WorkspaceModel.builder().uniqueId(new UniqueId(8101L)).build());
@@ -234,6 +325,7 @@ class WorkspaceEventsViewTest {
                         .uniqueId(new UniqueId(8102L)).title("Planning")
                         .startAt(java.time.Instant.parse("2026-09-13T09:00:00Z"))
                         .eventType(WorkspaceEventType.PADEL).maxParticipantCount(8).isPublished(true).build())));
+        when(registrationService.countByEvents(any(), any())).thenReturn(java.util.Map.of(new UniqueId(8102L), 3L));
         when(locationService.browse(any(), any())).thenReturn(new PageImpl<>(List.of()));
     }
 
@@ -265,6 +357,20 @@ class WorkspaceEventsViewTest {
         return descendants(component).filter(com.vaadin.flow.component.html.Span.class::isInstance)
                 .map(com.vaadin.flow.component.html.Span.class::cast)
                 .filter(span -> span.hasClassName(vg.rg.frontend.vaadin.component.disclosure.DisclosureList.ROW_NAME))
+                .map(com.vaadin.flow.component.html.Span::getText).toList();
+    }
+
+    private static List<String> rowMetas(Component component) {
+        return descendants(component).filter(com.vaadin.flow.component.html.Span.class::isInstance)
+                .map(com.vaadin.flow.component.html.Span.class::cast)
+                .filter(span -> span.hasClassName(vg.rg.frontend.vaadin.component.disclosure.DisclosureList.ROW_META))
+                .map(com.vaadin.flow.component.html.Span::getText).toList();
+    }
+
+    private static List<String> registeredCounts(Component component) {
+        return descendants(component).filter(com.vaadin.flow.component.html.Span.class::isInstance)
+                .map(com.vaadin.flow.component.html.Span.class::cast)
+                .filter(span -> span.hasClassName("event-registered-count"))
                 .map(com.vaadin.flow.component.html.Span::getText).toList();
     }
 

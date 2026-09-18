@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
 import vg.rg.frontend.vaadin.component.datetime.DateTimes;
@@ -44,7 +45,9 @@ import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.model.workspace.WorkspaceEventType;
 import vg.rg.service.security.AuthorityChecker;
 import vg.rg.service.workspace.WorkspaceLocationService;
+import vg.rg.service.workspace.WorkspaceParticipantService;
 import vg.rg.service.workspace.WorkspaceSelectionService;
+import vg.rg.service.workspace.event.WorkspaceEventRegistrationService;
 import vg.rg.service.workspace.event.WorkspaceEventService;
 import vg.unique.id.model.UniqueId;
 
@@ -53,7 +56,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /** Owner-managed events in the active workspace. */
 @Slf4j
@@ -71,6 +76,8 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
     private final LocalizationService localization;
     private final AuthorityChecker authorityChecker;
     private final transient WorkspaceEventService eventService;
+    private final transient WorkspaceEventRegistrationService registrationService;
+    private final transient WorkspaceParticipantService participantService;
     private final transient WorkspaceLocationService locationService;
     private final transient WorkspaceSelectionService selectionService;
     private final Div content = new Div();
@@ -84,11 +91,16 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
     private UniqueId workspaceId;
 
     public WorkspaceEventsView(LocalizationService localization, AuthorityChecker authorityChecker,
-                               WorkspaceEventService eventService, WorkspaceLocationService locationService,
+                               WorkspaceEventService eventService,
+                               WorkspaceEventRegistrationService registrationService,
+                               WorkspaceParticipantService participantService,
+                               WorkspaceLocationService locationService,
                                WorkspaceSelectionService selectionService) {
         this.localization = localization;
         this.authorityChecker = authorityChecker;
         this.eventService = eventService;
+        this.registrationService = registrationService;
+        this.participantService = participantService;
         this.locationService = locationService;
         this.selectionService = selectionService;
         browseSearch.setClearButtonVisible(true);
@@ -159,13 +171,15 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
         browseList.reset(); browseFooter.removeAll();
         var filter = query == null ? "" : query.trim();
         var page = eventService.browse(workspaceId, filter, PageRequest.of(0, loadedPages * BROWSE_PAGE_SIZE,
-                Sort.by("title").ascending().and(Sort.by("uniqueId").ascending())));
+                Sort.by("startAt").ascending().and(Sort.by("title").ascending())
+                        .and(Sort.by("uniqueId").ascending())));
         if (page.isEmpty()) {
             browseList.add(new Paragraph(localization.i18n(filter.isBlank() ? "events.empty" : "events.search.no-results")));
             return;
         }
+        var counts = registeredCounts(page.getContent());
         page.forEach(event -> {
-            var body = addItem(event);
+            var body = addItem(event, counts.getOrDefault(event.getUniqueId(), 0L));
             if (scrollTarget != null && scrollTarget.equals(event.getUniqueId())) {
                 body.getElement().executeJs(
                         "this.closest('.disclosure-item').scrollIntoView({behavior:'smooth',block:'center'})");
@@ -176,13 +190,43 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
                     page.getNumberOfElements(), page.getTotalElements()));
             count.addClassName("browse-count");
             var more = new Button(localization.i18n("events.load-more"), event -> { loadedPages++; renderBrowseList(browseSearch.getValue()); });
+            more.addThemeName(RGButtonTheme.BORDERED);
             more.setWidthFull();
             browseFooter.add(count, more);
         }
     }
 
-    private Div addItem(WorkspaceEventModel event) {
-        var body = browseList.addItem(event.getUniqueId(), event.getTitle(), null);
+    /**
+     * The registered counts for a page of events, in one query. Absent events read as zero. Skipped
+     * entirely for a viewer who cannot manage rosters, since the caption's count only accompanies the
+     * management affordance.
+     */
+    private Map<UniqueId, Long> registeredCounts(List<WorkspaceEventModel> events) {
+        if (!canViewCounts() || events.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return registrationService.countByEvents(workspaceId,
+                    events.stream().map(WorkspaceEventModel::getUniqueId).toList());
+        } catch (RuntimeException failure) {
+            log.debug("Registered-count lookup failed; captions fall back to zero", failure);
+            return Map.of();
+        }
+    }
+
+    private Div addItem(WorkspaceEventModel event, long registeredCount) {
+        var body = browseList.addItem(event.getUniqueId(), event.getTitle(), formatTime(event.getStartAt()),
+                registeredMarker(event, registeredCount));
+        // Right-aligned at the very top of the panel, above the detail rows.
+        if (authorityChecker.hasAuthority(event.getUniqueId(), LocalPermissions.WorkspaceEvent.MANAGE_PARTICIPANTS)) {
+            var manage = new Button(localization.i18n("events.participants"), VaadinIcon.USERS.create(),
+                    ignored -> openParticipants(event));
+            manage.addThemeVariants(ButtonVariant.TERTIARY);
+            manage.addThemeName(RGButtonTheme.BORDERED);
+            var manageRow = new Div(manage);
+            manageRow.addClassName("event-participants-action");
+            body.add(manageRow);
+        }
         body.add(DisclosureList.detailRow(VaadinIcon.FLAG, localization.i18n("event.field.type"),
                 localization.i18n(eventTypeKey(event.getEventType())), false));
         body.add(DisclosureList.detailRow(VaadinIcon.CALENDAR, localization.i18n("event.field.start-at"),
@@ -201,14 +245,44 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
         var actions = new Div(); actions.addClassName(DisclosureList.ROW_ACTIONS);
         if (authorityChecker.hasAuthority(event.getUniqueId(), LocalPermissions.WorkspaceEvent.UPDATE)) {
             var edit = new Button(localization.i18n("events.edit"), VaadinIcon.EDIT.create(), ignored -> openEdit(event));
-            edit.addThemeVariants(ButtonVariant.TERTIARY); actions.add(edit);
+            edit.addThemeVariants(ButtonVariant.TERTIARY); edit.addThemeName(RGButtonTheme.BORDERED); actions.add(edit);
         }
         if (authorityChecker.hasAuthority(event.getUniqueId(), LocalPermissions.WorkspaceEvent.DELETE)) {
             var delete = new Button(localization.i18n("events.remove"), VaadinIcon.TRASH.create(), ignored -> confirmDelete(event));
-            delete.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR); actions.add(delete);
+            delete.addThemeVariants(ButtonVariant.TERTIARY, ButtonVariant.ERROR); delete.addThemeName(RGButtonTheme.BORDERED); actions.add(delete);
         }
         if (actions.getElement().getChildCount() > 0) body.add(actions);
         return body;
+    }
+
+    /**
+     * The registered/max count as a right-aligned header marker on the title line, e.g. {@code 3/24}. A
+     * {@link DisclosureList} marker sits before the chevron with a leading auto margin, which is what
+     * pushes it to the trailing edge of the name line.
+     */
+    private Span registeredMarker(WorkspaceEventModel event, long registeredCount) {
+        var max = event.getMaxParticipantCount() == null ? "" : event.getMaxParticipantCount().toString();
+        var text = registeredCount + "/" + max;
+        var marker = new Span(text);
+        marker.addClassName("event-registered-count");
+        var label = localization.getTranslation("events.participants.count",
+                localization.getCurrentLocale(), registeredCount, max);
+        marker.getElement().setAttribute("aria-label", label);
+        marker.getElement().setAttribute("title", label);
+        return marker;
+    }
+
+    Dialog openParticipants(WorkspaceEventModel event) {
+        var dialog = new EventParticipantsDialog(localization, registrationService,
+                participantService, workspaceId, event).open();
+        // The roster may have changed while the dialog was open, so refresh the list — and thus the
+        // caption counts — once it closes.
+        dialog.addOpenedChangeListener(change -> {
+            if (!change.isOpened()) {
+                afterChange();
+            }
+        });
+        return dialog;
     }
 
     private Component addTab() {
@@ -225,7 +299,7 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
                 fields.published().setValue(false);
             }
         });
-        save.addThemeVariants(ButtonVariant.PRIMARY); save.setWidthFull();
+        save.addThemeVariants(ButtonVariant.PRIMARY); save.addThemeName(RGButtonTheme.BORDERED); save.setWidthFull();
         layout.add(new Paragraph(localization.i18n("events.add.hint")), form(fields), save);
         return layout;
     }
@@ -271,7 +345,9 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
         var dialog = new Dialog(); dialog.setHeaderTitle(localization.i18n("events.edit.title"));
         var fields = eventFields(event);
         var save = new Button(localization.i18n("events.save"), ignored -> { if (update(event, fields)) dialog.close(); });
+        save.addThemeName(RGButtonTheme.BORDERED);
         var cancel = new Button(localization.i18n("events.cancel"), ignored -> dialog.close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
         dialog.add(form(fields)); dialog.getFooter().add(cancel, save); dialog.open();
     }
 
@@ -415,8 +491,9 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
     }
 
     private String formatTime(Instant value) {
-        return DateTimes.format(DateTimes.toLocal(value, EVENT_TIME_ZONE), localization.getCurrentLocale(),
-                EVENT_DATE_TIME_OPTIONS);
+        // Through the localization service as the bridge to the shared datetime formatter, so the caption
+        // meta line and the detail rows share one presentation.
+        return localization.formatEventDateTime(value, EVENT_DATE_TIME_OPTIONS);
     }
 
     private static Instant toInstant(LocalDateTime value) {
@@ -459,5 +536,15 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
 
     private boolean canCreate() {
         return authorityChecker.hasAuthority(workspaceId, LocalPermissions.WorkspaceEvent.CREATE);
+    }
+
+    /**
+     * Whether the viewer may read the events' roster counts for the caption. Checked against the
+     * workspace with the container-addressed {@code list} verb — the same one {@code browse} already
+     * passed to render the page, and the one the batch count query is guarded by — rather than the
+     * event-addressed {@code manage-participants}, which cannot be checked against a workspace id.
+     */
+    private boolean canViewCounts() {
+        return authorityChecker.hasAuthority(workspaceId, LocalPermissions.WorkspaceEvent.LIST);
     }
 }

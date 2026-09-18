@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
+import vg.rg.frontend.vaadin.component.datetime.DateTimes;
 import vg.rg.frontend.vaadin.component.datetime.TemporalPickers;
 
 import java.time.Instant;
@@ -68,6 +69,23 @@ public class LocalizationService implements I18NProvider {
                 .withLocale(currentLocale())
                 .withZone(ZoneId.systemDefault())
                 .format(instant);
+    }
+
+    /**
+     * Formats an event {@link Instant} through the shared {@code component.datetime} formatter, with this
+     * service as the locale bridge.
+     *
+     * <p>Distinct from {@link #formatDateTime(Instant)}, which keeps its own {@link FormatStyle}/system-
+     * zone behaviour: this one delegates to {@link DateTimes#format} so a caption and the temporal
+     * pickers share one presentation, and it reads the event zone the same way the event view does —
+     * event instants have no assigned zone and are treated as UTC. The caller passes the same
+     * {@link DateDisplayOptions} it builds its pickers with, so the weekday/year/seconds choices match.
+     */
+    public String formatEventDateTime(Instant instant, DateDisplayOptions options) {
+        if (instant == null) {
+            return "";
+        }
+        return DateTimes.format(DateTimes.toLocal(instant, ZoneOffset.UTC), currentLocale(), options);
     }
 
     private LocalDateTime toLocalDateTime(Instant instant) {

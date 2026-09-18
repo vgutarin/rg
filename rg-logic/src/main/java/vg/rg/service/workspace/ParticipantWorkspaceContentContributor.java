@@ -3,6 +3,7 @@ package vg.rg.service.workspace;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import vg.rg.repository.workspace.WorkspaceParticipantRepository;
 import vg.unique.id.model.UniqueId;
@@ -21,6 +22,9 @@ import java.util.Objects;
  * unbind an invite or drop a stored file.
  */
 @Slf4j
+// After the event-registration contributor (order 0): a registration's FK to its participant is
+// restricting, so registrations must be gone before the people they point at.
+@Order(2)
 @Component
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class ParticipantWorkspaceContentContributor implements WorkspaceContentContributor {

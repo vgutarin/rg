@@ -3,10 +3,14 @@ package vg.rg.frontend.vaadin.service;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.context.support.StaticMessageSource;
+import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
+import vg.rg.frontend.vaadin.component.datetime.DateTimes;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Properties;
@@ -86,6 +90,32 @@ class LocalizationServiceTest {
                 .isEqualTo("Переклад недоступний")
                 .isNotBlank()
                 .isNotEqualTo("missing.everywhere");
+    }
+
+    @Test
+    void formatEventDateTime_nullInstant_returnsEmpty() {
+        assertThat(service.formatEventDateTime(null,
+                DateDisplayOptions.builder().showShortDayName(true).build())).isEmpty();
+    }
+
+    /**
+     * Bridges to the shared {@code DateTimes} formatter, reading the instant as UTC and using the current
+     * locale (uk-UA outside a Vaadin session). Includes the time, and the short weekday requested by the
+     * options — so the caption and the temporal pickers share one presentation.
+     */
+    @Test
+    void formatEventDateTime_delegatesToDateTimesWithUtcAndCurrentLocale() {
+        var options = DateDisplayOptions.builder().showShortDayName(true).build();
+        var instant = Instant.parse("2026-09-13T09:00:00Z");
+
+        var formatted = service.formatEventDateTime(instant, options);
+
+        var expected = DateTimes.format(DateTimes.toLocal(instant, ZoneOffset.UTC),
+                Locale.forLanguageTag("uk-UA"), options);
+        assertThat(formatted).isEqualTo(expected);
+        // The datetime form carries the time after the date separator, distinguishing it from a date-only
+        // rendering.
+        assertThat(formatted).contains("09:00");
     }
 
     private static String bundleValue(String resource, String key) throws IOException {

@@ -133,10 +133,13 @@ when it is not the default** — the default is the implicit place to be, so nam
 had not already assumed.
 
 Mobile-first throughout: one column, full-width actions, long names wrapped rather than clipped, and wider
-layouts reached only through `min-width` queries. Management actions such as Rename and Remove have
-visible borders, including the destructive action's error color, so they remain recognizable as buttons.
-All text is internationalized, Ukrainian default with English second; a system-named workspace's label
-follows the viewer's locale.
+layouts reached only through `min-width` queries. Text action buttons opt into a shared border affordance
+by carrying the `rg-bordered` theme token (`RGButtonTheme.BORDERED`), styled once in `styles.css` as a
+1px outline in the button's own text colour, so they read as pressable controls; only the colour varies
+by intent — accent for ordinary actions, the theme's error red for a destructive one — through
+`currentColor`. Icon-only buttons are left untagged, so a lone glyph never gets a box around it. All text
+is internationalized, Ukrainian default with English second; a system-named workspace's label follows the
+viewer's locale.
 
 ## Data
 
@@ -209,9 +212,11 @@ them, enforced by an architecture test:
 - **`rg-frontend-vaadin`** (UI): `WorkspaceLayout` (the nested layout hosting the selector),
   `WorkspacesView` (`/workspaces`), `WorkspaceLocationsView` (`/workspaces/locations`),
   `WorkspaceParticipantsView` (`/workspaces/participants`), `DisclosureList` (the accordion both
-  contained-type screens are built from), `LocationFormDialog`, `MapsResolutionBridge`
-  (workspace-scoped proximity), the workspace navigation section in `MainView`, and the `workspace-*`
-  and `disclosure-*` rules in `rg-frontend-vaadin/src/main/resources/META-INF/resources/styles.css`.
+  contained-type screens are built from), `ScrollCue` (`component.scroll`, a reusable scroll viewport
+  that fades in up/down chevrons for off-screen content, toggled on the client; used by both tabs of the
+  event participants dialog), `LocationFormDialog`, `MapsResolutionBridge` (workspace-scoped proximity),
+  the workspace navigation section in `MainView`, and the `workspace-*`, `disclosure-*` and `scroll-cue-*`
+  rules in `rg-frontend-vaadin/src/main/resources/META-INF/resources/styles.css`.
 
 ## Configuration
 
