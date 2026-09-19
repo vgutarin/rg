@@ -1,6 +1,7 @@
 package vg.rg.frontend.vaadin.view.workspace;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.notification.Notification;
@@ -85,6 +86,7 @@ public class LocationFormDialog extends Dialog {
         cancel.addThemeName(RGButtonTheme.BORDERED);
         var save = new Button(localization.i18n("location.save"), event -> save());
         save.addThemeName(RGButtonTheme.BORDERED);
+        save.addThemeVariants(ButtonVariant.PRIMARY);
         getFooter().add(cancel, save);
     }
 

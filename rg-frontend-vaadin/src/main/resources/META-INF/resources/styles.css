@@ -52,7 +52,13 @@ vaadin-select {
    are identical everywhere. Icon-only buttons are simply left untagged, so a lone glyph never gets a box
    around it that would read as a chip. */
 vaadin-button[theme~="rg-bordered"] {
-  border: 1px outset currentColor;
+  --vaadin-button-height: auto;
+  border: none;
+  /* The magic: simulates a light source hitting the top-left */
+  box-shadow:
+          inset 2px 2px 0px #ffffff,       /* White inner highlight (top/left) */
+          inset -2px -2px 0px #808080,     /* Gray inner shadow (bottom/right) */
+          2px 2px 5px rgba(0, 0, 0, 0.15); /* Soft drop shadow beneath it */;
 }
 
 :is(vaadin-button, vaadin-menu-bar-button, vaadin-upload-button):not([theme~="primary"], [theme~="tertiary"]) {
@@ -685,6 +691,8 @@ vaadin-button[theme~="rg-bordered"] {
   /* Digits are easier to read back aloud when they do not shift width. */
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .participant-revealed-phone--copied {

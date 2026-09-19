@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceModel;
@@ -87,6 +88,17 @@ class WorkspaceResponsiveLocaleTest {
         assertThat(applied).isNotEmpty();
         assertThat(applied).allSatisfy(className ->
                 assertThat(stylesheet).as("no rule for .%s", className).contains("." + className));
+    }
+
+    @Test
+    void borderedButtons_allowTheirActionRowToStretchThemToEqualHeight() throws IOException {
+        var stylesheet = Files.readString(STYLESHEET);
+        var selector = "vaadin-button[theme~=\"" + RGButtonTheme.BORDERED + "\"]";
+        var rule = Pattern.compile(Pattern.quote(selector) + "\\s*\\{([^}]+)}")
+                .matcher(stylesheet);
+
+        assertThat(rule.find()).isTrue();
+        assertThat(rule.group(1)).containsPattern("--vaadin-button-height\\s*:\\s*auto\\s*;");
     }
 
     @Test

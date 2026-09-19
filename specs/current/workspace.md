@@ -137,7 +137,10 @@ layouts reached only through `min-width` queries. Text action buttons opt into a
 by carrying the `rg-bordered` theme token (`RGButtonTheme.BORDERED`), styled once in `styles.css` as a
 1px outline in the button's own text colour, so they read as pressable controls; only the colour varies
 by intent — accent for ordinary actions, the theme's error red for a destructive one — through
-`currentColor`. Icon-only buttons are left untagged, so a lone glyph never gets a box around it. All text
+`currentColor`. Bordered buttons use `--vaadin-button-height: auto`, allowing sibling actions in a
+stretch-aligned flex row to share the tallest button's height when a translated label wraps. Labels
+remain fully visible, and buttons retain the shared 44px minimum touch-target height. Icon-only buttons
+are left untagged, so a lone glyph never gets a box around it. All text
 is internationalized, Ukrainian default with English second; a system-named workspace's label follows the
 viewer's locale.
 

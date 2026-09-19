@@ -69,6 +69,9 @@ by given `resourceUniqueId` builds final `Permissions` object traversing by all 
 
 ## TODO
 
+- Add instruction to AGENTS.md
+  - distinguish logic spec and view spec (?separate dirs vs just filename)
+  - do views with cross platform checks (works on android and ios)
 - events
   - add visibility scope (public vs [groups | workspaces | users]) 
   - add user registration (belong to workspace, is registered but not belong workspace, is not registered)

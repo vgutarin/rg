@@ -3,6 +3,7 @@ package vg.rg.frontend.vaadin.view.workspace;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.clipboard.Clipboard;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -293,11 +294,15 @@ public class WorkspaceParticipantsView extends VerticalLayout
                     event -> revealContact(participant));
             reveal.addThemeVariants(ButtonVariant.TERTIARY);
             reveal.addThemeName(RGButtonTheme.BORDERED);
+            /* Commented because it is not working on IOS
             var call = new Button(localization.i18n("participants.call"), VaadinIcon.PHONE.create(),
                     event -> callContact(participant));
             call.addThemeVariants(ButtonVariant.TERTIARY);
             call.addThemeName(RGButtonTheme.BORDERED);
             var contactActions = new Div(reveal, call);
+             */
+
+            var contactActions = new Div(reveal);
             contactActions.addClassName("participant-contact-actions");
             body.add(contactActions);
         }
@@ -392,16 +397,11 @@ public class WorkspaceParticipantsView extends VerticalLayout
         close.addThemeName(RGButtonTheme.BORDERED);
         try {
             var revealed = participantService.revealContact(participant.getUniqueId());
-            var number = new Span(revealed.phone());
-            number.addClassName("participant-revealed-phone");
-            var copy = new Button(VaadinIcon.COPY.create(),
-                    event -> copyToClipboard(number, revealed.phone()));
-            var copyLabel = localization.i18n("participants.copy");
-            copy.setAriaLabel(copyLabel);
-            copy.getElement().setAttribute("title", copyLabel);
-            var revealedContact = new Div(number, copy);
-            revealedContact.addClassName("participant-revealed-contact");
-            dialog.add(revealedContact);
+            if (revealed.phone() == null || revealed.phone().isBlank()) {
+                dialog.add(new Paragraph(localization.i18n("participants.phone.unavailable")));
+            } else {
+                dialog.add(revealedContact(revealed.phone()));
+            }
         } catch (RuntimeException failure) {
             // Never the exception's own text: it may have come from a layer that saw the value.
             dialog.add(new Paragraph(localization.i18n(failure)));
@@ -414,34 +414,39 @@ public class WorkspaceParticipantsView extends VerticalLayout
     private void callContact(WorkspaceParticipantModel participant) {
         try {
             var revealed = participantService.revealContact(participant.getUniqueId());
-            getElement().executeJs("window.location.href = 'tel:' + $0", revealed.phone());
+            if (revealed.phone() == null || revealed.phone().isBlank()) {
+                Notification.show(localization.i18n("participants.phone.unavailable"));
+                return;
+            }
+            getElement().executeJs("window.location.href = $0", "tel:" + revealed.phone());
         } catch (RuntimeException failure) {
             Notification.show(localization.i18n(failure));
         }
     }
 
-    private void copyToClipboard(Span number, String phone) {
+    private Div revealedContact(String phone) {
+        var number = new Span(phone);
+        number.addClassName("participant-revealed-phone");
+        var copy = new Button(VaadinIcon.COPY.create());
+        var copyLabel = localization.i18n("participants.copy");
+        copy.setAriaLabel(copyLabel);
+        copy.getElement().setAttribute("title", copyLabel);
+        Clipboard.onClick(copy).writeText(phone,
+                copied -> animateCopiedPhone(number),
+                error -> Notification.show(localization.i18n("participants.copy.failed")));
+        var revealedContact = new Div(number, copy);
+        revealedContact.addClassName("participant-revealed-contact");
+
+        return revealedContact;
+    }
+
+    private void animateCopiedPhone(Span number) {
         number.getElement().executeJs("""
-                var phoneNumber = this;
-                var animate = function() {
-                    phoneNumber.classList.remove('participant-revealed-phone--copied');
-                    void phoneNumber.offsetWidth;
-                    phoneNumber.classList.add('participant-revealed-phone--copied');
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText($0).then(animate, function() {});
-                } else {
-                    var field = document.createElement('textarea');
-                    field.value = $0;
-                    document.body.appendChild(field);
-                    field.select();
-                    var copied = document.execCommand('copy');
-                    field.remove();
-                    if (copied) {
-                        animate();
-                    }
-                }
-                """, phone);
+                this.classList.remove('participant-revealed-phone--copied');
+                void this.offsetWidth;
+                this.classList.add('participant-revealed-phone--copied');
+                window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+                """);
     }
 
     /**

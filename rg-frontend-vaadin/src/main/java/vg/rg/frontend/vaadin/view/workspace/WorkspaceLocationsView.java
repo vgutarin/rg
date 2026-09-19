@@ -326,6 +326,7 @@ public class WorkspaceLocationsView extends VerticalLayout
         var save = new Button(localization.i18n("location.save"),
                 event -> saveNewLocation(name, description));
         save.addThemeName(RGButtonTheme.BORDERED);
+        save.addThemeVariants(ButtonVariant.PRIMARY);
         save.setWidthFull();
         var cancel = new Button(localization.i18n("location.cancel"), event -> hideAddForm());
         cancel.addThemeName(RGButtonTheme.BORDERED);

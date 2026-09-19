@@ -228,15 +228,21 @@ once that is closed, not before. That is not a resemblance maintained by discipl
 same `DisclosureList` component and therefore literally the same DOM and the same CSS, so neither screen
 can be restyled without the other following. See [Shared presentation](#shared-presentation).
 
-The expanded panel places equally prominent primary **Show phone** and **Call** actions side by side.
-Call retrieves the number only from its click handler, then navigates the browser to its `tel:` URI; the
-roster still never receives any digits. The revealed number appears in a **dialog**, not a notification:
-a notification auto-dismisses on a timer, cannot be closed deliberately, and is the component most
-likely to be reused somewhere that logs its text. Nothing on this path is logged, and the plaintext
-exists only for as long as the dialog does. The dialog places an accessible Copy-number icon beside the
-number; it writes to the browser clipboard without echoing the plaintext into a notification. A successful
-copy briefly pulses the number in the accent color; it does not animate when the user prefers reduced
-motion.
+The expanded panel places equally prominent **Show phone** and **Call** actions side by side. Both
+retrieve the number through the permission-checked `revealContact` service only when clicked; the roster
+never receives any digits. **Show phone** opens the contact dialog with the number and its copy action.
+**Call** directly navigates to the retrieved number's `tel:` URI through `window.location.href`, without
+an application dialog or another tap. Telephone navigation bypasses Telegram's HTTP-only `openLink` API.
+An absent number produces a localized notification instead of navigating.
+
+The contact dialog places an accessible Copy-number icon beside the number. Vaadin's
+`Clipboard.onClick(...).writeText(...)` binds the write directly to the browser click, preserving the
+user gesture required by iOS clipboard access. A successful copy briefly pulses the number in the accent
+color and requests Telegram success haptics when available; the pulse respects reduced-motion preferences.
+A rejected or unavailable clipboard write shows a localized manual-copy hint, without exposing the number
+or browser error text in a notification. If the number is absent when retrieved, the dialog shows a
+localized message without a copy action. The reveal dialog has no call action. Contact data and clipboard
+errors are not logged.
 
 Mobile-first throughout: one column, a 44 px minimum row height, long labels wrapped rather than
 clipped, wider layouts reached only through `min-width` queries. All text internationalized, Ukrainian
