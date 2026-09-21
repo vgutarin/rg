@@ -30,7 +30,7 @@ import static vg.test.TestHelper.nextUniqueId;
  * the module that declares the guards, so it is active in every context scanning {@code vg.rg} —
  * {@code BaseFuncTest} included. That placement is what keeps the denial assertions below meaningful:
  * a guard that never activates is not a weaker guard but no guard, and every such assertion would pass
- * vacuously. See {@code specs/current/engineering-notes.md}.
+ * vacuously. See {@code specs/current/engineering/engineering-notes.md}.
  */
 class WorkspaceLocationServiceFuncTest extends BaseFuncTest {
 

@@ -1,12 +1,13 @@
 # Home and navigation
 
-Current-state specification of the application's home page and first-level navigation.
+The authenticated shell exposes Home and capability destinations. Authentication and
+access-status interactions are defined in [authentication](authentication.md).
 
 ## Top-level destinations
 
 The drawer presents the ordered navigation provider as Android-style tiles in three columns: Home, Dates &
 times, Locations, Participants, and Events. Each full tile is an icon-and-label route link and retains the
-existing compact tile dimensions. Home is always shown. Dates & times requires `experiment:participant` and
+compact tile dimensions. Home is always shown. Dates & times requires `experiment:participant` and
 does not resolve or provision a workspace. Locations, Participants, and Events are included only when the
 caller holds `workspace:owner`, has an active workspace, and passes the corresponding scoped list check.
 The provider resolves that workspace once per render before evaluating those three entries.
@@ -38,3 +39,15 @@ at the landing baseline, where a back step would otherwise reach the preceding l
 ## Home
 
 The home page shows only a localized welcome message. Navigation is available from the drawer tile panel.
+
+The shell resolves nested route titles from the active navigation chain and retranslates
+the resolved title on locale change. Workspace selector behavior belongs to
+[workspaces](workspaces.md); shared presentation belongs to [foundations](foundations.md).
+
+## Evidence
+
+- [MainView.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/MainView.java)
+- [ContentNavigationProvider.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/ContentNavigationProvider.java)
+- [LandingView.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/view/home/LandingView.java)
+- [telegram-navigation.ts](../../../rg-frontend-vaadin/src/main/frontend/ts/telegram-navigation.ts)
+- [MainViewTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/view/MainViewTest.java)

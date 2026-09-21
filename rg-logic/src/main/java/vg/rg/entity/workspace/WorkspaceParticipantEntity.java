@@ -45,7 +45,7 @@ import static vg.utils.HibernateHelper.effectiveClass;
  * by rg content — which is what stops a later identity binding from having to rewrite references.
  *
  * <p>{@code descriptor} holds the label and phone number, encrypted; see {@link ParticipantDescriptor}
- * and {@code specs/current/encryption.md}. It is excluded from {@code toString()} because one log line
+ * and {@code specs/current/engineering/encryption.md}. It is excluded from {@code toString()} because one log line
  * printing an entity would defeat the entire design.
  */
 @NoArgsConstructor

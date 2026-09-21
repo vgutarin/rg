@@ -192,7 +192,7 @@ class WorkspaceParticipantServiceImpl implements WorkspaceParticipantService {
      * IV per write, so two equal numbers produce different ciphertexts and the database can compare
      * nothing. So the roster is read and opened in memory. That is affordable precisely because
      * {@code rg.workspace.participants-max-per-workspace} bounds it, and it avoids importing the keyed
-     * blind index that {@code specs/current/encryption.md} records as deliberately not copied here.
+     * blind index that {@code specs/current/engineering/encryption.md} records as deliberately not copied here.
      *
      * <p>Comparing only within one workspace is also what keeps this from disclosing anything: the owner
      * can already read this roster in full.

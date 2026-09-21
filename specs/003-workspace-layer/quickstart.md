@@ -98,7 +98,7 @@ Start the application:
 ```
 
 Serve over **https** for any Telegram Mini App or geolocation check — the existing constraint from
-[../current/geolocation.md](../current/geolocation.md) still applies.
+[../current/geolocation.md](../current/logic/workspace/locations.md) still applies.
 
 ### Scenario A0 — the migration ran (FR-037 – FR-041)
 
@@ -201,7 +201,7 @@ A type added later then inherits depth-independence by registering one `Workspac
 
 Every scenario above passes, `./gradlew test` is green, and — per the constitution's actualization rule —
 `specs/current/` carries a workspace domain file describing the implemented behaviour, while
-[../current/geolocation.md](../current/geolocation.md) has been **rewritten**: its "shared collection"
+[../current/geolocation.md](../current/logic/workspace/locations.md) has been **rewritten**: its "shared collection"
 framing is superseded, since a location is now workspace-scoped and the proximity suggestion is scoped to
 the active workspace. That actualization is the final phase of `tasks.md`, not of this plan.
 

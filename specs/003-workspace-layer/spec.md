@@ -11,7 +11,7 @@
 ## Overview
 
 Today every saved location lives in a single **global** collection that all permitted users share (see
-[../current/geolocation.md](../current/geolocation.md)). This feature **replaces** that model with a
+[../current/geolocation.md](../current/logic/workspace/locations.md)). This feature **replaces** that model with a
 **workspace** — a named container a user works inside — and the notion of a **workspace-scoped
 (inherited) object**: an object that belongs to exactly one workspace and **derives its access from
 that workspace** rather than carrying access rules of its own.
@@ -568,12 +568,12 @@ workspace's content is unchanged.
   this feature. Carries the same business content as the former global location (name, optional
   description, optional coordinates, optional Google Place ID, version token, author/last-editor audit
   identities, timestamps) plus a **mandatory** workspace reference. Behaviour otherwise follows
-  [../current/geolocation.md](../current/geolocation.md).
+  [../current/geolocation.md](../current/logic/workspace/locations.md).
 - **Local permission declaration**: the set of capability permissions meaningful only inside a workspace —
   the location capabilities. Distinct from the app-wide declaration that holds `workspace:owner`; both
   share one syntax rule.
 - **Retired: global location collection**: the shared, workspace-less collection described in
-  [../current/geolocation.md](../current/geolocation.md). Migrated into workspaces (FR-037 – FR-041) and
+  [../current/geolocation.md](../current/logic/workspace/locations.md). Migrated into workspaces (FR-037 – FR-041) and
   then removed together with its navigation entry and screens. No global location scope remains.
 
 ### Scope
@@ -742,5 +742,5 @@ receive an empty default workspace on first entry instead); a public space.
   existing authentication boundary, so their acceptance criteria measure application-owned work and do not
   impose end-to-end latency targets on externally dependent paths.
 - **The location domain is extended, not replaced**: the existing location behaviour specified in
-  [../current/geolocation.md](../current/geolocation.md) continues to apply to workspace-scoped locations
+  [../current/geolocation.md](../current/logic/workspace/locations.md) continues to apply to workspace-scoped locations
   except where this specification scopes visibility and access to a workspace.

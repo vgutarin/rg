@@ -1,6 +1,42 @@
-# Dates and times
+# Shared interactions
 
-The frontend's reusable helpers live in `vg.rg.frontend.vaadin.component.datetime`.
+Reusable contracts used by the [capability screens](README.md), with shared visual
+rules in [foundations](foundations.md).
+
+## Disclosure lists
+
+`DisclosureList` owns accordion rows, chevrons, header accessibility, single-open
+state, and labeled detail rows. Headers expose their expanded state and controls;
+decorative chevrons are hidden from assistive technology.
+
+Each entry is keyed by domain identity. The open key survives a reset/rebuild, so an
+edited or renamed row reopens even when its order changes. Deleted/filtered entries
+do not reopen, and deliberately closed entries stay closed.
+
+The component and its consumers share `disclosure-*` style constants. Panel-content
+constants include `ROW_ACTIONS`, `DETAIL_DESCRIPTION`, and `DETAIL_META`; callers
+apply them to their own content. `form-actions` and `stacked-form` provide shared
+form presentation. Locations, participants, and events use this common component.
+
+## Scroll cues
+
+`ScrollCue` provides a scroll viewport with up/down chevrons that fade according to
+content above/below the visible area. Visibility is updated in the browser from
+scroll position and viewport/content size. `scrollByRows` shifts the viewport by a
+row count. Event roster tabs use it to keep a moved row under the user's tapped control.
+
+## Location selection
+
+`LocationPicker` is a native filterable single-select field scoped to one workspace.
+Blank input loads the first 20 alphabetically ordered locations; typing searches by
+name. The domain service caps and orders the result. Selection returns a
+`LocationModel`, while arbitrary custom text cannot become a value. Restoring a
+saved location identifier supports event editing. Search and matching rules belong
+to [location logic](../logic/workspace/locations.md).
+
+## Temporal controls
+
+Reusable temporal helpers live in `vg.rg.frontend.vaadin.component.datetime`.
 
 ## Values and formatting
 
@@ -26,9 +62,9 @@ crossing a year boundary display both years even when the year preference is off
 
 Local datetimes have **no implicit timezone**. `DateTimes.toLocal(instant, zone)` and
 `DateTimes.toInstant(local, zone)` require an explicit zone. The latter rejects DST gaps and
-ambiguous overlaps rather than silently shifting a time or choosing an offset. The pre-existing
-`LocalizationService.formatDateTime(Instant)` (system zone, Java `FormatStyle`) retains its own
-behavior and is not migrated. Alongside it, `LocalizationService.formatEventDateTime(Instant,
+ambiguous overlaps rather than silently shifting a time or choosing an offset.
+`LocalizationService.formatDateTime(Instant)` uses the system zone and Java `FormatStyle`.
+`LocalizationService.formatEventDateTime(Instant,
 DateDisplayOptions)` is a bridge that delegates to `DateTimes.format`, reading the instant as UTC and
 using the current locale — so a caption formatted through the localization service and a temporal
 picker built with the same options share one presentation.
@@ -66,8 +102,24 @@ cards gain a second column at 40rem.
 
 ## Examples
 
-`/date-time-examples` is linked as **Dates & times** in both the drawer and home launcher only for callers
+`/date-time-examples` is linked as **Dates & times** in the drawer only for callers
 holding the app-wide `experiment:participant` permission. Its `beforeEnter` guard reroutes every other
 caller to the no-access view, and `workspace:owner` alone grants no access. It demonstrates dates, datetimes, both ranges, an
 empty value, and a read-only value, with live weekday/year/seconds/step controls and the shell's language
 switcher. Examples are in-memory view state only and reset when the view is recreated.
+
+## Evidence
+
+- [DisclosureList.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/disclosure/DisclosureList.java)
+- [ScrollCue.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/scroll/ScrollCue.java)
+- [LocationPicker.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/location/LocationPicker.java)
+- [TemporalEditor.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/datetime/TemporalEditor.java)
+- [TemporalDateTimePicker.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/datetime/TemporalDateTimePicker.java)
+- [DateTimes.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/component/datetime/DateTimes.java)
+- [DisclosureListTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/disclosure/DisclosureListTest.java)
+- [ScrollCueTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/scroll/ScrollCueTest.java)
+- [LocationPickerTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/location/LocationPickerTest.java)
+- [DateTimesTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/datetime/DateTimesTest.java)
+- [TemporalEditorTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/datetime/TemporalEditorTest.java)
+- [TemporalDateTimePickerTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/component/datetime/TemporalDateTimePickerTest.java)
+- [DateTimeExamplesViewTest.java](../../../rg-frontend-vaadin/src/test/java/vg/rg/frontend/vaadin/view/examples/datetime/DateTimeExamplesViewTest.java)

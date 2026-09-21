@@ -1,20 +1,22 @@
 # Configuration holders
 
 How this application reads its own tunables. Domain-specific keys and their meanings live in the domain
-files ([workspace.md](./workspace.md), [geolocation.md](./geolocation.md),
+files ([workspace lifecycle](../logic/workspace/lifecycle.md), [locations](../logic/workspace/locations.md),
 [encryption.md](./encryption.md)); this file is about the shared mechanism.
 
 ## The convention
 
-Every configuration holder is a `@ConfigurationProperties` type with final fields, registered explicitly:
-`RgLogicConfig` for the `rg-logic` ones, `AppConfiguration` for the `rg-frontend-vaadin` one.
-**`@ConfigurationProperties` types are not component-scanned** — a holder that is only annotated and never
+Most configuration holders are `@ConfigurationProperties` types with final fields, registered explicitly:
+`RgLogicConfig` for the immutable `rg-logic` holders, `AppConfiguration` for `MapsClientProperties`.
+`DevSecureServiceProperties` is an exception: it is a conditional `@Component` with mutable
+setter binding, activated only when `rg.dev-secure-service.enabled=true`.
+**`@ConfigurationProperties` alone does not enable component scanning** — a holder that is only annotated and never
 registered simply does not exist as a bean, and `@Import` does not work either: it registers the type as
 an ordinary bean whose constructor Spring then tries to autowire, failing with *"No qualifying bean of
 type 'String'"*. Use `@EnableConfigurationProperties`, in tests too.
 
 | Holder | Package | Prefix | Module |
-|---|---|---|
+|---|---|---|---|
 | `GeoProperties` | `vg.rg.config` | `rg.geo` | rg-logic |
 | `WorkspaceProperties` | `vg.rg.config` | `rg.workspace` | rg-logic |
 | `EncryptionProperties` | `vg.rg.config` | `rg.encryption` | rg-logic |
@@ -38,7 +40,7 @@ to `int` or `DataSize`. That is deliberate and costs real convenience, so it is 
 **Spring's conversion failure echoes the offending value** — `Failed to convert … for value [<value>]` —
 into the startup exception and the logs. The `rg.secure-service.*` limits are covered by tests named
 `failWithoutDisclosure`, asserting that a rejected value never appears in the message, and the other
-holders behaved the same way when they read `Environment` directly. Binding the component as `String`
+holders use the same non-disclosing validation. Binding the component as `String`
 keeps the conversion — and therefore the message — in our hands: a bad value is rejected by naming the
 **key** and nothing else.
 
@@ -78,3 +80,44 @@ The env-var spelling is only recognised in a `SystemEnvironmentPropertySource`.
 name mapping — a test asserting relaxed binding has to install a real
 `SystemEnvironmentPropertySource`, as `GeoPropertiesTest.relaxedBinding_acceptsEnvironmentVariableForm`
 does.
+
+## Google Maps browser integration
+
+`MapsClientProperties` exposes `google.maps.browser-api-key` and optional
+`google.maps.map-id` to the browser connector. The browser key is public by design
+and referrer-restricted; actual configured values are not logged or documented here.
+A blank key disables the picker and leads to the coordinate-free add form.
+
+A Vector Map ID enables the WebGL map; no ID uses the raster map. The integration
+requires Maps JavaScript API and Places API (New), using `PlaceAutocompleteElement`,
+`Place.fetchFields` (`displayName`, `location`), and point-of-interest `placeId` clicks.
+There is no server-side geocoding dependency. Client entry is
+`rgInitGoogleMapsConnector`; view callbacks are `onCoordinatesAcquired` and
+`onMapsUnavailable`, with the view element passed explicitly for `$0.$server` calls.
+
+The connector uses fixed code constants, not configuration properties: an 8-second
+Maps-load timeout, an 8-second Telegram initialization timeout, a 30-second Telegram
+location timeout, and an 8-second browser-location timeout. Failed Maps loading uses
+the [UI fallback](../ui/locations.md); no coordinate is fabricated.
+
+The Mini App needs HTTPS for browser/Telegram geolocation. Behind TLS termination,
+`server.forward-headers-strategy=framework` preserves the forwarded HTTPS scheme on
+redirects. The optional map-centering flow is described in the location UI contract.
+
+## Authorization adapter configuration
+
+`rg.dev-secure-service.enabled` selects the development adapter when true and the
+identity-service adapter otherwise. The development holder exposes `bot-token`,
+positive `auth-date-ttl` (default one hour), and nonnegative `allowed-clock-skew`
+(default 30 seconds). A real bot token belongs in environment/runtime configuration,
+not documentation or logs. Business validation limits are defined in
+[identity and access](../logic/identity-access.md).
+
+## Evidence
+
+- [ConfigurationBounds.java](../../../rg-logic/src/main/java/vg/rg/config/ConfigurationBounds.java)
+- [GeoPropertiesTest.java](../../../rg-logic/src/test/java/vg/rg/config/GeoPropertiesTest.java)
+- [WorkspacePropertiesTest.java](../../../rg-logic/src/test/java/vg/rg/config/WorkspacePropertiesTest.java)
+- [SecureAuthorizationLimitsPropertiesTest.java](../../../rg-logic/src/test/java/vg/rg/config/security/SecureAuthorizationLimitsPropertiesTest.java)
+- [MapsClientProperties.java](../../../rg-frontend-vaadin/src/main/java/vg/rg/frontend/vaadin/config/MapsClientProperties.java)
+- [google-maps-connector.ts](../../../rg-frontend-vaadin/src/main/frontend/ts/maps/google-maps-connector.ts)

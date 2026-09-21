@@ -3,8 +3,8 @@
 Facts about **building, testing and deploying this repository** that are not derivable from reading the
 code, and that have each cost real debugging time at least once.
 
-This file is deliberately not about behaviour — that lives in the domain files beside it. Add an entry
-here when something surprised you and the surprise was not visible in any source file.
+Behavioral contracts live in [UI](../ui/README.md) and [logic](../logic/README.md).
+Documentation maintenance instructions live in [specs/README.md](../../README.md#documentation-authoring-and-maintenance).
 
 ## Production frontend bundle
 
@@ -161,7 +161,7 @@ pass.
 **Two tables are retained but entirely unmapped**: `rg_location` and `rg_migration_marker`. No entity, no
 repository, nothing reaching them. `PermissionDeclarationArchitectureTest` fails if any production file so
 much as names `rg_location`, so do not "helpfully" map it back. See
-[workspace.md](./workspace.md#the-retired-global-scope) for why each is kept.
+[domain history](../decisions/domain-history.md#global-location-scope) for why each is kept.
 
 **Liquibase** runs from `rg-frontend-vaadin/src/main/resources/liquibase-changelog.yml`, which is just
 `includeAll: db/liquibase/`. Both modules' resources land on one classpath, so a new changeset dropped
@@ -216,10 +216,3 @@ The practical difference: **Jackson 3's `ObjectMapper` is immutable.** The 2.x m
 `JsonMapper.builder()…build()`. Inclusion is `changeDefaultPropertyInclusion(UnaryOperator<JsonInclude.Value>)`
 rather than a setter. Also worth knowing before writing a defensive `catch`:
 `writeValueAsString`/`readValue` now throw the **unchecked** `JacksonException`.
-
-## Referring to history
-
-Prefer describing a change ("the commit that removed the one-time migration") over quoting a short hash.
-This branch's history has been rewritten at least once, and hashes quoted in earlier revisions of these
-documents already point at commits reachable from no branch or tag — alive in the reflog and due to be
-garbage-collected.

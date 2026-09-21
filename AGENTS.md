@@ -3,13 +3,13 @@
 ## Definition of done (mandatory)
 
 - **Keep `specs/current/` actual at all times.** Every change that alters behaviour, contracts,
-  configuration, or data flow MUST update the corresponding logical domain md file(s) in `specs/current/`
-  within the same change — never as a follow-up. If no domain file covers the affected area yet, create
-  one (grouped by logical domain, not by feature or ticket). Code and `specs/current/` must never drift
+  configuration, or data flow MUST update the corresponding UI, logic, or engineering documents
+  within the same change — never as a follow-up. If no document covers the affected area yet, create
+  one grouped by capability or logical domain, not by feature or ticket. Code and `specs/current/` must never drift
   apart: a change is not complete until the spec reflects it. Do not mark work done, hand off, or open a
-  PR while the current specification still describes the old behaviour. When creating or refreshing a
-  `specs/current/` domain file, start from `specs/current/_TEMPLATE.md`: describe current state only (no
-  history/migration/evolution language), grounded in the actual code.
+  PR while the current specification still describes the old behaviour. Start UI and logic documents
+  from `specs/current/templates/ui-contract.md` and `specs/current/templates/logic-domain.md`
+  respectively, following [Documentation authoring and maintenance](specs/README.md#documentation-authoring-and-maintenance).
 - **Cover every change in logic with tests.** New or changed behaviour MUST be accompanied by unit tests
   for the logic in isolation and integration tests for its wiring and interaction with collaborators (persistence,
   messaging, HTTP, Spring context), added in the same change. A change is not complete until
@@ -18,12 +18,16 @@
 ## Scope & specs
 
 - Work only in this repository for project tasks; never switch to or use the `knowledge-storage` repository.
-- Current-state behaviour lives in `specs/current/`. Read the relevant domain file before changing
-  behaviour in that area. A feature directory under `specs/NNN-*/`
+- **Read and follow [Documentation authoring and maintenance](specs/README.md#documentation-authoring-and-maintenance)**
+  before creating, editing, moving, or reviewing project documentation, and before planning or
+  implementing changes to behaviour, contracts, configuration, or data flow that require spec updates.
+  Apply its verification checklist before marking that work complete.
+- Current-state behaviour lives in `specs/current/ui/` and `specs/current/logic/`. Read the relevant
+  UI and domain contracts before changing behaviour in that area. A feature directory under `specs/NNN-*/`
   is primarily a decision record capturing the system as of that feature; it may be updated when genuinely needed, but
   there is no obligation to review the `specs/NNN-*/` directories, or reconcile them with later changes, just to apply a
   change.
-- Before your first build or test run in a session, read `specs/current/engineering-notes.md`: build,
+- Before your first build or test run in a session, read `specs/current/engineering/engineering-notes.md`: build,
   test and deployment facts that are not derivable from the code and have each cost debugging time.
   `specs/current/open-decisions.md` lists work that is neither finished nor abandoned.
 

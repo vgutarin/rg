@@ -19,7 +19,7 @@ therefore **replaces** the global `LocationService` rather than sitting beside i
 
 `LocationModel`, `ProximityMatch`, `ProximityQuery`, `LocationMapper`, `GeoDistance`, and `GeoProperties`
 are **reused unchanged** — the geolocation behaviour in
-[../../current/geolocation.md](../../current/geolocation.md) is preserved; only its scope changes.
+[../../current/geolocation.md](../../current/logic/workspace/locations.md) is preserved; only its scope changes.
 
 The **table** `rg_location` is **retained**, marked unused via a changelog table comment — no production
 code reads it, and nothing in this feature drops it. It is the migration's durable rollback. Dropping it is

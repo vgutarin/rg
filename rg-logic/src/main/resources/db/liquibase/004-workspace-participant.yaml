@@ -14,7 +14,7 @@ databaseChangeLog:
         # key from rg content.
         #
         # There is no label and no phone column. Both live inside `descriptor`, encrypted -- a reader
-        # of this schema must not be able to see a person. See specs/current/encryption.md.
+        # of this schema must not be able to see a person. See specs/current/engineering/encryption.md.
         - createTable:
             tableName: rg_workspace_participant
             columns:

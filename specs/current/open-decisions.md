@@ -3,11 +3,10 @@
 Live items that are neither finished nor abandoned, with enough context to act on without the
 conversation that produced them.
 
-A feature directory under `specs/NNN-*/` freezes when its feature ships, so anything still open outgrows
-it. This file is where that lands. **Remove an entry when it closes** — a stale "open" item is worse than
-no list, because it invites re-litigating something already settled.
+Current contracts are indexed in [UI](ui/README.md) and [logic](logic/README.md).
+Documentation maintenance instructions are in [specs/README.md](../README.md#documentation-authoring-and-maintenance).
 
-Last reviewed: 2026-09-04.
+Documentation/source review: 2026-09-21. Deployment and device checks remain unverified.
 
 ## 1. Verify the production frontend bundle in the deployed environment — *status changed*
 
@@ -16,13 +15,15 @@ assembly. The cause was diagnosed: a cached `prod.bundle` predating the `workspa
 the route key the server sent had no branch in the bundle's `loadOnDemand` switch and the chunk defining
 `vaadin-tabs`/`vaadin-tabsheet` was never fetched.
 
-**The local cache is now gone** — `rg-frontend-vaadin/src/main/bundles/` holds only its `README.md` — so
-the next production build here generates a fresh bundle and the local half of this is closed.
+Removal of the stale local cache was recorded during the original diagnosis. Local
+build artifacts can be regenerated; their presence is not proof of deployed bundle
+freshness. Compare the actual route keys and deployed assembly rather than assuming
+the local bundles directory is still empty.
 
 What remains is unverified rather than known-broken: **whether the deployed environment is still running
 the old assembly.** Check the deployed app rather than this working copy. The mechanism and the
 verification greps are in
-[engineering-notes.md](./engineering-notes.md#production-frontend-bundle).
+[engineering notes](engineering/engineering-notes.md#production-frontend-bundle).
 
 Worth knowing while checking: a stale bundle is not the only way the frontend can look outdated — a
 client-cached `styles.css` produces a similar "the code is right but the screen is wrong" impression, and
@@ -45,13 +46,16 @@ would leave nothing explaining the decision.
 
 Scenario A0 is closed (see item 2). A–F are the UI walkthroughs in
 [../003-workspace-layer/quickstart.md](../003-workspace-layer/quickstart.md) and need a Telegram Mini App
-session over https, so they cannot be discharged locally. Their automated equivalents all pass.
+session over https, so they cannot be discharged by documentation review. Automated
+equivalents were reported passing during the feature work; they have not been rerun
+as part of this documentation migration.
 
 ## 4. Restore the workspace section's navigation entry — *deliberately withheld*
 
 The section has no drawer entry at present; its routes, layout and permission gate all work. Restoring it
-is one `addNav` call in `MainView` plus a `nav.workspaces` label in both bundles. `WorkspaceNavigationTest`
-currently asserts its **absence**, so that assertion inverts when the entry returns.
+requires an entry in `ContentNavigationProvider` plus a label in both bundles and
+corresponding navigation tests. Verify the current `MainViewTest` coverage when
+making that change; the earlier `WorkspaceNavigationTest` reference is obsolete.
 
 ## 5. Consider a freshness test for `specs/current/` — *not started*
 
@@ -76,7 +80,7 @@ their Telegram channel to a subject, and returns that subject so this applicatio
 about *registration* needs identity — that is deliberate, so registration cannot become a
 phone-number-lookup oracle — so this is the only part that does.
 
-**The hard prerequisite:** `IdentitySecureAuthorizationFacade.java:41` hardcodes
+**The hard prerequisite:** `IdentitySecureAuthorizationFacade` hardcodes
 `consentToKeepPersonalData = false`. Identity's `authenticateTelegram` is consent-gated create-on-demand,
 so with `false` and no existing user it returns a provisional principal with `userUniqueId == null` and
 persists nothing — and `AuthorityChecker` fails closed on a null subject. **An invited person can
@@ -96,3 +100,42 @@ can select or use someone else's workspace. Whichever change introduces membersh
   non-owner's selection pointing at a removed workspace would violate the foreign key.
 - `WorkspaceSelectionServiceImpl.activeWorkspace()` falls back to provisioning a workspace **owned by the
   caller**, which is the wrong answer for someone who is a member of one rather than an owner of any.
+
+## 8. Participant calling and clipboard in Telegram on iOS — unresolved verification
+
+The user reports that server-delayed `window.location.href = "tel:..."` does not
+launch dialing in the iOS Mini App. `WorkspaceParticipantsView` retains the
+`callContact` method but comments out its Call control; the rendered screen offers
+Show phone only. The old specification's two-action claim is therefore inaccurate.
+
+A native client-side telephone link with the phone available before the tap was
+suggested, not implemented or device-verified. Do not add another call dialog or
+an extra reveal-dialog button as an assumed solution. Any solution must preserve
+the permission-checked contact-disclosure boundary.
+
+Copy uses Vaadin 25.2's browser-click clipboard binding with localized failure
+feedback. That API wiring is not an iOS device acceptance result. Verify copy success,
+denial/manual-copy feedback, and any separately approved dialing solution on-device.
+The Call interaction tests are also commented out. Revisit their coverage alongside
+any approved dialing change; this migration does not change tests or behavior.
+
+## 9. Participant descriptor size refusal — service/contract discrepancy
+
+The old specification and converter comment described two size checks. Inspection
+finds the sealed-byte cap in `ParticipantDescriptorConverter`, but no corresponding
+check in `WorkspaceParticipantServiceImpl`; its sanitizer checks label and phone.
+The current logic contract documents converter enforcement rather than promising a
+service-level localized size refusal. Decide whether a separate service refusal is
+needed, with unit and persistence/integration tests if behavior changes.
+
+## 10. Event count workspace isolation — service query gap
+
+`WorkspaceEventRegistrationServiceImpl.countByEvents` authorizes the supplied
+workspace, but `WorkspaceEventRegistrationRepository.countByEventUniqueIds` filters
+only by event identifiers. The current UI supplies a workspace-scoped page, but the
+service does not constrain arbitrary identifiers to the authorized workspace. An
+authorized caller with another workspace's event identifier could obtain its count.
+
+Scope the query or validate all identifiers in a separate logic change, with tests
+for foreign/mixed workspace identifiers, normal counts, and absent events. No query,
+authorization, or API behavior is changed by the documentation migration.

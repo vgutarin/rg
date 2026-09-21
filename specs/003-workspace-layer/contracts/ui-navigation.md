@@ -78,7 +78,7 @@ removed `LocationsView`. Calls `WorkspaceLocationService` with the active worksp
 reaches it and can use it fully without holding any `location:*` capability, because ownership overrides
 them (FR-014); an empty workspace therefore shows the ordinary empty state, never a denial. The two-tab
 structure, the Google Maps picker, and `MapsResolutionBridge` are carried
-over as specified in [../../current/geolocation.md](../../current/geolocation.md) — including
+over as specified in [../../current/geolocation.md](../../current/ui/locations.md) — including
 `MapsResolutionBridge`'s proximity call, which is re-pointed at the active workspace. Only the scope
 changes; the geolocation behaviour does not.
 

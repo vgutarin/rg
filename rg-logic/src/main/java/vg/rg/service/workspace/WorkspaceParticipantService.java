@@ -59,7 +59,7 @@ public interface WorkspaceParticipantService {
      *
      * <p><strong>Ordered and filtered in memory, not in SQL, and it cannot be otherwise.</strong> The
      * label lives inside an encrypted column with a fresh IV per write, so the database can neither
-     * compare it, index it, nor order by it — see {@code specs/current/encryption.md}. So
+     * compare it, index it, nor order by it — see {@code specs/current/engineering/encryption.md}. So
      * <strong>every call reads and opens the whole roster</strong>, whatever page is asked for: the
      * returned page is honest about its total but not about its cost. That is affordable only because
      * {@code rg.workspace.participants-max-per-workspace} bounds how many envelopes there can be.

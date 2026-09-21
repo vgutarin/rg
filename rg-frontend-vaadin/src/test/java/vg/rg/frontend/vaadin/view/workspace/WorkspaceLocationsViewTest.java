@@ -347,7 +347,7 @@ class WorkspaceLocationsViewTest {
      *
      * <p>Held in a field on purpose: Vaadin keeps the current UI behind a weak reference, so one with no
      * other referent can be collected mid-test and {@code dialog.open()} then fails intermittently with
-     * "No currently active UI found". See {@code specs/current/engineering-notes.md}.
+     * "No currently active UI found". See {@code specs/current/engineering/engineering-notes.md}.
      */
     private com.vaadin.flow.component.UI ui;
 

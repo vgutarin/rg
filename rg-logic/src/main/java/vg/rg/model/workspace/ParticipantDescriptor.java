@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * mechanism.)
  *
  * @param schemaVersion the shape this payload is in. The stored envelope carries no version byte — see
- *                      {@code specs/current/encryption.md} — so the discriminator lives in the payload
+ *                      {@code specs/current/engineering/encryption.md} — so the discriminator lives in the payload
  *                      instead. Lenient parsing already absorbs an <em>added</em> field; this earns its
  *                      keep when an existing field has to be reinterpreted, which would otherwise mean
  *                      rewriting every stored row.

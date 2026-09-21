@@ -176,7 +176,7 @@ The `workspace_unique_id` column serves **both** purposes — scoped querying *a
 `LocationParentResolver.findParent(id)` returns it, which is how a location resolves to its workspace from
 its own identifier alone. There is no second row to write and keep consistent (FR-011, research R1).
 
-**Behaviour** otherwise follows [../current/geolocation.md](../current/geolocation.md) unchanged: optional
+**Behaviour** otherwise follows [../current/geolocation.md](../current/logic/workspace/locations.md) unchanged: optional
 coordinates, advisory proximity suggestion within `rg.geo.match-radius-meters`, case-insensitive name
 search, derived Google Maps link. Proximity matching never looks outside the row's own workspace.
 
