@@ -125,7 +125,7 @@ class TelegramAuthViewTest {
     }
 
     @Test
-    void authenticate_nullSubject_installsSessionAndNavigatesToNoAccess() {
+    void authenticate_nullSubject_installsSessionAndNavigatesToPublicHome() {
         var principal = principal(null);
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
@@ -136,8 +136,7 @@ class TelegramAuthViewTest {
             view.authenticate("auth_date=1&hash=x");
 
             verify(securityContextService).authenticate(principal);
-            verify(ui).navigate(NoAccessView.class);
-            verify(ui, never()).navigate(LandingView.class);
+            verify(ui).navigate(LandingView.class);
         }
     }
 

@@ -13,15 +13,16 @@ import java.util.Objects;
 /**
  * Removes a workspace's locations when the workspace is removed.
  *
- * <p>Ordered last: an event carries a restricting FK to its location, so every event must be gone
- * before its locations. The event contributor runs at order 1, this at order 3.
+ * <p>A direct workspace child, ordered immediately before its workspace. Events run earlier because
+ * an event's FK to its location is restricting.
  */
 @Slf4j
-@Order(3)
+@Order(LocationWorkspaceContentContributor.ORDER)
 @Component
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
-class LocationWorkspaceContentContributor implements WorkspaceContentContributor {
+public class LocationWorkspaceContentContributor implements WorkspaceContentContributor {
 
+    public static final int ORDER = DIRECT_WORKSPACE_CHILD_ORDER;
     static final String RESOURCE_TYPE = "LOCATION";
 
     private final WorkspaceLocationRepository repository;

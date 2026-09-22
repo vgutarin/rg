@@ -14,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import vg.rg.frontend.vaadin.service.ApplicationSecurityContextService;
 import vg.rg.frontend.vaadin.service.LocalizationService;
-import vg.rg.frontend.vaadin.view.auth.NoAccessView;
 import vg.rg.frontend.vaadin.view.auth.TelegramAuthView;
 import vg.rg.frontend.vaadin.view.home.LandingView;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
@@ -29,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,7 +64,7 @@ class SecureEntryIntegrationTest {
     }
 
     @Test
-    void secureEntry_nullSubject_reachesNoAccessWithoutRenderingIdentity() {
+    void secureEntry_nullSubject_reachesPublicHomeWithoutRenderingIdentity() {
         var principal = principal(null, "Sensitive Session Name", Set.of("workspace:owner"));
         when(authorizationService.redeem(any())).thenReturn(AuthorizationOutcome.authorized(principal));
         var ui = mock(UI.class);
@@ -79,8 +77,7 @@ class SecureEntryIntegrationTest {
             assertThat(SecurityContextHolder.getContext().getAuthentication().getPrincipal()).isSameAs(principal);
             assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities()).isEmpty();
             assertThat(renderedText(view)).doesNotContain("Sensitive Session Name", "workspace:owner", "auth_date");
-            verify(ui).navigate(NoAccessView.class);
-            verify(ui, never()).navigate(LandingView.class);
+            verify(ui).navigate(LandingView.class);
         }
     }
 

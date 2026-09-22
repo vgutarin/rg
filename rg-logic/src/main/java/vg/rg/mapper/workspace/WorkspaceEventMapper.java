@@ -21,7 +21,6 @@ public class WorkspaceEventMapper {
                 .locationUniqueId(source.getLocationUniqueId())
                 .eventType(source.getEventType())
                 .maxParticipantCount(source.getMaxParticipantCount())
-                .isPublished(source.isPublished())
                 .author(source.getAuthor())
                 .lastEditor(source.getLastEditor())
                 .createdAt(source.getCreatedAt())

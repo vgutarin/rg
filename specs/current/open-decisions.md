@@ -6,7 +6,7 @@ conversation that produced them.
 Current contracts are indexed in [UI](ui/README.md) and [logic](logic/README.md).
 Documentation maintenance instructions are in [specs/README.md](../README.md#documentation-authoring-and-maintenance).
 
-Documentation/source review: 2026-09-21. Deployment and device checks remain unverified.
+Documentation/source review: 2026-11-03. Deployment and device checks remain unverified.
 
 ## 1. Verify the production frontend bundle in the deployed environment — *status changed*
 
@@ -70,27 +70,6 @@ CamelCase names flags framework classes these documents legitimately mention —
 `@SpringBootTest` — as missing. Resolve candidates against the `vg.rg` sources rather than against every
 `.java` stem, or restrict the pattern to names the repo actually declares.
 
-## 6. Let an invited participant actually bind to an identity — *blocked on a consent step*
-
-A workspace owner can register a participant, but there is no way for that person to become a platform
-user and have their `user_unique_id` filled in. Two pieces are missing, and the second blocks the first.
-
-**An invite issue/redeem pair in the identity service.** Redemption authenticates the person, links
-their Telegram channel to a subject, and returns that subject so this application can bind it. Nothing
-about *registration* needs identity — that is deliberate, so registration cannot become a
-phone-number-lookup oracle — so this is the only part that does.
-
-**The hard prerequisite:** `IdentitySecureAuthorizationFacade` hardcodes
-`consentToKeepPersonalData = false`. Identity's `authenticateTelegram` is consent-gated create-on-demand,
-so with `false` and no existing user it returns a provisional principal with `userUniqueId == null` and
-persists nothing — and `AuthorityChecker` fails closed on a null subject. **An invited person can
-therefore authenticate and do nothing, and the invite can never bind.** A real consent step has to feed
-that argument before any invitation flow works end to end.
-
-Contract tests at that boundary are mandatory when it changes: success, validation failure,
-authorization failure, timeout, unavailability, incompatible response — plus that consent-given now
-yields a non-null subject.
-
 ## 7. Two latent bugs that only real membership surfaces — *dormant, recorded deliberately*
 
 Both are harmless while a workspace has exactly one owner, and both become live the moment a non-owner
@@ -139,3 +118,26 @@ authorized caller with another workspace's event identifier could obtain its cou
 Scope the query or validate all identifiers in a separate logic change, with tests
 for foreign/mixed workspace identifiers, normal counts, and absent events. No query,
 authorization, or API behavior is changed by the documentation migration.
+
+## 11. Disclosure-list keyboard and expanded-state accessibility
+
+Source review finds that `DisclosureList.addItem` gives its header `role="button"`
+and `tabindex="0"`, but only installs a click listener. It does not set
+`aria-expanded` or `aria-controls`, or handle Enter/Space activation. The existing
+`DisclosureListTest.header_isOperableAsAControl` checks only role and tabindex;
+it does not establish keyboard activation or expanded-state announcements.
+
+The shared UI contract reflects these implemented limits. Add the missing semantics
+and keyboard handling in a behavior change, with component tests and browser
+verification that both keys toggle the intended panel and announced state follows it.
+
+## 12. Verify Join Society in Telegram — device/deployment acceptance
+
+Automated consent and resume coverage is indexed in
+[authentication](ui/authentication.md#evidence) and [navigation](ui/navigation.md#evidence).
+Database-backed membership tests also cover refusing an event unpublished during
+the consent journey and idempotent submission for an eligible event.
+
+Verify the journey in a deployed Telegram Mini App: consent cancellation and
+confirmation, reauthorization callbacks, return to Home, and the pending membership
+state after a subject is obtained. Automated checks do not establish device acceptance.

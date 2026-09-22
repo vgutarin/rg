@@ -29,7 +29,22 @@ when blank. Updating a system-named workspace requires a nonblank name, so it ca
 return to a null name through editing. Ownership, default status, author, and creation
 time are not writable through update.
 
-## Invariants and consistency
+## Functional requirements
+
+- **FR-001**: User-created workspaces MUST belong to the caller and MUST be non-default.
+- **FR-002**: Create/update MUST require a trimmed nonblank name and enforce the configured name and description bounds.
+- **FR-003**: Creation MUST refuse a request when the observed owned-workspace count reaches the configured maximum.
+- **FR-004**: Updating MUST reject a stale version and change only name and description.
+- **FR-005**: Deleting a default workspace MUST be refused; deleting a selected non-default workspace MUST repoint the caller's selection before removal.
+- **FR-006**: Active-workspace lookup MUST return a still-owned selection or ensure a default and persist the repaired pointer.
+
+## Invariants
+
+- **INV-001**: An owner has at most one marked default workspace (checked by schema constraint `uq_rg_workspace_default_for_owner`).
+- **INV-002**: A user has at most one persisted selection, pointing to an existing workspace (checked by schema primary key `pk_rg_workspace_selection` and FK `fk_rg_workspace_selection_workspace`).
+- **INV-003**: Updating cannot transfer ownership or change the default marker (checked by `WorkspaceServiceImplTest`).
+
+## Consistency
 
 Create/update/delete and selection changes are transactional service operations.
 Updates compare the supplied version and use JPA versioning; stale updates raise an
@@ -57,6 +72,12 @@ guarantee from the configurable maximum count.
 
 Positive bounds and blank-value fallback use [configuration holders](../../engineering/configuration.md).
 [Workspace UI](../../ui/workspaces.md) owns default-label localization and confirmation.
+
+## Success criteria
+
+- **SC-001**: First active-workspace lookup returns a system-named default and makes it active (`WorkspaceSelectionFuncTest`).
+- **SC-002**: Selecting another workspace survives a new session and replaces the user's selection row rather than adding another (`WorkspaceSelectionFuncTest`).
+- **SC-003**: Deleting the selected non-default workspace leaves its content removed and the default active (`WorkspaceDeletionFuncTest`).
 
 ## Evidence
 

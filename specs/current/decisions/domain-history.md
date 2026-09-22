@@ -37,7 +37,8 @@ a participant could not be modeled merely as a pending platform user.
 The local participant identifier was chosen as the only reference from application
 content. The optional identity-subject field is separate, so identity binding need
 not rewrite event or other content references. An invitation redemption flow was
-discussed but remains [open decision 6](../open-decisions.md#6-let-an-invited-participant-actually-bind-to-an-identity--blocked-on-a-consent-step).
+discussed; identity binding and explicit consent are addressed by the
+[event visibility and membership decision](0001-event-visibility-and-membership.md).
 
 Registration intentionally does not ask identity whether a phone belongs to an
 existing account: lookup-and-reuse would expose a phone-number membership oracle.

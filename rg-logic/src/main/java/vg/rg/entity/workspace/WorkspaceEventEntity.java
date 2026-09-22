@@ -72,9 +72,6 @@ public class WorkspaceEventEntity implements UniqueIdEntity {
     @Column(name = "max_participant_count", nullable = false)
     private Integer maxParticipantCount;
 
-    @Column(name = "is_published", nullable = false)
-    private boolean isPublished;
-
     @CreatedBy
     @Column(updatable = false)
     @Convert(converter = UniqueIdLongConverter.class)

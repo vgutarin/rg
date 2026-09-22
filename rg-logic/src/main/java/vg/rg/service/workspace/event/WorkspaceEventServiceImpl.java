@@ -10,11 +10,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vg.rg.entity.workspace.WorkspaceEventEntity;
 import vg.rg.mapper.workspace.WorkspaceEventMapper;
+import vg.rg.model.resource.ResourcePublication;
+import vg.rg.model.resource.ResourceVisibilityPolicy;
+import vg.rg.model.resource.ResourceVisibilitySubjectKind;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.repository.workspace.WorkspaceEventRegistrationRepository;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
+import vg.rg.repository.workspace.WorkspaceMembershipRequestRepository;
+import vg.rg.service.resource.ResourcePublicationService;
 import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
 
@@ -38,7 +43,9 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
     private final UniqueIdService uniqueIdService;
     private final WorkspaceEventRepository repository;
     private final WorkspaceEventRegistrationRepository registrationRepository;
+    private final ResourcePublicationService publicationService;
     private final WorkspaceLocationRepository locationRepository;
+    private final WorkspaceMembershipRequestRepository membershipRequestRepository;
     private final WorkspaceEventMapper mapper;
 
     @Override
@@ -50,6 +57,8 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
         var title = titleOf(model);
         validateSchedule(model);
         validateLocation(workspaceId, model.getLocationUniqueId());
+        var policy = policyFrom(model);
+        validatePolicy(policy);
         var entity = WorkspaceEventEntity.builder()
                 .workspaceUniqueId(workspaceId)
                 .title(title)
@@ -57,10 +66,11 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
                 .endAt(model.getEndAt())
                 .locationUniqueId(model.getLocationUniqueId())
                 .eventType(model.getEventType())
-                .maxParticipantCount(model.getMaxParticipantCount())
-                .isPublished(model.isPublished())
-                .build();
-        return mapper.toModel(repository.saveWithNewUniqueId(entity, uniqueIdService));
+                .maxParticipantCount(model.getMaxParticipantCount()).build();
+        var saved = repository.saveWithNewUniqueId(entity, uniqueIdService);
+        var publication = publicationService.create(new UniqueId(saved.getUniqueId()), model.isPublished(),
+                policy.mode(), policy.rules());
+        return toModel(saved, publication);
     }
 
     @Override
@@ -72,7 +82,7 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
         var events = filter.isBlank()
                 ? repository.findByWorkspaceUniqueId(workspaceId, pageable)
                 : repository.findByWorkspaceUniqueIdAndTitleContainingIgnoreCase(workspaceId, filter, pageable);
-        return events.map(mapper::toModel);
+        return events.map(this::toModel);
     }
 
     @Override
@@ -94,8 +104,24 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
         entity.setLocationUniqueId(model.getLocationUniqueId());
         entity.setEventType(model.getEventType());
         entity.setMaxParticipantCount(model.getMaxParticipantCount());
-        entity.setPublished(model.isPublished());
-        return mapper.toModel(repository.save(entity));
+        var saved = repository.save(entity);
+        var publication = publicationService.updatePublicationState(model.getUniqueId(), model.getPublicationVersion(),
+                model.isPublished());
+        return toModel(saved, publication);
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("@authorityChecker.hasAuthority(#eventId, '" + LocalPermissions.WorkspaceEvent.UPDATE + "')")
+    public WorkspaceEventModel replaceVisibilityPolicy(
+            UniqueId eventId, int version, ResourceVisibilityPolicy policy) {
+        Objects.requireNonNull(eventId, "eventId");
+        Objects.requireNonNull(policy, "policy");
+        validatePolicy(policy);
+        var event = repository.findById(eventId).orElseThrow(EntityNotFoundException::new);
+        var publication = publicationService.replaceVisibilityPolicy(eventId, version,
+                policy.mode(), policy.rules());
+        return toModel(event, publication);
     }
 
     @Override
@@ -107,6 +133,8 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
         // The FK from a registration to its event is deliberately restricting, so the roster must go
         // first or the delete fails with a constraint violation.
         registrationRepository.deleteByEventUniqueId(eventId);
+        publicationService.delete(eventId);
+        membershipRequestRepository.clearOriginEventUniqueId(eventId);
         repository.delete(entity);
     }
 
@@ -145,6 +173,32 @@ class WorkspaceEventServiceImpl implements WorkspaceEventService {
         }
         if (!locationRepository.existsByUniqueIdAndWorkspaceUniqueId(locationId.getLongValue(), workspaceId)) {
             throw new IllegalArgumentException(LOCATION_OUTSIDE_WORKSPACE);
+        }
+    }
+
+    private WorkspaceEventModel toModel(WorkspaceEventEntity entity) {
+        var publication = publicationService.ensureDraftPublication(new UniqueId(entity.getUniqueId()));
+        return toModel(entity, publication);
+    }
+
+    private WorkspaceEventModel toModel(WorkspaceEventEntity entity, ResourcePublication publication) {
+        var model = mapper.toModel(entity);
+        model.setPublished(publication.isPublished());
+        model.setPublicationVersion(publication.version());
+        model.setVisibilityPolicy(new ResourceVisibilityPolicy(publication.visibilityMode(), publication.rules()));
+        return model;
+    }
+
+    private static ResourceVisibilityPolicy policyFrom(WorkspaceEventModel model) {
+        return model.getVisibilityPolicy() == null
+                ? ResourceVisibilityPolicy.publicVisibility()
+                : model.getVisibilityPolicy();
+    }
+
+    private static void validatePolicy(ResourceVisibilityPolicy policy) {
+        if (policy.rules().stream().anyMatch(rule -> rule.subjectKind()
+                == ResourceVisibilitySubjectKind.WORKSPACE_GROUP)) {
+            throw new IllegalArgumentException("resource.visibility.error.group-not-supported");
         }
     }
 }

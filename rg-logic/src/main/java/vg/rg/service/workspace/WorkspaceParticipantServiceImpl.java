@@ -126,6 +126,20 @@ class WorkspaceParticipantServiceImpl implements WorkspaceParticipantService {
             + LocalPermissions.WorkspaceParticipant.LIST + "')")
     public Page<WorkspaceParticipantModel> browse(
             UniqueId workspaceId, String labelFilter, Pageable pageable) {
+        return browse(workspaceId, labelFilter, pageable, candidate -> true);
+    }
+
+    @Override
+    @PreAuthorize("@authorityChecker.hasAuthority(#workspaceId, '"
+            + LocalPermissions.WorkspaceParticipant.LIST + "')")
+    public Page<WorkspaceParticipantModel> browseUnbound(
+            UniqueId workspaceId, String labelFilter, Pageable pageable) {
+        return browse(workspaceId, labelFilter, pageable, candidate -> candidate.getUserUniqueId() == null);
+    }
+
+    private Page<WorkspaceParticipantModel> browse(
+            UniqueId workspaceId, String labelFilter, Pageable pageable,
+            java.util.function.Predicate<WorkspaceParticipantEntity> eligibility) {
         Objects.requireNonNull(workspaceId, "workspaceId");
         Objects.requireNonNull(pageable, "pageable");
         if (pageable.getSort().isSorted()) {
@@ -140,6 +154,7 @@ class WorkspaceParticipantServiceImpl implements WorkspaceParticipantService {
         // encrypted column can be neither searched nor ordered by the database. Bounded by the roster
         // limit, and the same cost whichever page was asked for.
         var ordered = repository.findByWorkspaceUniqueId(workspaceId).stream()
+                .filter(eligibility)
                 .map(mapper::toModel)
                 .filter(model -> needle.isEmpty() || matches(model.getLabel(), needle))
                 .sorted(BY_LABEL_THEN_ID)

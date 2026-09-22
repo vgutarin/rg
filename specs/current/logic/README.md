@@ -8,6 +8,7 @@ authentication to an external identity service.
 - [Lifecycle](workspace/lifecycle.md): workspace creation, naming, selection, and removal.
 - [Locations](workspace/locations.md): saved coordinates, name search, and proximity.
 - [Participants](workspace/participants.md): local person records and protected contact data.
+- [Resource publication](resource-publication.md): reusable publication state and audience rules.
 - [Events](workspace/events.md): scheduled sports records and publication state.
 - [Registrations](workspace/registrations.md): ordered participant-to-event relationships.
 

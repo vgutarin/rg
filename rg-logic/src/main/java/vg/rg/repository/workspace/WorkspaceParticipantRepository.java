@@ -32,6 +32,8 @@ public interface WorkspaceParticipantRepository extends UniqueIdJpaRepository<Wo
 
     long countByWorkspaceUniqueId(UniqueId workspaceUniqueId);
 
+    boolean existsByWorkspaceUniqueIdAndUserUniqueId(UniqueId workspaceUniqueId, UniqueId userUniqueId);
+
     void deleteByWorkspaceUniqueId(UniqueId workspaceUniqueId);
 
     /**

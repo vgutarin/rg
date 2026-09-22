@@ -31,7 +31,7 @@ import vg.rg.service.EncryptionService;
  * <ul>
  *   <li><strong>Unknown fields are ignored.</strong> A rollback to an older build must still be able to
  *       read rows a newer one wrote, which means an unrecognized key cannot be an error.</li>
- *   <li><strong>Nulls are omitted.</strong> A participant with no phone stores {@code {"v":1,"l":"…"}}
+ *   <li><strong>Nulls are omitted.</strong> A descriptor with no phone stores {@code {"v":1,"l":"…"}}
  *       instead of paying envelope space for {@code "p":null}. With lenient reads, absent and null
  *       arrive as the same thing, so nothing downstream has to tell them apart.</li>
  * </ul>

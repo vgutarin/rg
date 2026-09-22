@@ -3,13 +3,17 @@
 ## Responsibility and language
 
 A participant is a person record created by a workspace owner, independently of
-Telegram authentication. Registration grants no application/workspace access and
-performs no identity-service lookup. It does not disclose whether a phone belongs
-to an identity-service user.
+Telegram authentication. An unbound participant grants no application/workspace
+access. A participant with `user_unique_id` is a member of its workspace for event
+visibility policy matching, but does not gain workspace navigation or management.
+Registration performs no identity-service lookup and does not disclose whether a
+phone belongs to an identity-service user.
 
 The local `unique_id` is the identifier referenced by other application content.
-Nullable `user_unique_id` is an identity-subject field; registration leaves it unset
-and contact update does not change it.
+Nullable `user_unique_id` is an identity-subject field. Registration leaves it unset
+and contact update does not change it. Membership-request approval is the only
+binding path. The database permits one bound participant per workspace/user while
+allowing many unbound records.
 
 ## Model and disclosure
 
@@ -51,7 +55,27 @@ Create/list address the workspace; update/delete/reveal-contact address the part
 The local resource name is `workspace-participant`. Ownership grants these operations
 under the [shared access policy](README.md#authorization-scope).
 
-## Roster query and consistency
+## Functional requirements
+
+- **FR-001**: Registration MUST create an unbound participant in the supplied workspace after label/phone sanitization and roster-limit and duplicate-phone checks.
+- **FR-002**: Update MUST reject a stale version and replace the complete contact descriptor, including removal of an omitted phone.
+- **FR-003**: Roster browsing MUST apply eligibility, label filtering, and fixed label/identifier ordering before slicing the page; a supplied sort MUST be refused.
+- **FR-004**: Plaintext contact retrieval MUST use the participant-addressed reveal-contact guard.
+- **FR-005**: Participant deletion MUST remove that participant's event registrations before removing the participant.
+- **FR-006**: Join requests MUST use the authenticated subject and an audience-visible event, and MUST be a no-op for an existing member or pending requester.
+- **FR-007**: Owner approval MUST explicitly create a bound participant or bind an eligible owner-selected unbound participant; contact matching MUST NOT select a target automatically.
+- **FR-008**: Approval and rejection MUST remove the resolved request so a later request can be submitted.
+
+## Invariants
+
+- **INV-001**: The roster model carries no phone number or masked suffix (checked by `WorkspaceParticipantServiceFuncTest`).
+- **INV-002**: The participant schema stores contact data in a binary descriptor without plaintext label/phone columns (checked by `WorkspaceParticipantSchemaTest` and the raw-column assertions in `ParticipantDescriptorPersistenceFuncTest`).
+- **INV-003**: At most one participant is bound to a given workspace/user pair (checked by schema constraint `uq_rg_workspace_participant_workspace_user`; null user bindings remain repeatable).
+- **INV-004**: At most one pending request exists for a workspace/user pair (checked by schema constraint `uq_rg_workspace_membership_request_pending_user` and `WorkspaceMembershipRequestPersistenceFuncTest`).
+
+## Consistency
+
+### Roster queries
 
 Browse decrypts all descriptors in the workspace, filters by trimmed case-insensitive
 label containment, orders by case-insensitive label then identifier, and only then
@@ -71,6 +95,32 @@ Encryption protects read access to stored dumps/backups, not a compromised appli
 holding keys, arbitrary database writers, or data already captured in backups.
 Technical envelope/key behavior is owned by [encryption](../../engineering/encryption.md).
 
+### Membership requests
+
+An authenticated viewer requests to join from a visible event. The request belongs to
+the event workspace; its nullable event reference records the origin and never creates
+an event registration. It snapshots the authenticated account label in an encrypted
+`ParticipantDescriptor` without a phone. Submission locks that workspace before checking
+for an existing request. `pendingUserUniqueId` is the authenticated identity for that
+check; the database permits exactly one request per workspace/user. An existing member
+or requester is an idempotent no-op. Approval or rejection deletes the request and logs
+the decision with the request, workspace, and deciding-user identifiers, permitting a
+later request.
+
+Only the workspace owner reads pending requests or decides them. Approval explicitly
+chooses either an owner-selected unbound participant or creation from the encrypted requester descriptor;
+when that name is absent or too long, the owner supplies the required label. Both paths
+trim the label, and creating a participant enforces the configured roster limit before
+approving the request. No name, phone, or contact-based automatic match exists. The
+encrypted requester label is disclosed only in the owner’s request queue. Rejection is
+authorized against the request's workspace, rather than treating the workspace identifier
+as a participant resource.
+
+The membership-approval candidate query applies the unbound predicate before its
+case-insensitive label/identifier ordering and pageable slice. It shares the roster query's
+workspace-list authorization and encrypted-label scan, so each page contains only eligible
+participants.
+
 ## Configuration
 
 | Property | Default |
@@ -82,6 +132,18 @@ Technical envelope/key behavior is owned by [encryption](../../engineering/encry
 The workspace/created-at database index supports storage access, not alphabetical
 ordering of encrypted labels. [Registration logic](registrations.md) references the
 participant's local identity and resolves labels at read time.
+
+## Success criteria
+
+- **SC-001**: Filtered roster pages continue in case-insensitive label/identifier order and report the complete filtered total (`WorkspaceParticipantServiceFuncTest`).
+- **SC-002**: A persisted descriptor round-trips to its original contact data while the raw database column contains ciphertext (`ParticipantDescriptorPersistenceFuncTest`).
+- **SC-003**: Approval using an eligible request label creates a bound participant with the trimmed label; rejection releases the pending-request slot (`WorkspaceMembershipRequestPersistenceFuncTest`).
+
+## Related contracts
+
+- [Workspace authorization](README.md#authorization-scope).
+- [Participant UI](../../ui/participants.md) and [event registrations](registrations.md).
+- [Encryption mechanism](../../engineering/encryption.md).
 
 ## Evidence
 
@@ -96,3 +158,9 @@ participant's local identity and resolves labels at read time.
 - [ParticipantPhoneTest.java](../../../../rg-logic/src/test/java/vg/rg/model/workspace/ParticipantPhoneTest.java)
 - [ParticipantDescriptorConverterTest.java](../../../../rg-logic/src/test/java/vg/rg/entity/workspace/ParticipantDescriptorConverterTest.java)
 - [ParticipantDescriptorPersistenceFuncTest.java](../../../../rg-logic/src/test/java/vg/rg/entity/workspace/ParticipantDescriptorPersistenceFuncTest.java)
+- [WorkspaceParticipantServiceImplTest.java](../../../../rg-logic/src/test/java/vg/rg/service/workspace/WorkspaceParticipantServiceImplTest.java)
+- [WorkspaceParticipantSchemaTest.java](../../../../rg-logic/src/test/java/vg/rg/entity/workspace/WorkspaceParticipantSchemaTest.java)
+- [007-event-visibility-membership.yaml](../../../../rg-logic/src/main/resources/db/liquibase/007-event-visibility-membership.yaml)
+- [WorkspaceMembershipRequestServiceImpl.java](../../../../rg-logic/src/main/java/vg/rg/service/workspace/WorkspaceMembershipRequestServiceImpl.java)
+- [WorkspaceMembershipRequestServiceImplTest.java](../../../../rg-logic/src/test/java/vg/rg/service/workspace/WorkspaceMembershipRequestServiceImplTest.java)
+- [WorkspaceMembershipRequestPersistenceFuncTest.java](../../../../rg-logic/src/test/java/vg/rg/entity/workspace/WorkspaceMembershipRequestPersistenceFuncTest.java)

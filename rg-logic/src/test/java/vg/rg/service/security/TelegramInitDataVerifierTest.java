@@ -32,7 +32,7 @@ class TelegramInitDataVerifierTest {
         var result = verifier.verify(request(signed(user("123456", false), NOW.minusSeconds(60))));
 
         assertThat(result.status()).isEqualTo(TelegramInitDataVerifier.Status.VALID);
-        assertThat(result.telegramUserId()).hasValue(123456L);
+        assertThat(result.telegramUserId()).isEqualTo(123456L);
     }
 
     @Test

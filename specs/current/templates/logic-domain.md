@@ -14,13 +14,32 @@
 
 <Inputs, results, validation, authorization, and failure outcomes.>
 
-## Invariants and consistency
+## Functional requirements
 
-<Business invariants, actual transaction boundaries, and persistence constraints.>
+<Normative, each independently testable. MUST/SHOULD.>
+
+- **FR-001**: The system MUST <observable rule>.
+- **FR-002**: <...>
+
+## Invariants
+
+<Properties that always hold and map to a check (a test, a schema).>
+
+- **INV-001**: <property> (checked by <test/schema>).
+
+## Consistency
+
+<Actual transaction boundaries and persistence constraints.>
 
 ## Interactions
 
 <Relationships with other domain capabilities and external systems.>
+
+## Success criteria
+
+<Measurable, outcome-focused.>
+
+- **SC-001**: <measurable outcome>.
 
 ## Related contracts
 

@@ -3,13 +3,12 @@ package vg.rg.model.workspace;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * The contact data a workspace owner records about a participant, and the value that is persisted —
- * serialized to JSON and encrypted, as one opaque column.
+ * The contact data for a participant or membership requester, persisted as one encrypted opaque column.
  *
- * <p><strong>What may go in here: contact attributes of the registered person, and nothing else.</strong>
- * The constitution's allowance for this data (Principle I) is exhaustive, so an extra field is a
- * governance change and not merely a schema one. Without that rule stated, an untyped-looking blob
- * becomes a dumping ground.
+ * <p><strong>What may go in here: contact attributes of a participant, or the account-label snapshot
+ * of a membership requester, and nothing else.</strong> The constitution's allowance for this data
+ * (Principle I) is exhaustive, so an extra field is a governance change and not merely a schema one.
+ * Without that rule stated, an untyped-looking blob becomes a dumping ground.
  *
  * <p>One record rather than a column per field, because encryption already destroys the only advantage
  * separate columns would have: neither form can be queried, sorted, or constrained by the database.
@@ -27,8 +26,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *                      instead. Lenient parsing already absorbs an <em>added</em> field; this earns its
  *                      keep when an existing field has to be reinterpreted, which would otherwise mean
  *                      rewriting every stored row.
- * @param label         the display name the registering owner chose. Never derived from Telegram data
- *                      and never an identity, authorization, ownership, or audit input.
+ * @param label         the display name for this contact. A participant label is owner-selected; a
+ *                      membership request snapshots the authenticated account label. It is never an
+ *                      authorization, ownership, or audit input.
  * @param phone         a single contact number, normalized by {@code ParticipantPhone}. Nullable: a
  *                      participant may be recorded with a label alone. Null is omitted from the JSON
  *                      rather than written, so an absent phone costs no envelope space.

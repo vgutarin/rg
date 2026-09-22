@@ -3,15 +3,16 @@
 ## Purpose and integration
 
 `EncryptionService` encrypts selected string values as binary data. The generic
-`StringEncryptionConverter` opts a field in with
+`StringEncryptionConverter` can opt a String field in with
 `@Convert(converter = StringEncryptionConverter.class)` and preserves null values in
 both directions. Encrypted database columns use BLOB/VARBINARY storage.
 
-The application usage is `rg_workspace_participant.descriptor`, through the typed
-`ParticipantDescriptorConverter`. It serializes contact data to JSON and delegates
-to the same encryption service. Contact exposure, permitted fields, and size bounds
-belong to [participant logic](../logic/workspace/participants.md). Historical choices
-are recorded in [domain history](../decisions/domain-history.md#contact-storage-and-encryption).
+The application usage is `rg_workspace_participant.descriptor` and
+`rg_workspace_membership_request.descriptor`, both through the typed
+`ParticipantDescriptorConverter`. The descriptor serializes contact data to JSON;
+the generic string converter also delegates to the same encryption service. Contact
+and membership-descriptor exposure belong to [participant logic](../logic/workspace/participants.md).
+Historical choices are recorded in [domain history](../decisions/domain-history.md#contact-storage-and-encryption).
 
 ## Stored format
 
@@ -65,10 +66,10 @@ Stateful JPA converters are obtained through Spring's managed-bean registry when
 Hibernate encounters an annotated entity. Context startup alone does not exercise
 that resolution.
 
-`ParticipantDescriptorPersistenceFuncTest` persists, flushes, clears, and reloads,
-then checks raw JDBC bytes so a plaintext round trip cannot masquerade as encryption.
-`EncryptionWiringFuncTest` exercises the generic string converter, which is not
-attached to a production entity. Converter tests cover nulls, randomized writes,
+`ParticipantDescriptorPersistenceFuncTest` and
+`WorkspaceMembershipRequestPersistenceFuncTest` persist, flush, clear, and reload,
+then check raw JDBC bytes so a plaintext round trip cannot masquerade as encryption.
+`EncryptionWiringFuncTest` exercises the generic string converter directly. Converter tests cover nulls, randomized writes,
 tampering, omitted null JSON fields, unknown fields, rotation, and the sealed-byte cap.
 
 ## Evidence
@@ -79,3 +80,4 @@ tampering, omitted null JSON fields, unknown fields, rotation, and the sealed-by
 - [EncryptionServiceTest.java](../../../rg-logic/src/test/java/vg/rg/service/EncryptionServiceTest.java)
 - [EncryptionWiringFuncTest.java](../../../rg-logic/src/test/java/vg/rg/entity/EncryptionWiringFuncTest.java)
 - [ParticipantDescriptorPersistenceFuncTest.java](../../../rg-logic/src/test/java/vg/rg/entity/workspace/ParticipantDescriptorPersistenceFuncTest.java)
+- [WorkspaceMembershipRequestPersistenceFuncTest.java](../../../rg-logic/src/test/java/vg/rg/entity/workspace/WorkspaceMembershipRequestPersistenceFuncTest.java)

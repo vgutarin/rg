@@ -1,3 +1,43 @@
+- JoinSocietyIntent - why in session only?
+- Location should allow open in google maps (WorkspaceEventAudienceModel)
+- request phone and store Participants details to memberships request
+- when 'Join Button' is clicked and user dos not have consent yet - correspondent Consent window must appears (verify it does)
+- consent
+  - text
+    - home.events.membership.consent.title=Створити ідентичність учасника 
+    - home.events.membership.consent=Я погоджуюся на створення та зберігання моєї ідентичності для цього запиту. 
+    - home.events.membership.consent.description=Ідентичність потрібна власнику спільноти для розгляду вашого запиту.
+  - add consent description page (what is persisted and why)
+- Add permission Workspace.MEMBERSHIP_REQUEST_DECISION
+- WorkspaceEventAudienceServiceImpl
+  - refactor List<WorkspaceEventEntity> findAllByOrderByStartAtAscTitleAscUniqueIdAsc(); to fetch permitted only with all required data to construct WorkspaceEventAudienceModel
+
+
+- After user membership was approved
+  - send notification for user
+  - add him to event registration (if we have event)
+- make edit dialog of event 90% width
+- Location should allow open in google maps (WorkspaceEventAudienceModel)
+- request phone and store Participants details to memberships request
+- when 'Join Button' is clicked and user dos not have consent yet - correspondent Consent window must appears (verify it does)
+- consent
+  - text
+    - home.events.membership.consent.title=Створити ідентичність учасника 
+    - home.events.membership.consent=Я погоджуюся на створення та зберігання моєї ідентичності для цього запиту. 
+    - home.events.membership.consent.description=Ідентичність потрібна власнику спільноти для розгляду вашого запиту.
+  - add consent description page (what is persisted and why)
+- Add permission Workspace.MEMBERSHIP_REQUEST_DECISION
+- Requests to join tab should display count of requests (or may be appears only if there are requests)
+- WorkspaceEventAudienceServiceImpl
+- `ResourcePublicationService` fetch published resources with respect to
+  - publishing time 
+  - additional filters like "label contains" \[and type IN(tennis, basketball)]
+  - custom order by
+- shared evens view
+  - display tenis/padel
+  - display marker (you are registered)
+  - add (unregister button)
+
 # Research
 
 ## Permissions model idea

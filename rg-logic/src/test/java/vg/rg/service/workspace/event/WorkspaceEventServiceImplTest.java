@@ -12,19 +12,26 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.entity.workspace.WorkspaceEventEntity;
 import vg.rg.mapper.workspace.WorkspaceEventMapper;
+import vg.rg.model.resource.ResourcePublication;
+import vg.rg.model.resource.ResourceVisibilityMode;
 import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.model.workspace.WorkspaceEventType;
 import vg.rg.repository.workspace.WorkspaceEventRegistrationRepository;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
+import vg.rg.repository.workspace.WorkspaceMembershipRequestRepository;
+import vg.rg.service.resource.ResourcePublicationService;
 import vg.unique.id.model.UniqueId;
 import vg.unique.id.service.UniqueIdService;
 
-import java.util.Optional;
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -46,7 +53,11 @@ class WorkspaceEventServiceImplTest {
     @Mock
     WorkspaceEventRegistrationRepository registrationRepository;
     @Mock
+    ResourcePublicationService publicationService;
+    @Mock
     WorkspaceLocationRepository locationRepository;
+    @Mock
+    WorkspaceMembershipRequestRepository membershipRequestRepository;
     @Mock
     WorkspaceEventMapper mapper;
 
@@ -55,9 +66,17 @@ class WorkspaceEventServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new WorkspaceEventServiceImpl(
-                uniqueIdService, repository, registrationRepository, locationRepository, mapper);
-        when(repository.saveWithNewUniqueId(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+                uniqueIdService, repository, registrationRepository, publicationService,
+                locationRepository, membershipRequestRepository, mapper);
+        when(repository.saveWithNewUniqueId(any(), any())).thenAnswer(invocation -> {
+            WorkspaceEventEntity event = invocation.getArgument(0);
+            event.setUniqueId(EVENT.getLongValue());
+            return event;
+        });
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(publicationService.create(any(), anyBoolean(), any(), any())).thenReturn(publication());
+        when(publicationService.updatePublicationState(any(), anyInt(), anyBoolean())).thenReturn(publication());
+        when(publicationService.findByResourceUniqueId(any())).thenReturn(Optional.of(publication()));
         when(mapper.toModel(any())).thenReturn(WorkspaceEventModel.builder().build());
         when(locationRepository.existsByUniqueIdAndWorkspaceUniqueId(LOCATION.getLongValue(), WORKSPACE))
                 .thenReturn(true);
@@ -72,8 +91,7 @@ class WorkspaceEventServiceImplTest {
         verify(repository).saveWithNewUniqueId(argThat(event -> WORKSPACE.equals(event.getWorkspaceUniqueId())
                 && "Planning".equals(event.getTitle()) && startAt.equals(event.getStartAt())
                 && endAt.equals(event.getEndAt()) && event.getEventType() == WorkspaceEventType.PADEL
-                && event.getMaxParticipantCount() == 12
-                && event.isPublished()), eq(uniqueIdService));
+                && event.getMaxParticipantCount() == 12), eq(uniqueIdService));
     }
 
     @Test
@@ -180,5 +198,10 @@ class WorkspaceEventServiceImplTest {
                 .eventType(WorkspaceEventType.PADEL)
                 .maxParticipantCount(12)
                 .locationUniqueId(LOCATION);
+    }
+
+    private static ResourcePublication publication() {
+        return new ResourcePublication(EVENT, 0, Instant.parse("2026-09-29T10:00:00Z"),
+                ResourceVisibilityMode.PUBLIC, List.of());
     }
 }

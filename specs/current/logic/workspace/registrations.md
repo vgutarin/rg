@@ -33,7 +33,22 @@ query filters only by supplied event identifiers, not by that workspace. Its UI 
 supplies identifiers from the scoped event page. The service does not independently
 validate that every identifier belongs to the authorized workspace.
 
-## Consistency and lifecycle
+## Functional requirements
+
+- **FR-001**: Register MUST refuse a participant from another workspace or an event/participant pair already registered.
+- **FR-002**: Register MUST append at the current maximum position plus one, starting at zero for an empty roster, and MUST allow overbooking.
+- **FR-003**: List MUST return registrations ordered by position then identifier, with labels resolved from current workspace participant descriptors.
+- **FR-004**: Move up/down MUST swap the selected registration's position with its adjacent neighbor and perform no write at the corresponding end.
+- **FR-005**: Unregister MUST remove only the addressed registration.
+- **FR-006**: Grouped counts MUST omit zero-count events and require event-list authority on the supplied workspace; the identifier-filter limitation above applies.
+
+## Invariants
+
+- **INV-001**: An event/participant pair has at most one registration (checked by schema constraint `uq_rg_workspace_event_registration_event_participant`).
+- **INV-002**: Every registration references an existing event and participant (checked by schema FKs `fk_rg_workspace_event_registration_event` and `fk_rg_workspace_event_registration_participant`).
+- **INV-003**: Service-created registrations join an event and participant in the same workspace (checked by `WorkspaceEventRegistrationServiceImplTest`; the schema alone does not enforce this relationship).
+
+## Consistency
 
 Register, unregister, and reorder are transactional service operations. Reorder writes
 both neighboring records. Positions can have gaps after removal; the query includes
@@ -50,6 +65,12 @@ workspace bulk deletion scopes by an event join.
 [Events](events.md) supply schedule, capacity, and scope.
 [Event UI](../../ui/events.md#event-participants-dialog) owns ordering controls, tab
 behavior, scrolling, and displayed counts.
+
+## Success criteria
+
+- **SC-001**: Sequential registration preserves insertion order, and moving a middle registration down exchanges its displayed position with the next row (`WorkspaceEventRegistrationServiceFuncTest`).
+- **SC-002**: Registration above configured event capacity succeeds (`WorkspaceEventRegistrationServiceFuncTest`).
+- **SC-003**: Event, participant, and workspace removal each remove their dependent registrations without leaving restrictive-FK failures (`WorkspaceEventRegistrationServiceFuncTest`).
 
 ## Evidence
 

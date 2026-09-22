@@ -1,5 +1,7 @@
 package vg.rg.repository.workspace;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vg.rg.entity.workspace.WorkspaceEntity;
@@ -35,4 +37,13 @@ public interface WorkspaceRepository extends UniqueIdJpaRepository<WorkspaceEnti
             where w.uniqueId = :workspaceUniqueId
             """)
     Optional<UniqueIdRow> findOwnerByUniqueId(@Param("workspaceUniqueId") Long workspaceUniqueId);
+
+    /** Serializes join requests for all events in one workspace before checking the pending constraint. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select w from WorkspaceEntity w
+              join WorkspaceEventEntity e on e.workspaceUniqueId = w.uniqueId
+            where e.uniqueId = :eventUniqueId
+            """)
+    Optional<WorkspaceEntity> lockByEventUniqueId(@Param("eventUniqueId") Long eventUniqueId);
 }

@@ -45,13 +45,12 @@ public class DevSecureAuthorizationFacade implements SecureAuthorizationFacade {
         if (verification.status() == TelegramInitDataVerifier.Status.EXPIRED) {
             return AuthorizationOutcome.expired();
         }
-        if (verification.status() != TelegramInitDataVerifier.Status.VALID || verification.telegramUserId().isEmpty()) {
+        if (verification.status() != TelegramInitDataVerifier.Status.VALID || null == verification.telegramUserId()) {
             return AuthorizationOutcome.invalidRequest();
         }
-        var telegramUserId = verification.telegramUserId().getAsLong();
         return AuthorizationOutcome.authorized(new AuthenticatedUserPrincipal(
-                new UniqueId(telegramUserId),
-                null,
+                new UniqueId(verification.telegramUserId()),
+                verification.name(),
                 Permissions.ALL,
                 true,
                 AuthenticationFlow.TELEGRAM));

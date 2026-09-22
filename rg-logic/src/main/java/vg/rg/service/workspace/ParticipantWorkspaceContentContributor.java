@@ -22,13 +22,13 @@ import java.util.Objects;
  * unbind an invite or drop a stored file.
  */
 @Slf4j
-// After the event-registration contributor (order 0): a registration's FK to its participant is
-// restricting, so registrations must be gone before the people they point at.
-@Order(2)
+// A direct workspace child. Registrations run earlier because their FK to the participant is restricting.
+@Order(ParticipantWorkspaceContentContributor.ORDER)
 @Component
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class ParticipantWorkspaceContentContributor implements WorkspaceContentContributor {
 
+    static final int ORDER = DIRECT_WORKSPACE_CHILD_ORDER;
     static final String RESOURCE_TYPE = "WORKSPACE_PARTICIPANT";
 
     private final WorkspaceParticipantRepository repository;

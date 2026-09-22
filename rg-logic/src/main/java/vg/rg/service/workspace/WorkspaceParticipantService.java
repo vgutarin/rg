@@ -82,6 +82,16 @@ public interface WorkspaceParticipantService {
     Page<WorkspaceParticipantModel> browse(UniqueId workspaceId, String labelFilter, Pageable pageable);
 
     /**
+     * One page of participants that are not yet bound to an authenticated user, with the same
+     * case-insensitive label-and-identifier order and optional label filter as {@link #browse}.
+     *
+     * <p>This query exists for membership-request approval. Eligibility is applied before paging, so
+     * a page of choices is not shortened by already-bound members. It has the same workspace-list
+     * authorization and encrypted-label scan characteristics as the roster query.
+     */
+    Page<WorkspaceParticipantModel> browseUnbound(UniqueId workspaceId, String labelFilter, Pageable pageable);
+
+    /**
      * Discloses one participant's contact data in plaintext. The one path that produces it, which is why
      * it carries its own permission.
      *

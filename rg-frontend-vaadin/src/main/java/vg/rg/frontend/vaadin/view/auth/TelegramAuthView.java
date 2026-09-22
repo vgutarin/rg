@@ -15,9 +15,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import vg.rg.frontend.vaadin.service.ApplicationSecurityContextService;
 import vg.rg.frontend.vaadin.service.LocalizationService;
 import vg.rg.frontend.vaadin.view.home.LandingView;
+import vg.rg.frontend.vaadin.view.home.JoinSocietyIntent;
+import vg.rg.model.security.AuthenticatedUserPrincipal;
+import vg.rg.model.security.AuthenticationFlow;
 import vg.rg.model.security.AuthorizationOutcome;
+import vg.rg.model.security.Permissions;
 import vg.rg.model.security.TelegramInitDataRequest;
 import vg.rg.service.security.AuthorizationApplicationService;
+import vg.unique.id.model.UniqueId;
+
+import java.util.Set;
 
 @Slf4j
 @PageTitle("page.login.title")
@@ -53,7 +60,7 @@ public class TelegramAuthView extends VerticalLayout implements LocaleChangeObse
     @Override
     protected void onAttach(AttachEvent attachEvent) {
         super.onAttach(attachEvent);
-        if (isAuthenticated()) {
+        if (isAuthenticated() && !requiresConsentUpgrade()) {
             navigateHome();
         } else {
             requestTelegramInitData();
@@ -69,7 +76,7 @@ public class TelegramAuthView extends VerticalLayout implements LocaleChangeObse
         requestInFlight = false;
         final TelegramInitDataRequest request;
         try {
-            request = new TelegramInitDataRequest(initData);
+            request = new TelegramInitDataRequest(initData, JoinSocietyIntent.isPending());
         } catch (IllegalArgumentException exception) {
             securityContextService.clear();
             show(AuthorizationUiState.DENIED);
@@ -159,6 +166,15 @@ public class TelegramAuthView extends VerticalLayout implements LocaleChangeObse
                 && !(authentication instanceof AnonymousAuthenticationToken);
     }
 
+    private boolean requiresConsentUpgrade() {
+        if (!JoinSocietyIntent.isPending()) {
+            return false;
+        }
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal)
+                || principal.userUniqueId() == null;
+    }
+
     private void navigateHome() {
         var ui = UI.getCurrent();
         if (ui != null) {
@@ -169,11 +185,7 @@ public class TelegramAuthView extends VerticalLayout implements LocaleChangeObse
     private void navigateAuthorized(boolean provisional) {
         var ui = UI.getCurrent();
         if (ui != null) {
-            if (provisional) {
-                ui.navigate(NoAccessView.class);
-            } else {
-                ui.navigate(LandingView.class);
-            }
+            ui.navigate(LandingView.class);
         }
     }
 }

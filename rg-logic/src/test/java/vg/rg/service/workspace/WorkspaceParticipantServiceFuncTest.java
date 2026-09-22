@@ -215,6 +215,21 @@ class WorkspaceParticipantServiceFuncTest extends BaseFuncTest {
     }
 
     @Test
+    void membershipApprovalCandidates_areUnboundBeforeTheyAreOrderedAndPaged() {
+        var bound = service.register(workspaceA, ParticipantDescriptor.of("Alpha", null));
+        service.register(workspaceA, ParticipantDescriptor.of("Charlie", null));
+        service.register(workspaceA, ParticipantDescriptor.of("Bravo", null));
+        var entity = participantRepository.findById(bound.getUniqueId()).orElseThrow();
+        entity.setUserUniqueId(nextUniqueId());
+        participantRepository.saveAndFlush(entity);
+
+        var page = service.browseUnbound(workspaceA, null, PageRequest.of(0, 1));
+
+        assertThat(labels(page)).containsExactly("Bravo");
+        assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
     void total_isTheFilteredSize_notThePageSizeAndNotTheWholeRoster() {
         service.register(workspaceA, ParticipantDescriptor.of("Ivan the plumber", PHONE));
         service.register(workspaceA, ParticipantDescriptor.of("Ivan the vet", "+380501114455"));

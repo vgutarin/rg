@@ -15,17 +15,26 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.OptionalLong;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class TelegramInitDataVerifier {
 
     public enum Status { VALID, INVALID, EXPIRED }
 
-    public record Result(Status status, OptionalLong telegramUserId) {
-        static Result valid(long userId) { return new Result(Status.VALID, OptionalLong.of(userId)); }
-        static Result invalid() { return new Result(Status.INVALID, OptionalLong.empty()); }
-        static Result expired() { return new Result(Status.EXPIRED, OptionalLong.empty()); }
+    public record Result(Status status, Long telegramUserId, String name) {
+        static Result valid(long userId, String name) {
+            return new Result(Status.VALID, userId, name);
+        }
+
+        static Result invalid() {
+            return new Result(Status.INVALID, null, null);
+        }
+
+        static Result expired() {
+            return new Result(Status.EXPIRED, null, null);
+        }
     }
 
     private static final int MAX_JSON_DEPTH = 16;
@@ -53,13 +62,13 @@ public final class TelegramInitDataVerifier {
             var parameters = parseQuery(request.initData());
             var dateStatus = validateAuthDate(parameters.get("auth_date"));
             if (dateStatus != Status.VALID) {
-                return new Result(dateStatus, OptionalLong.empty());
+                return new Result(dateStatus, null, null);
             }
             if (!validHash(parameters)) {
                 return Result.invalid();
             }
             var user = parseUser(parameters.get("user"));
-            return user.isPresent() ? Result.valid(user.getAsLong()) : Result.invalid();
+            return user.map(value -> Result.valid(value.id, value.name)).orElseGet(Result::invalid);
         } catch (RuntimeException exception) {
             return Result.invalid();
         }
@@ -120,26 +129,39 @@ public final class TelegramInitDataVerifier {
         }
     }
 
-    private OptionalLong parseUser(String userJson) {
+    private Optional<User> parseUser(String userJson) {
         if (userJson == null || userJson.isBlank()) {
-            return OptionalLong.empty();
+            return Optional.empty();
         }
         try {
             var user = objectMapper.readTree(userJson);
             if (depth(user, 0) > MAX_JSON_DEPTH || !user.isObject()) {
-                return OptionalLong.empty();
+                return Optional.empty();
             }
             var bot = user.get("is_bot");
             if (bot != null && bot.asBoolean(false)) {
-                return OptionalLong.empty();
+                return Optional.empty();
             }
             JsonNode id = user.get("id");
             if (id == null || !id.isIntegralNumber() || !id.canConvertToLong()) {
-                return OptionalLong.empty();
+                return Optional.empty();
             }
-            return OptionalLong.of(id.longValue());
+
+            return Optional.of(
+                    new User(
+                            id.longValue(),
+                            Stream.of(
+                                            textOrNull(user.get("first_name")),
+                                            textOrNull(user.get("last_name"))
+                                    )
+                                    .filter(value -> value != null && !value.isBlank())
+                                    .map(String::trim)
+                                    .reduce((first, second) -> first + " " + second)
+                                    .orElse(textOrNull(user.get("username")))
+                    )
+            );
         } catch (RuntimeException exception) {
-            return OptionalLong.empty();
+            return Optional.empty();
         }
     }
 
@@ -183,5 +205,15 @@ public final class TelegramInitDataVerifier {
             throw new IllegalArgumentException(field + " must not be negative");
         }
         return value;
+    }
+
+    private String textOrNull(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        return node.asString();
+    }
+
+    private record User(long id, String name) {
     }
 }

@@ -37,7 +37,8 @@ public class IdentitySecureAuthorizationFacade implements SecureAuthorizationFac
         Objects.requireNonNull(request);
         final IdentityApplicationUserPrincipal principal;
         try {
-            var identityRequest = new TelegramAuthenticationRequest(request.initData(), false);
+            var identityRequest = new TelegramAuthenticationRequest(
+                    request.initData(), request.consentToKeepPersonalData());
             var result = identityApplicationApi.authenticateTelegram(identityRequest);
             if (result == null) {
                 return AuthorizationOutcome.incompatible();

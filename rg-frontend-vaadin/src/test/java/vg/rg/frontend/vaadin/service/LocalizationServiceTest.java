@@ -3,6 +3,7 @@ package vg.rg.frontend.vaadin.service;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
 import vg.rg.frontend.vaadin.component.datetime.DateTimes;
 
@@ -90,6 +91,16 @@ class LocalizationServiceTest {
                 .isEqualTo("Переклад недоступний")
                 .isNotBlank()
                 .isNotEqualTo("missing.everywhere");
+    }
+
+    @Test
+    void i18n_authorizationDeniedException_returnsLocalizedSafeMessage() throws IOException {
+        var ukrainian = bundleValue("/messages.properties", "exception.AuthorizationDeniedException");
+        var english = bundleValue("/messages_en.properties", "exception.AuthorizationDeniedException");
+
+        assertThat(service.i18n(new AuthorizationDeniedException("denied"))).isEqualTo(ukrainian);
+        assertThat(service.getTranslation("exception.AuthorizationDeniedException", Locale.ENGLISH))
+                .isEqualTo(english);
     }
 
     @Test

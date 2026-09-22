@@ -14,6 +14,12 @@ import vg.unique.id.model.UniqueId;
  */
 public interface WorkspaceContentContributor {
 
+    /** Workspace deletion runs after every direct child contributor. */
+    int ORDER = 10;
+
+    /** A one-parent workspace child removes itself immediately before its workspace. */
+    int DIRECT_WORKSPACE_CHILD_ORDER = ORDER - 1;
+
     /** The resource type this contributor removes, for diagnostics and ordering decisions. */
     String resourceType();
 

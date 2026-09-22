@@ -157,7 +157,8 @@ class WorkspaceEventsViewTest {
                 .filter(field -> "event.field.title".equals(field.getLabel()))
                 .findFirst().orElseThrow().setValue("Retrospective");
         dateTimePickers(view).getFirst().setValue(LocalDateTime.of(2026, 9, 13, 9, 0));
-        radioGroups(view).getFirst().setValue(WorkspaceEventType.TENNIS);
+        radioGroups(view).stream().filter(field -> "event.field.type".equals(field.getLabel())).findFirst()
+                .orElseThrow().setValue(WorkspaceEventType.TENNIS);
         maxParticipantCountFields(view).getFirst().setValue(10);
         click(descendants(view).filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(button -> "events.create".equals(button.getText())).findFirst().orElseThrow());
@@ -189,7 +190,10 @@ class WorkspaceEventsViewTest {
         var dateTimePickers = dateTimePickers(view);
         dateTimePickers.getFirst().setValue(LocalDateTime.of(2026, 9, 13, 9, 0));
         dateTimePickers.get(1).clear();
-        radioGroups(view).getFirst().setValue(WorkspaceEventType.TENNIS);
+        radioGroups(view).stream()
+                .filter(field -> "event.field.type".equals(field.getLabel()))
+                .findFirst().orElseThrow()
+                .setValue(WorkspaceEventType.TENNIS);
         maxParticipantCountFields(view).getFirst().setValue(10);
         descendants(view).filter(LocationPicker.class::isInstance).map(LocationPicker.class::cast)
                 .findFirst().orElseThrow().setValue(location);

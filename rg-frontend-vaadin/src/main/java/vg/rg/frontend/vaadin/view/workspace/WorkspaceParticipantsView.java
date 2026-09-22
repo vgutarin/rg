@@ -4,7 +4,9 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.clipboard.Clipboard;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
@@ -12,8 +14,11 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
@@ -25,6 +30,7 @@ import jakarta.annotation.security.PermitAll;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import vg.rg.config.WorkspaceProperties;
 import vg.rg.exception.workspace.DuplicateParticipantPhoneException;
 import vg.rg.exception.workspace.ParticipantLimitReachedException;
 import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
@@ -37,13 +43,17 @@ import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
 import vg.rg.model.workspace.ParticipantPhone;
+import vg.rg.model.workspace.WorkspaceMembershipApprovalTarget;
+import vg.rg.model.workspace.WorkspaceMembershipRequestModel;
 import vg.rg.model.workspace.WorkspaceParticipantModel;
 import vg.rg.service.security.AuthorityChecker;
+import vg.rg.service.workspace.WorkspaceMembershipRequestService;
 import vg.rg.service.workspace.WorkspaceParticipantService;
 import vg.rg.service.workspace.WorkspaceSelectionService;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * The people registered in the active workspace who have not come through Telegram, and may never do so.
@@ -76,7 +86,9 @@ public class WorkspaceParticipantsView extends VerticalLayout
     private final LocalizationService localization;
     private final AuthorityChecker authorityChecker;
     private final transient WorkspaceParticipantService participantService;
+    private final transient WorkspaceMembershipRequestService membershipRequestService;
     private final transient WorkspaceSelectionService selectionService;
+    private final WorkspaceProperties workspaceProperties;
 
     private final Div content = new Div();
     private final DisclosureList browseList = new DisclosureList();
@@ -105,11 +117,15 @@ public class WorkspaceParticipantsView extends VerticalLayout
     public WorkspaceParticipantsView(LocalizationService localization,
                                      AuthorityChecker authorityChecker,
                                      WorkspaceParticipantService participantService,
-                                     WorkspaceSelectionService selectionService) {
+                                     WorkspaceMembershipRequestService membershipRequestService,
+                                     WorkspaceSelectionService selectionService,
+                                     WorkspaceProperties workspaceProperties) {
         this.localization = localization;
         this.authorityChecker = authorityChecker;
         this.participantService = participantService;
+        this.membershipRequestService = membershipRequestService;
         this.selectionService = selectionService;
+        this.workspaceProperties = workspaceProperties;
 
         browseSearch.setClearButtonVisible(true);
         browseSearch.setWidthFull();
@@ -163,7 +179,8 @@ public class WorkspaceParticipantsView extends VerticalLayout
             tabs.setWidthFull();
             tabs.add(localization.i18n("participants.tab.browse"), browseTab());
             tabs.add(localization.i18n("participants.tab.add"), addTab());
-            tabs.setSelectedIndex(Math.min(selectedTabIndex, 1));
+            tabs.add(localization.i18n("participants.tab.requests"), requestsTab());
+            tabs.setSelectedIndex(Math.min(selectedTabIndex, 2));
             tabs.addSelectedChangeListener(event -> selectedTabIndex = tabs.getSelectedIndex());
             content.add(tabs);
         } else {
@@ -355,6 +372,142 @@ public class WorkspaceParticipantsView extends VerticalLayout
         form.setWidthFull();
         layout.add(new Paragraph(localization.i18n("participants.add.hint")), form);
         return layout;
+    }
+
+    private Component requestsTab() {
+        var layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(false);
+        layout.setWidthFull();
+        var requests = membershipRequestService.pending(workspaceId);
+        if (requests.isEmpty()) {
+            layout.add(new Paragraph(localization.i18n("participants.requests.empty")));
+            return layout;
+        }
+        requests.forEach(request -> layout.add(requestRow(request)));
+        return layout;
+    }
+
+    private Component requestRow(WorkspaceMembershipRequestModel request) {
+        var requesterLabel = descriptorLabel(request);
+        var name = requesterLabel == null || requesterLabel.isBlank()
+                ? localization.i18n("participants.requests.unnamed") : requesterLabel;
+        var title = new Paragraph(name);
+        var approve = new Button(localization.i18n("participants.requests.approve"), VaadinIcon.CHECK.create(),
+                ignored -> openApprovalDialog(request));
+        approve.addThemeName(RGButtonTheme.BORDERED);
+        var reject = new Button(localization.i18n("participants.requests.reject"), VaadinIcon.CLOSE_SMALL.create(),
+                ignored -> reject(request));
+        reject.addThemeVariants(ButtonVariant.ERROR);
+        reject.addThemeName(RGButtonTheme.BORDERED);
+        var row = new Div(title, approve, reject);
+        row.addClassName("participant-membership-request");
+        return row;
+    }
+
+    Dialog openApprovalDialog(WorkspaceMembershipRequestModel request) {
+        var dialog = new Dialog();
+        dialog.setHeaderTitle(localization.i18n("participants.requests.approve.title"));
+        var target = new RadioButtonGroup<BindingTarget>(localization.i18n("participants.requests.approve.target"));
+        target.setItems(BindingTarget.values());
+        target.addThemeVariants(RadioGroupVariant.AURA_HORIZONTAL);
+        target.setItemLabelGenerator(value -> localization.i18n(value == BindingTarget.CREATE
+                ? "participants.requests.approve.create" : "participants.requests.approve.existing"));
+        target.setValue(BindingTarget.CREATE);
+        var existing = new ComboBox<WorkspaceParticipantModel>(localization.i18n("participants.requests.approve.participant"));
+        existing.setPageSize(BROWSE_PAGE_SIZE);
+        existing.setWidthFull();
+        existing.setItemLabelGenerator(WorkspaceParticipantModel::getLabel);
+        existing.setItems(this::fetchExistingParticipantChoices, this::countExistingParticipantChoices);
+        existing.setVisible(false);
+        var label = labelField();
+        var requesterLabel = descriptorLabel(request);
+        label.setValue(requesterLabel == null ? "" : requesterLabel);
+        var validRequesterLabel = requesterLabel != null
+                && requesterLabel.trim().length() <= workspaceProperties.participantLabelMaxLength()
+                && !requesterLabel.isBlank();
+        label.setRequiredIndicatorVisible(!validRequesterLabel);
+        target.addValueChangeListener(change -> {
+            var useExisting = change.getValue() == BindingTarget.EXISTING;
+            existing.setVisible(useExisting);
+            label.setVisible(!useExisting);
+        });
+        var form = new FormLayout();
+        form.setAutoResponsive(true);
+        form.setExpandColumns(true);
+        form.setExpandFields(true);
+        form.addFormRow(target);
+        form.addFormRow(existing);
+        form.addFormRow(label);
+        var approve = new Button(localization.i18n("participants.requests.approve"), ignored -> {
+            try {
+                var approvalTarget = target.getValue() == BindingTarget.EXISTING
+                        ? WorkspaceMembershipApprovalTarget.BIND_EXISTING_PARTICIPANT
+                        : WorkspaceMembershipApprovalTarget.CREATE_PARTICIPANT;
+                if (approvalTarget == WorkspaceMembershipApprovalTarget.BIND_EXISTING_PARTICIPANT
+                        && existing.getValue() == null) {
+                    existing.setInvalid(true);
+                    existing.setErrorMessage(localization.i18n("workspace.membership-request.error.participant-required"));
+                    return;
+                }
+                existing.setInvalid(false);
+                membershipRequestService.approve(workspaceId, request.getUniqueId(), approvalTarget,
+                        existing.getValue() == null ? null : existing.getValue().getUniqueId(),
+                        label.getValue());
+                dialog.close();
+                Notification.show(localization.i18n("participants.requests.approved"));
+                render();
+            } catch (IllegalArgumentException invalid) {
+                Notification.show(localization.i18n(invalid.getMessage()));
+            } catch (RuntimeException failure) {
+                Notification.show(localization.i18n(failure));
+            }
+        });
+        approve.addThemeName(RGButtonTheme.BORDERED);
+        var cancel = new Button(localization.i18n("participants.cancel"), ignored -> dialog.close());
+        cancel.addThemeName(RGButtonTheme.BORDERED);
+        dialog.add(form);
+        dialog.getFooter().add(cancel, approve);
+        dialog.open();
+        return dialog;
+    }
+
+    private void reject(WorkspaceMembershipRequestModel request) {
+        try {
+            membershipRequestService.reject(workspaceId, request.getUniqueId());
+            Notification.show(localization.i18n("participants.requests.rejected"));
+            render();
+        } catch (RuntimeException failure) {
+            Notification.show(localization.i18n(failure));
+        }
+    }
+
+    private enum BindingTarget {CREATE, EXISTING}
+
+    /** Fetches only the first fifty eligible, unbound candidates for the ComboBox's typed filter. */
+    private Stream<WorkspaceParticipantModel> fetchExistingParticipantChoices(
+            Query<WorkspaceParticipantModel, String> query) {
+        var offset = query.getOffset();
+        var limit = query.getLimit();
+        if (offset >= BROWSE_PAGE_SIZE) {
+            return Stream.empty();
+        }
+        return participantService.browseUnbound(workspaceId, normalizedFilter(query),
+                        PageRequest.of(0, BROWSE_PAGE_SIZE))
+                .getContent().stream()
+                .skip(offset)
+                .limit(Math.min(limit, BROWSE_PAGE_SIZE - offset));
+    }
+
+    /** Caps the virtual list so the dialog never requests candidates beyond its first fifty. */
+    private int countExistingParticipantChoices(Query<WorkspaceParticipantModel, String> query) {
+        var total = participantService.browseUnbound(workspaceId, normalizedFilter(query), PageRequest.of(0, 1))
+                .getTotalElements();
+        return Math.toIntExact(Math.min(total, BROWSE_PAGE_SIZE));
+    }
+
+    private static String normalizedFilter(Query<WorkspaceParticipantModel, String> query) {
+        return query.getFilter().orElse("").trim();
     }
 
     private boolean register(String label, String phone) {
@@ -615,6 +768,10 @@ public class WorkspaceParticipantsView extends VerticalLayout
 
     private boolean canCreate() {
         return authorityChecker.hasAuthority(workspaceId, LocalPermissions.WorkspaceParticipant.CREATE);
+    }
+
+    private static String descriptorLabel(WorkspaceMembershipRequestModel request) {
+        return request.getDescriptor() == null ? null : request.getDescriptor().label();
     }
 
     /**

@@ -128,7 +128,10 @@ context before any test body executes. A runner with side effects needs a test-p
 `UI` in a field, not just call `UI.setCurrent(new UI())` — otherwise the UI can be collected mid-test and
 `dialog.open()` fails intermittently with `No currently active UI found`. Also note
 `dialog.getFooter().getChildren()` throws (`getChildren is not supported for non-Component
-HasComponentsOfType`), so a flow that needs its footer buttons asserted must hand them back to the test.
+HasComponentsOfType`). Inspect `dialog.getFooter().getElement()` or hand the buttons back to the test.
+Dialog auto-attachment is deferred until before the client response; a component test that discovers an
+opened dialog through the UI must process that work with
+`ui.getInternals().getStateTree().runExecutionsBeforeClientResponse()` and attach a test session first.
 
 **`rg_workspace.author` is `NOT NULL` in the schema although the entity does not declare it.** Auditing
 fills it from the current auditor, and an unauthenticated test has none — so a test that writes a

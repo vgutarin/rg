@@ -8,10 +8,12 @@ import vg.rg.entity.workspace.WorkspaceEventEntity;
 import vg.unique.id.jpa.UniqueIdJpaRepository;
 import vg.unique.id.model.UniqueId;
 
+import java.util.List;
 import java.util.Optional;
 
 /** Workspace-scoped event persistence. */
 public interface WorkspaceEventRepository extends UniqueIdJpaRepository<WorkspaceEventEntity> {
+
 
     Page<WorkspaceEventEntity> findByWorkspaceUniqueId(UniqueId workspaceUniqueId, Pageable pageable);
 
@@ -21,6 +23,12 @@ public interface WorkspaceEventRepository extends UniqueIdJpaRepository<Workspac
     long countByWorkspaceUniqueId(UniqueId workspaceUniqueId);
 
     void deleteByWorkspaceUniqueId(UniqueId workspaceUniqueId);
+
+    @Query("""
+            select e.uniqueId as uniqueId from WorkspaceEventEntity e
+            where e.workspaceUniqueId = :workspaceUniqueId
+            """)
+    List<Long> findUniqueIdsByWorkspaceUniqueId(@Param("workspaceUniqueId") UniqueId workspaceUniqueId);
 
     @Query("""
             select e.workspaceUniqueId as workspaceUniqueId, w.ownerUniqueId as ownerUniqueId

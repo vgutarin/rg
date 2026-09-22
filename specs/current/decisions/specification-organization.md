@@ -10,8 +10,8 @@ usage reference in root [AGENTS.md](../../../AGENTS.md), not in the constitution
 The new structure comprises UI, logic, engineering, templates, and decisions, with
 open questions kept at their existing path. Numbered feature directories retain
 their paths and historical meaning. `./specify/`, `.specify/`, and the constitution
-are excluded from modification. The [implementation plan](../../specification-refactor-plan.md)
-records the agreed migration scope.
+are excluded from modification. The original implementation plan
+(`specs/specification-refactor-plan.md`) recorded the agreed migration scope.
 
 ## Rationale
 

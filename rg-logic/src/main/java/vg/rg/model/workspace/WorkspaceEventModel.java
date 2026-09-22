@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import vg.rg.model.resource.ResourceVisibilityPolicy;
 import vg.unique.id.Identifiable;
 import vg.unique.id.model.UniqueId;
 
@@ -24,6 +25,9 @@ public class WorkspaceEventModel implements Identifiable {
     private WorkspaceEventType eventType;
     private Integer maxParticipantCount;
     private boolean isPublished;
+    private int publicationVersion;
+    @Builder.Default
+    private ResourceVisibilityPolicy visibilityPolicy = ResourceVisibilityPolicy.publicVisibility();
     private UniqueId author;
     private UniqueId lastEditor;
     private Instant createdAt;

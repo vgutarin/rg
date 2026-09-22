@@ -1,0 +1,155 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 007-event-visibility-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            tableName: rg_workspace_event
+            columnName: is_published
+        - createTable:
+            tableName: rg_resource_publication
+            columns:
+              - column:
+                  name: resource_unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_resource_publication
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: visible_since
+                  type: DATETIME(8)
+              - column:
+                  name: visibility_mode
+                  type: TINYINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_editor
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: rg_resource_visibility_rule
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_resource_visibility_rule
+              - column:
+                  name: resource_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effect
+                  type: TINYINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject_kind
+                  type: TINYINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_resource_visibility_rule_publication
+            baseTableName: rg_resource_visibility_rule
+            baseColumnNames: resource_unique_id
+            referencedTableName: rg_resource_publication
+            referencedColumnNames: resource_unique_id
+        - addUniqueConstraint:
+            constraintName: uq_rg_resource_visibility_rule_target
+            tableName: rg_resource_visibility_rule
+            columnNames: resource_unique_id, subject_kind, subject_unique_id
+  - changeSet:
+      id: 007-membership-request-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: rg_workspace_membership_request
+            columns:
+              - column:
+                  name: unique_id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rg_workspace_membership_request
+              - column:
+                  name: version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workspace_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pending_user_unique_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: origin_event_unique_id
+                  type: BIGINT
+              - column:
+                  name: descriptor
+                  type: BLOB
+              - column:
+                  name: created_at
+                  type: DATETIME(8)
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_membership_request_workspace
+            baseTableName: rg_workspace_membership_request
+            baseColumnNames: workspace_unique_id
+            referencedTableName: rg_workspace
+            referencedColumnNames: unique_id
+        - addForeignKeyConstraint:
+            constraintName: fk_rg_workspace_membership_request_origin_event
+            baseTableName: rg_workspace_membership_request
+            baseColumnNames: origin_event_unique_id
+            referencedTableName: rg_workspace_event
+            referencedColumnNames: unique_id
+        - addUniqueConstraint:
+            constraintName: uq_rg_workspace_membership_request_pending_user
+            tableName: rg_workspace_membership_request
+            columnNames: workspace_unique_id, pending_user_unique_id
+  - changeSet:
+      id: 007-bound-participant-unique-1
+      author: vg
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            constraintName: uq_rg_workspace_participant_workspace_user
+            tableName: rg_workspace_participant
+            columnNames: workspace_unique_id, user_unique_id

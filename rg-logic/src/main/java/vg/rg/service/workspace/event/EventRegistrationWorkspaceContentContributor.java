@@ -17,9 +17,9 @@ import java.util.Objects;
  * <p><strong>Ordered first among the contributors.</strong> The foreign keys from a registration to its
  * event and participant are deliberately restricting (see the migration), so a registration must be
  * deleted before either endpoint or the delete fails with a constraint violation.
- * {@code WorkspaceService.delete} iterates contributors in {@code @Order}, so this runs first, then the
- * event ({@link #ORDER} + 1), then the participant and location. The whole chain is spelled out with
- * explicit orders so the dependency is a stated fact rather than an accident of bean registration.
+ * {@code WorkspaceService.delete} iterates contributors in {@code @Order}, so this runs before the
+ * event and its direct workspace children. The named orders make the dependency a stated fact rather
+ * than an accident of bean registration.
  */
 @Slf4j
 @Order(EventRegistrationWorkspaceContentContributor.ORDER)
@@ -27,11 +27,8 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 class EventRegistrationWorkspaceContentContributor implements WorkspaceContentContributor {
 
-    /**
-     * First in the removal chain. A registration references an event and a participant, so it must be
-     * removed before either; those in turn are removed before the location an event references.
-     */
-    static final int ORDER = 0;
+    /** A registration references an event and a participant, so it is removed before both. */
+    static final int ORDER = EventWorkspaceContentContributor.ORDER - 1;
 
     static final String RESOURCE_TYPE = "WORKSPACE_EVENT_REGISTRATION";
 

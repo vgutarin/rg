@@ -8,9 +8,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import vg.rg.BaseFuncTest;
 import vg.rg.model.geo.LocationModel;
+import vg.rg.model.resource.ResourceVisibilityMode;
 import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.model.workspace.WorkspaceEventType;
 import vg.rg.model.workspace.WorkspaceModel;
+import vg.rg.repository.resource.ResourcePublicationRepository;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
 import vg.rg.repository.workspace.WorkspaceLocationRepository;
 import vg.rg.repository.workspace.WorkspaceRepository;
@@ -36,6 +38,8 @@ class WorkspaceEventServiceFuncTest extends BaseFuncTest {
     @Autowired
     WorkspaceEventRepository eventRepository;
     @Autowired
+    ResourcePublicationRepository publicationRepository;
+    @Autowired
     WorkspaceLocationRepository locationRepository;
     @Autowired
     WorkspaceRepository workspaceRepository;
@@ -56,6 +60,7 @@ class WorkspaceEventServiceFuncTest extends BaseFuncTest {
 
     @AfterEach
     void cleanUp() {
+        publicationRepository.deleteAll();
         eventRepository.deleteAll();
         locationRepository.deleteAll();
         workspaceRepository.deleteAll();
@@ -73,7 +78,8 @@ class WorkspaceEventServiceFuncTest extends BaseFuncTest {
         assertThat(eventService.browse(workspaceB, null, PageRequest.of(0, 10)).getContent()).isEmpty();
 
         var updated = eventService.update(WorkspaceEventModel.builder().uniqueId(created.getUniqueId())
-                .version(created.getVersion()).title("Published planning").startAt(created.getStartAt())
+                .version(created.getVersion()).publicationVersion(created.getPublicationVersion())
+                .title("Published planning").startAt(created.getStartAt())
                 .eventType(created.getEventType()).maxParticipantCount(created.getMaxParticipantCount())
                 .locationUniqueId(created.getLocationUniqueId())
                 .isPublished(true).build());
@@ -82,6 +88,24 @@ class WorkspaceEventServiceFuncTest extends BaseFuncTest {
         assertThat(updated.getStartAt()).isEqualTo(Instant.parse("2026-09-13T09:00:00Z"));
         assertThat(updated.getEventType()).isEqualTo(WorkspaceEventType.PADEL);
         assertThat(updated.getMaxParticipantCount()).isEqualTo(8);
+    }
+
+    @Test
+    void browsingAnEventWithoutAPublication_repairsItAsADraft() {
+        var created = eventService.create(workspaceA, WorkspaceEventModel.builder().title("Planning")
+                .startAt(Instant.parse("2026-09-13T09:00:00Z")).eventType(WorkspaceEventType.PADEL)
+                .maxParticipantCount(8).locationUniqueId(locationA.getUniqueId()).isPublished(false).build());
+        publicationRepository.deleteById(created.getUniqueId().getLongValue());
+
+        var event = eventService.browse(workspaceA, "plan", PageRequest.of(0, 10)).getContent().getFirst();
+
+        assertThat(event.isPublished()).isFalse();
+        assertThat(event.getPublicationVersion()).isZero();
+        assertThat(publicationRepository.findById(created.getUniqueId().getLongValue()))
+                .hasValueSatisfying(publication -> {
+                    assertThat(publication.getVisibleSince()).isNull();
+                    assertThat(publication.getVisibilityMode()).isEqualTo(ResourceVisibilityMode.PUBLIC);
+                });
     }
 
     @Test

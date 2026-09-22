@@ -17,6 +17,8 @@ import vg.rg.frontend.vaadin.view.workspace.WorkspaceLocationsView;
 import vg.rg.frontend.vaadin.view.workspace.WorkspacesView;
 import vg.rg.model.security.AuthenticatedUserPrincipal;
 import vg.rg.model.security.AuthenticationFlow;
+import vg.rg.service.workspace.WorkspaceMembershipRequestService;
+import vg.rg.service.resource.ResourcePublicationService;
 import vg.unique.id.model.UniqueId;
 
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +38,8 @@ class PermissionAwareViewsTest {
     @Mock LocalizationService localization;
     @Mock AuthenticationContext authenticationContext;
     @Mock BeforeEnterEvent event;
+    @Mock ResourcePublicationService publicationService;
+    @Mock WorkspaceMembershipRequestService membershipRequestService;
 
     @Test
     void viewsUsePermissionSemanticsRatherThanRoles() {
@@ -69,7 +74,9 @@ class PermissionAwareViewsTest {
     }
 
     private LandingView landing() {
-        return new LandingView(localization, authenticationContext);
+        lenient().when(publicationService.browseWorkspaceEvents(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+        return new LandingView(localization, authenticationContext, publicationService, membershipRequestService);
     }
 
     private AuthenticatedUserPrincipal principal(UniqueId userUniqueId, Set<String> permissions) {

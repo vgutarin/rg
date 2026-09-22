@@ -32,9 +32,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
-import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.datetime.DateDisplayOptions;
 import vg.rg.frontend.vaadin.component.datetime.DateTimes;
+import vg.rg.frontend.vaadin.component.dialog.Dialogs;
 import vg.rg.frontend.vaadin.component.disclosure.DisclosureList;
 import vg.rg.frontend.vaadin.component.location.LocationPicker;
 import vg.rg.frontend.vaadin.service.LocalizationService;
@@ -43,6 +43,11 @@ import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.WorkspaceEventModel;
 import vg.rg.model.workspace.WorkspaceEventType;
+import vg.rg.model.resource.ResourceVisibilityEffect;
+import vg.rg.model.resource.ResourceVisibilityMode;
+import vg.rg.model.resource.ResourceVisibilityPolicy;
+import vg.rg.model.resource.ResourceVisibilityRule;
+import vg.rg.model.resource.ResourceVisibilitySubjectKind;
 import vg.rg.service.security.AuthorityChecker;
 import vg.rg.service.workspace.WorkspaceLocationService;
 import vg.rg.service.workspace.WorkspaceParticipantService;
@@ -227,6 +232,9 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
             manageRow.addClassName("event-participants-action");
             body.add(manageRow);
         }
+        if (authorityChecker.hasAuthority(event.getUniqueId(), LocalPermissions.WorkspaceEvent.UPDATE)) {
+            body.add(visibilityControl(event));
+        }
         body.add(DisclosureList.detailRow(VaadinIcon.FLAG, localization.i18n("event.field.type"),
                 localization.i18n(eventTypeKey(event.getEventType())), false));
         body.add(DisclosureList.detailRow(VaadinIcon.CALENDAR, localization.i18n("event.field.start-at"),
@@ -253,6 +261,40 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
         }
         if (actions.getElement().getChildCount() > 0) body.add(actions);
         return body;
+    }
+
+    private RadioButtonGroup<ResourceVisibilityMode> visibilityControl(WorkspaceEventModel event) {
+        var field = new RadioButtonGroup<ResourceVisibilityMode>(localization.i18n("event.field.visibility"));
+        field.setItems(ResourceVisibilityMode.PUBLIC, ResourceVisibilityMode.RESTRICTED);
+        field.addThemeVariants(RadioGroupVariant.AURA_HORIZONTAL);
+        field.setWidthFull();
+        field.setItemLabelGenerator(mode -> localization.i18n(mode == ResourceVisibilityMode.PUBLIC
+                ? "event.visibility.public" : "event.visibility.society"));
+        field.setValue(event.getVisibilityPolicy() == null
+                ? ResourceVisibilityMode.PUBLIC : event.getVisibilityPolicy().mode());
+        field.addValueChangeListener(change -> {
+            if (!change.isFromClient() || change.getValue() == null) {
+                return;
+            }
+            var policy = change.getValue() == ResourceVisibilityMode.PUBLIC
+                    ? ResourceVisibilityPolicy.publicVisibility()
+                    : ResourceVisibilityPolicy.restricted(List.of(new ResourceVisibilityRule(
+                    ResourceVisibilityEffect.ALLOW,
+                    ResourceVisibilitySubjectKind.WORKSPACE, workspaceId)));
+            try {
+                eventService.replaceVisibilityPolicy(event.getUniqueId(), event.getPublicationVersion(), policy);
+                afterChange();
+            } catch (ObjectOptimisticLockingFailureException stale) {
+                Notification.show(localization.i18n("events.stale"));
+                field.setValue(event.getVisibilityPolicy() == null
+                        ? ResourceVisibilityMode.PUBLIC : event.getVisibilityPolicy().mode());
+            } catch (RuntimeException failure) {
+                Notification.show(localization.i18n(failure));
+                field.setValue(event.getVisibilityPolicy() == null
+                        ? ResourceVisibilityMode.PUBLIC : event.getVisibilityPolicy().mode());
+            }
+        });
+        return field;
     }
 
     /**
@@ -354,6 +396,7 @@ public class WorkspaceEventsView extends VerticalLayout implements BeforeEnterOb
     private boolean update(WorkspaceEventModel current, EventFields fields) {
         try {
             eventService.update(WorkspaceEventModel.builder().uniqueId(current.getUniqueId()).version(current.getVersion())
+                    .publicationVersion(current.getPublicationVersion())
                     .title(fields.title().getValue())
                     .startAt(toInstant(fields.startAt().getValue()))
                     .endAt(toInstant(fields.endAt().getValue()))

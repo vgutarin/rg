@@ -6,6 +6,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vg.rg.repository.workspace.WorkspaceEventRepository;
+import vg.rg.service.resource.ResourcePublicationService;
 import vg.unique.id.model.UniqueId;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +23,7 @@ class EventWorkspaceContentContributorTest {
     private static final UniqueId WORKSPACE = nextUniqueId();
 
     @Mock WorkspaceEventRepository repository;
+    @Mock ResourcePublicationService publicationService;
 
     @Test
     void resourceType_identifiesWorkspaceEvents() {
@@ -59,6 +61,6 @@ class EventWorkspaceContentContributorTest {
     }
 
     private EventWorkspaceContentContributor contributor() {
-        return new EventWorkspaceContentContributor(repository);
+        return new EventWorkspaceContentContributor(repository, publicationService);
     }
 }

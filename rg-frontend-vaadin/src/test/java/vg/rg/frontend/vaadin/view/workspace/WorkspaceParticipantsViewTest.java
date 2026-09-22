@@ -6,7 +6,7 @@ import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -14,9 +14,12 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.internal.PendingJavaScriptInvocation;
 import com.vaadin.flow.component.internal.UIInternals.JavaScriptInvocation;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.dom.JsFunction;
 import com.vaadin.flow.internal.JacksonUtils;
 import com.vaadin.flow.internal.nodefeature.ReturnChannelMap;
@@ -37,6 +40,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import vg.rg.config.WorkspaceProperties;
 import vg.rg.exception.workspace.DuplicateParticipantPhoneException;
 import vg.rg.exception.workspace.ParticipantLimitReachedException;
 import vg.rg.frontend.vaadin.component.button.RGButtonTheme;
@@ -46,9 +50,11 @@ import vg.rg.frontend.vaadin.view.auth.NoAccessView;
 import vg.rg.model.security.LocalPermissions;
 import vg.rg.model.security.Permissions;
 import vg.rg.model.workspace.ParticipantDescriptor;
+import vg.rg.model.workspace.WorkspaceMembershipRequestModel;
 import vg.rg.model.workspace.WorkspaceModel;
 import vg.rg.model.workspace.WorkspaceParticipantModel;
 import vg.rg.service.security.AuthorityChecker;
+import vg.rg.service.workspace.WorkspaceMembershipRequestService;
 import vg.rg.service.workspace.WorkspaceParticipantService;
 import vg.rg.service.workspace.WorkspaceSelectionService;
 import vg.unique.id.model.UniqueId;
@@ -91,7 +97,11 @@ class WorkspaceParticipantsViewTest {
     @Mock LocalizationService localization;
     @Mock AuthorityChecker authorityChecker;
     @Mock WorkspaceParticipantService participantService;
+    @Mock
+    WorkspaceMembershipRequestService membershipRequestService;
     @Mock WorkspaceSelectionService selectionService;
+    @Mock
+    WorkspaceProperties workspaceProperties;
     @Mock BeforeEnterEvent event;
     @Mock VaadinSession session;
 
@@ -131,14 +141,14 @@ class WorkspaceParticipantsViewTest {
     // --- the screen shape, shared with locations ----------------------------------------------------
 
     @Test
-    void beforeEnter_rendersTwoTabsAndATitle() {
+    void beforeEnter_rendersBrowseAddAndRequestsTabsAndATitle() {
         var view = entered();
 
         var tabs = descendants(view).stream()
                 .filter(TabSheet.class::isInstance).map(TabSheet.class::cast)
                 .findFirst().orElseThrow();
 
-        assertThat(tabContents(tabs)).hasSize(2);
+        assertThat(tabContents(tabs)).hasSize(3);
         assertThat(descendants(view).stream().anyMatch(H1.class::isInstance)).isTrue();
     }
 
@@ -148,6 +158,48 @@ class WorkspaceParticipantsViewTest {
 
         verify(participantService).browse(eq(WORKSPACE), any(), any(Pageable.class));
         assertThat(view.renderedLabels()).contains("Ivan the plumber");
+    }
+
+    @Test
+    void existingMemberChoices_areLazyAndApplyTheTypedFilterOnTheServer() {
+        var view = entered();
+        var dialog = view.openApprovalDialog(WorkspaceMembershipRequestModel.builder()
+                .uniqueId(new UniqueId(6100L)).descriptor(ParticipantDescriptor.of("Applicant", null)).build());
+        when(participantService.browseUnbound(eq(WORKSPACE), eq("candidate"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(withoutPhone("Candidate"), withoutPhone("Another candidate"))));
+
+        verify(participantService, never()).browseUnbound(any(), any(), any(Pageable.class));
+        assertThat(descendants(dialog).stream().filter(TextField.class::isInstance).toList()).hasSize(1);
+        var target = descendants(dialog).stream().filter(RadioButtonGroup.class::isInstance)
+                .map(WorkspaceParticipantsViewTest::asRadioButtonGroup).findFirst().orElseThrow();
+        var existingTarget = target.getListDataView().getItems()
+                .filter(value -> "EXISTING".equals(value.toString())).findFirst().orElseThrow();
+        target.setValue(existingTarget);
+
+        verify(participantService, never()).browseUnbound(any(), any(), any(Pageable.class));
+        var existing = descendants(dialog).stream().filter(ComboBox.class::isInstance)
+                .map(ComboBox.class::cast)
+                .map(WorkspaceParticipantsViewTest::asParticipantComboBox).findFirst().orElseThrow();
+        assertThat(existingChoices(existing, "candidate", 1)).extracting(WorkspaceParticipantModel::getLabel)
+                .containsExactly("Candidate");
+
+        var pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(participantService).browseUnbound(eq(WORKSPACE), eq("candidate"), pageable.capture());
+        assertThat(pageable.getValue()).extracting(Pageable::getPageNumber, Pageable::getPageSize)
+                .containsExactly(0, WorkspaceParticipantsView.BROWSE_PAGE_SIZE);
+    }
+
+    @Test
+    void approvalLabelRequirement_usesTheConfiguredParticipantLabelLimit() {
+        var view = entered();
+        when(workspaceProperties.participantLabelMaxLength()).thenReturn(4);
+
+        var dialog = view.openApprovalDialog(WorkspaceMembershipRequestModel.builder()
+                .uniqueId(new UniqueId(6101L)).descriptor(ParticipantDescriptor.of("ABCDE", null)).build());
+
+        var label = descendants(dialog).stream().filter(TextField.class::isInstance).map(TextField.class::cast)
+                .filter(field -> "participant.field.label".equals(field.getLabel())).findFirst().orElseThrow();
+        assertThat(label.isRequiredIndicatorVisible()).isTrue();
     }
 
     @Test
@@ -791,7 +843,8 @@ class WorkspaceParticipantsViewTest {
         when(authorityChecker.hasAuthority(Permissions.Workspace.OWNER)).thenReturn(false);
 
         var view = new WorkspaceParticipantsView(
-                localization, authorityChecker, participantService, selectionService);
+                localization, authorityChecker, participantService, membershipRequestService, selectionService,
+                workspaceProperties);
         view.beforeEnter(event);
 
         verify(event).rerouteTo(NoAccessView.class);
@@ -823,6 +876,8 @@ class WorkspaceParticipantsViewTest {
                         !deniedLocalPermissions.contains(invocation.getArgument(1, String.class)));
         when(selectionService.activeWorkspace())
                 .thenReturn(WorkspaceModel.builder().uniqueId(WORKSPACE).defaultWorkspace(true).build());
+        when(membershipRequestService.pending(WORKSPACE)).thenReturn(List.of());
+        when(workspaceProperties.participantLabelMaxLength()).thenReturn(128);
         // One stub for both paths, answering from the requested page size so the Load-more flow can be
         // driven: the service slices, so the stub must too, or "shown vs total" would be meaningless.
         when(participantService.browse(eq(WORKSPACE), any(), any(Pageable.class)))
@@ -842,7 +897,8 @@ class WorkspaceParticipantsViewTest {
         });
 
         var view = new WorkspaceParticipantsView(
-                localization, authorityChecker, participantService, selectionService);
+                localization, authorityChecker, participantService, membershipRequestService, selectionService,
+                workspaceProperties);
         view.beforeEnter(event);
         return view;
     }
@@ -1023,6 +1079,11 @@ class WorkspaceParticipantsViewTest {
                 .findFirst().orElseThrow();
     }
 
+    @SuppressWarnings("unchecked")
+    private static RadioButtonGroup<Object> asRadioButtonGroup(Component component) {
+        return (RadioButtonGroup<Object>) component;
+    }
+
     private static void click(Component element) {
         ComponentUtil.fireEvent(element, new ClickEvent<>(element));
     }
@@ -1057,5 +1118,22 @@ class WorkspaceParticipantsViewTest {
             }
         }
         return contents;
+    }
+
+    private static List<WorkspaceParticipantModel> existingChoices(ComboBox<WorkspaceParticipantModel> comboBox,
+                                                                      String filter, int limit) {
+        return participantProvider(comboBox).fetch(new Query<>(0, limit,
+                List.of(), null, filter)).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ComboBox<WorkspaceParticipantModel> asParticipantComboBox(ComboBox<?> comboBox) {
+        return (ComboBox<WorkspaceParticipantModel>) comboBox;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static DataProvider<WorkspaceParticipantModel, String> participantProvider(
+            ComboBox<WorkspaceParticipantModel> comboBox) {
+        return (DataProvider<WorkspaceParticipantModel, String>) comboBox.getDataProvider();
     }
 }

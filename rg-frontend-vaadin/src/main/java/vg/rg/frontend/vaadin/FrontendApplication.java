@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 //import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @StyleSheet(Aura.STYLESHEET)
-@StyleSheet("styles.css")
+@StyleSheet("styles.css?v=2026-09-20")
 @ColorScheme(ColorScheme.Value.LIGHT_DARK)
 @SpringBootApplication(scanBasePackages = {"vg.rg", "vg.unique.id"})
 //@EnableJpaAuditing
